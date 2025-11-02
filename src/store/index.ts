@@ -13,7 +13,7 @@ import { scoreReviewSlice } from "./slices/scoreReview.slice";
 import { bagHandoverSlice } from "./slices/bagHandover.slice";
 import { examRoomsSlice } from "./slices/examRooms.slice";
 import { examEntitiesSlice } from "./slices/examEntities.slice";
-
+import { keyManagementSlice } from "./slices/key.slice";
 export const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
@@ -30,6 +30,7 @@ export const store = configureStore({
     bagHandover: bagHandoverSlice.reducer,
     examRooms: examRoomsSlice.reducer,
     examEntities: examEntitiesSlice.reducer,
+    keyManagement: keyManagementSlice.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

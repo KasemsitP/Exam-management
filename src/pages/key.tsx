@@ -1,409 +1,384 @@
-import { useEffect, useMemo, useState } from "react";
-import { Lock, KeyRound, KeySquare, ShieldCheck, Unlock, Hash, Shield } from "lucide-react";
-
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  Lock,
+  KeyRound,
+  ShieldCheck,
+  Hash,
+  Shield,
+  Loader2,
+  AlertTriangle,
+  Trash2,
+  Plus,
+  CheckCircle2,
+  XCircle,
+  Rocket,
+} from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { useToast } from "@/components/ui/use-toast";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
-import { useAppSelector } from "@/store/hook";
-import { selectActiveCampaign, selectActiveCampaignSessions } from "@/store/slices/examData.slice";
 
-const STORAGE_KEY = "examflow_active_daily_key";
+// [ ⭐️ 1. Imports ⭐️ ]
+import {
+  fetchKeysForCampaign,
+  saveNewKey,
+  deleteKey,
+  clearActiveKeys,
+  selectAllActiveKeys,
+  selectKeyManagementStatus,
+  selectKeyManagementError,
+  checkEncryptionPrerequisites,
+  clearEncryptionResult,
+  runBulkEncryptionForSession,
+  selectEncryptionStatus,
+  selectLastBulkEncryptionStats,
+  selectPrerequisites,
+} from "@/store/slices/key.slice"; 
 
-const canUseBase64 = typeof btoa === "function" && typeof atob === "function";
+import {
+  selectActiveCampaign,
+  selectActiveCampaignSessions,
+} from "@/store/slices/examData.slice";
 
-function safeLocalStorage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
+const parseCampaignId = (id: string): number => Number(id.replace("camp-", ""));
+const parseSessionId = (id: string): number => Number(id.replace("sess-", ""));
 
-const toHex = (bytes: Uint8Array): string =>
-  Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
-
-const fromHex = (hex: string): Uint8Array => {
-  const cleaned = hex.replace(/[^0-9a-f]/gi, "");
-  if (cleaned.length < 2) return new Uint8Array();
-  const pairs = cleaned.match(/.{1,2}/g) ?? [];
-  return new Uint8Array(pairs.map((pair) => parseInt(pair, 16)));
-};
-
-const encodeText = (value: string): Uint8Array<ArrayBuffer> => {
-  if (typeof TextEncoder !== "undefined") {
-    const encoded = new TextEncoder().encode(value);
-    const buffer = encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength);
-    return new Uint8Array(buffer);
-  }
-  const buffer = new ArrayBuffer(value.length);
-  const view = new Uint8Array(buffer);
-  for (let i = 0; i < value.length; i++) {
-    view[i] = value.charCodeAt(i) & 0xff;
-  }
-  return view;
-};
-
-const decodeText = (bytes: Uint8Array): string => {
-  if (typeof TextDecoder !== "undefined") {
-    return new TextDecoder().decode(bytes);
-  }
-  let output = "";
-  bytes.forEach((byte) => {
-    output += String.fromCharCode(byte);
-  });
-  return output;
-};
-
-const fromBase64 = (input: string): Uint8Array => {
-  if (!input) return new Uint8Array();
-  if (canUseBase64) {
-    const binary = atob(input);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  }
-  return fromHex(input);
-};
-
-const toBase64 = (bytes: Uint8Array): string => {
-  if (canUseBase64) {
-    let binary = "";
-    bytes.forEach((byte) => {
-      binary += String.fromCharCode(byte);
-    });
-    return btoa(binary);
-  }
-  return toHex(bytes);
-};
-
-const xorBytes = (data: Uint8Array, key: Uint8Array): Uint8Array => {
-  if (!key.length) return data;
-  const result = new Uint8Array(data.length);
-  for (let i = 0; i < data.length; i++) {
-    result[i] = data[i] ^ key[i % key.length];
-  }
-  return result;
-};
-
-const hashString = async (input: string): Promise<string> => {
-  if (typeof crypto !== "undefined" && crypto.subtle && typeof TextEncoder !== "undefined") {
-    const digest = await crypto.subtle.digest("SHA-256", encodeText(input));
-    return toHex(new Uint8Array(digest));
-  }
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
-  }
-  const basic = hash.toString(16).padStart(8, "0");
-  return basic.repeat(8).slice(0, 64);
-};
-
-async function deriveDailyKey(keyA: string, keyB: string, tweak: string): Promise<string> {
-  return hashString(`${keyA}::${keyB}::${tweak}`);
-}
-
-async function setActiveDailyKey(key: string): Promise<void> {
-  const storage = safeLocalStorage();
-  storage?.setItem(STORAGE_KEY, key);
-}
-
-function clearActiveDailyKey(): void {
-  const storage = safeLocalStorage();
-  storage?.removeItem(STORAGE_KEY);
-}
-
-async function getActiveDailyKey(): Promise<string | null> {
-  const storage = safeLocalStorage();
-  return storage?.getItem(STORAGE_KEY) ?? null;
-}
-
-async function encryptUserId(userId: string, keyHex: string): Promise<string> {
-  const payload = encodeText(userId);
-  const key = fromHex(keyHex);
-  const cipher = xorBytes(payload, key);
-  return toBase64(cipher);
-}
-
-async function decryptUserId(ciphertext: string, keyHex: string): Promise<string> {
-  const key = fromHex(keyHex);
-  const cipher = fromBase64(ciphertext);
-  const plain = xorBytes(cipher, key);
-  return decodeText(plain);
-}
 
 export default function KeyManagementPage() {
   const { toast } = useToast();
+  const dispatch = useAppDispatch();
+
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  const sessions = useAppSelector(selectActiveCampaignSessions);
+  const activeKeys = useAppSelector(selectAllActiveKeys);
+  const keyStatus = useAppSelector(selectKeyManagementStatus);
+  const sessions = useAppSelector(selectActiveCampaignSessions) as any[]; // (ใช้ any ชั่วคราว)
+  const prerequisites = useAppSelector(selectPrerequisites);
+  const encryptionStatus = useAppSelector(selectEncryptionStatus);
+  const lastBulkEncryptionStats = useAppSelector(selectLastBulkEncryptionStats);
+  const keyManagementError = useAppSelector(selectKeyManagementError);
 
-  const [keyA, setKeyA] = useState("");
-  const [keyB, setKeyB] = useState("");
-  const [tweak, setTweak] = useState("");
-  const [selectedSessionId, setSelectedSessionId] = useState("");
+  // (State ภายใน)
+  const [keyInput, setKeyInput] = useState("");
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
 
-  const [activeKeyPreview, setActiveKeyPreview] = useState("");
+  const isLoading = keyStatus === "loading";
+  const canGenerate = !isLoading && activeKeys.length < 2;
+  const isEncryptionLoading = encryptionStatus === "loading";
+  const numericCampaignId = activeCampaign
+    ? parseCampaignId(activeCampaign.id)
+    : null;
+  const canEncrypt =
+    prerequisites?.hasTwoKeys && prerequisites?.hasImportedUsers;
 
-  const [userId, setUserId] = useState("U0001");
-  const [cipherText, setCipherText] = useState("");
-  const [plainText, setPlainText] = useState("");
-
-  const sessionOptions = useMemo(
-    () =>
-      sessions.map((session) => ({
-        id: session.id,
-        label: session.label ?? "ไม่ระบุรอบสอบ",
-        date: session.examDate ?? null,
-      })),
-    [sessions]
-  );
-
+  // (useEffect ดึงข้อมูล)
   useEffect(() => {
-    if (!sessionOptions.length) return;
-    if (!selectedSessionId || !sessionOptions.some((o) => o.id === selectedSessionId)) {
-      setSelectedSessionId(sessionOptions[0].id);
+    if (activeCampaign && numericCampaignId) {
+      dispatch(fetchKeysForCampaign(numericCampaignId));
+      dispatch(checkEncryptionPrerequisites(numericCampaignId));
     }
-  }, [sessionOptions, selectedSessionId]);
+    return () => {
+      dispatch(clearActiveKeys());
+    };
+  }, [activeCampaign, dispatch, numericCampaignId]);
 
+  // (useEffect สำหรับตั้งค่า Session เริ่มต้น)
   useEffect(() => {
-    if (!tweak && selectedSessionId) setTweak(selectedSessionId);
-  }, [selectedSessionId, tweak]);
+    if (sessions.length > 0 && !selectedSessionId) {
+      setSelectedSessionId(sessions[0].id);
+    }
+  }, [sessions, selectedSessionId]);
 
-  const composeTweak = () => (tweak.trim() ? tweak.trim() : new Date().toISOString().slice(0, 10));
-
-  const handleActivate = async () => {
-    if (!keyA.trim() || !keyB.trim()) {
+  // (Handlers: handleSaveKey, handleDelete - เหมือนเดิม)
+  const handleSaveKey = () => {
+    if (!numericCampaignId) {
+      toast({ title: "กรุณาเลือก Campaign ก่อน", variant: "destructive" });
+      return;
+    }
+    if (!keyInput.trim()) {
+      toast({ title: "กรุณากรอกคีย์ (Secret)", variant: "destructive" });
+      return;
+    }
+    if (!canGenerate) {
       toast({
-        title: "กรอกคีย์ให้ครบ",
-        description: "กรุณากรอก Key A และ Key B ก่อนเปิดใช้งาน",
+        title: "Campaign นี้มีคีย์ครบ 2 อันแล้ว",
         variant: "destructive",
       });
       return;
     }
-    const derivedKey = await deriveDailyKey(keyA.trim(), keyB.trim(), composeTweak());
-    await setActiveDailyKey(derivedKey);
-    setActiveKeyPreview(derivedKey);
-    toast({
-      title: "เปิดใช้งานคีย์สำเร็จ",
-      description: "ระบบจะใช้คีย์นี้ในการเข้ารหัส / ถอดรหัส QR Code",
+    dispatch(
+      saveNewKey({
+        campaignId: numericCampaignId,
+        key: keyInput.trim(),
+      })
+    ).then(() => {
+      dispatch(checkEncryptionPrerequisites(numericCampaignId));
+    });
+    setKeyInput("");
+  };
+
+  const handleDelete = (keyId: number) => {
+    if (!window.confirm(`ยืนยันการลบคีย์ ID: ${keyId} ?`)) return;
+    dispatch(deleteKey(keyId)).then(() => {
+      if (numericCampaignId) {
+        dispatch(checkEncryptionPrerequisites(numericCampaignId));
+      }
     });
   };
 
-  const handleDeactivate = () => {
-    clearActiveDailyKey();
-    setActiveKeyPreview("");
-    toast({ title: "ปิดใช้งานคีย์แล้ว" });
-  };
-
-  const handleEncrypt = async () => {
-    const key = await getActiveDailyKey();
-    if (!key) {
+  // [ ⭐️ Handler: handleRunBulkEncryption (แก้ไข) ⭐️ ]
+  const handleRunBulkEncryption = () => {
+    if (!numericCampaignId || !selectedSessionId || !canEncrypt) {
       toast({
-        title: "ยังไม่ได้ Activate คีย์",
-        description: "กรุณาเปิดใช้งานคีย์ก่อนทดลองเข้ารหัส",
+        title: "ข้อมูลไม่ครบ",
+        description: "กรุณาเลือก Session และตรวจสอบว่าคีย์/ข้อมูล พร้อม",
         variant: "destructive",
       });
       return;
     }
-    if (!userId.trim()) {
-      toast({ title: "กรอก userID ก่อน", variant: "destructive" });
-      return;
-    }
-    const ct = await encryptUserId(userId.trim(), key);
-    setCipherText(ct);
-    toast({ title: "เข้ารหัสเรียบร้อย" });
+    dispatch(clearEncryptionResult());
+    dispatch(
+      runBulkEncryptionForSession({
+        campaignId: numericCampaignId,
+        sessionId: parseSessionId(selectedSessionId),
+      })
+    ).then((result: any) => {
+      if (result.meta.requestStatus === "fulfilled") {
+        toast({
+          title: "เข้ารหัสสำเร็จ!",
+          description: `เข้ารหัสผู้สอบ ${result.payload.usersEncrypted} คน ใน Session นี้`,
+        });
+      } else {
+        toast({
+          title: "เข้ารหัสล้มเหลว",
+          description: result.payload as string,
+          variant: "destructive",
+        });
+      }
+    });
   };
-
-  const handleDecrypt = async () => {
-    const key = await getActiveDailyKey();
-    if (!key) {
-      toast({
-        title: "ยังไม่ได้ Activate คีย์",
-        description: "กรุณาเปิดใช้งานคีย์ก่อนทดลองถอดรหัส",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (!cipherText.trim()) {
-      toast({ title: "กรอก ciphertext ก่อน", variant: "destructive" });
-      return;
-    }
-    try {
-      const pt = await decryptUserId(cipherText.trim(), key);
-      setPlainText(pt);
-      toast({ title: "ถอดรหัสสำเร็จ" });
-    } catch {
-      setPlainText("");
-      toast({
-        title: "ถอดรหัสไม่สำเร็จ",
-        description: "รูปแบบ ciphertext ไม่ถูกต้อง",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const statusActive = Boolean(activeKeyPreview);
 
   return (
     <ShowIfCan anyOf={["manage_keys"]}>
       <div className="container-fluid px-3 px-sm-4 py-4">
-        {/* Header */}
-        <div className="d-flex flex-column flex-sm-row align-items-sm-center justify-content-sm-between gap-3 mb-4">
-          <div className="d-flex align-items-start gap-3">
-            <div className="rounded-circle bg-primary-subtle p-2 text-primary d-inline-flex">
-              <Lock size={24} />
-            </div>
-            <div>
-              <h1 className="h4 mb-1">
-                Key Management <span className="text-muted">(2 Keys)</span>
-              </h1>
-              {activeCampaign && (
-                <div className="small text-muted">
-                  สนามสอบ: <span className="fw-semibold text-body">{activeCampaign.name}</span>
-                </div>
-              )}
-            </div>
+        {/* Header (เหมือนเดิม) */}
+        <div className="d-flex align-items-start gap-3 mb-4">
+          <div className="rounded-circle bg-primary-subtle p-2 text-primary d-inline-flex">
+            <Lock size={24} />
           </div>
-          <span className={`badge d-inline-flex align-items-center gap-1 ${statusActive ? "text-bg-success" : "text-bg-secondary"}`}>
-            <Shield size={14} />
-            {statusActive ? "Active" : "Inactive"}
-          </span>
+          <div>
+            <h1 className="h4 mb-1">Key & Encryption Management</h1>
+            {activeCampaign && (
+              <div className="small text-muted">
+                สนามสอบ:{" "}
+                <span className="fw-semibold text-body">
+                  {activeCampaign.name}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Card: กรอกคีย์หลัก */}
+        {/* Card: "สร้าง" คีย์ (เหมือนเดิม) */}
         <div className="card shadow-sm mb-4">
           <div className="card-header bg-white">
-            <div className="d-flex align-items-center gap-2">
-              <KeyRound className="text-primary" size={18} />
-              <h6 className="mb-0">กรอกคีย์หลัก</h6>
-            </div>
+            <h6 className="mb-0">1. เพิ่มคีย์ (สูงสุด 2 คีย์)</h6>
           </div>
           <div className="card-body">
-            <div className="row g-4">
-              <div className="col-md-6">
-                <label className="form-label small d-flex align-items-center gap-2">
-                  <KeyRound className="text-primary" size={16} />
-                  Key A (ผู้ดูแลคนที่ 1)
+            <div className="row g-3">
+              <div className="col-lg-8">
+                <label htmlFor="key-input" className="form-label">
+                  คีย์ลับ (Key / Secret)
                 </label>
                 <input
+                  id="key-input"
                   type="password"
                   className="form-control"
-                  placeholder="กรอกคีย์จากผู้ดูแลคนที่ 1"
-                  value={keyA}
-                  onChange={(e) => setKeyA(e.target.value)}
+                  placeholder="กรอกคีย์ลับที่ต้องการบันทึก"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  disabled={!canGenerate}
                 />
               </div>
-              <div className="col-md-6">
-                <label className="form-label small d-flex align-items-center gap-2">
-                  <KeySquare className="text-primary" size={16} />
-                  Key B (ผู้ดูแลคนที่ 2)
-                </label>
-                <input
-                  type="password"
-                  className="form-control"
-                  placeholder="กรอกคีย์จากผู้ดูแลคนที่ 2"
-                  value={keyB}
-                  onChange={(e) => setKeyB(e.target.value)}
-                />
+              <div className="col-lg-4 d-flex align-items-end">
+                <button
+                  className="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2"
+                  onClick={handleSaveKey}
+                  disabled={
+                    !canGenerate || !activeCampaign || !keyInput.trim()
+                  }
+                >
+                  {isLoading ? (
+                    <Loader2 size={16} className="spin-animation" />
+                  ) : (
+                    <Plus size={16} />
+                  )}
+                  Save New Key
+                </button>
               </div>
+            </div>
+            {!canGenerate && activeKeys.length >= 2 && (
+              <div className="alert alert-success small py-2 mt-3 mb-0">
+                <ShieldCheck size={16} className="me-2" />
+                Campaign นี้มีคีย์ครบ 2 อันแล้ว (ไม่สามารถเพิ่มได้)
+              </div>
+            )}
+          </div>
+        </div>
 
-              <div className="col-md-6">
-                <label className="form-label small d-flex align-items-center gap-2">
-                  <Hash className="text-primary" size={16} />
-                  Tweak / Session
-                </label>
-                <input
-                  className="form-control"
-                  placeholder="เช่น sess-day1 หรือ 2025-05-01"
-                  value={tweak}
-                  onChange={(e) => setTweak(e.target.value)}
-                />
+        {/* Card: แสดงคีย์ที่ดึงมา (เหมือนเดิม) */}
+        <div className="card shadow-sm mb-4">
+          <div className="card-header bg-white">
+            <h6 className="mb-0">
+              2. คีย์ที่ใช้งาน (Active Keys) ({activeKeys.length} / 2)
+            </h6>
+          </div>
+          <div className="card-body">
+            {isLoading && (
+              <div className="text-center text-muted">Loading keys...</div>
+            )}
+            {keyStatus === "failed" && (
+              <div className="alert alert-danger mb-0">
+                Failed to fetch keys
               </div>
+            )}
+            {keyStatus === "succeeded" && activeKeys.length === 0 && (
+              <div className="text-center text-muted">
+                Campaign นี้ยังไม่มีคีย์
+              </div>
+            )}
+            {activeKeys.length > 0 && (
+              <ul className="list-group">
+                {activeKeys.map((key: any) => (
+                  <li
+                    key={key.id}
+                    className="list-group-item d-flex align-items-center justify-content-between"
+                  >
+                    <div className="d-flex align-items-center gap-3">
+                      <Hash size={16} className="text-muted" />
+                      <div className="d-flex flex-column">
+                        <span className="fw-semibold text-monospace">
+                          {key.key}
+                        </span>
+                        <small className="text-muted">
+                          ID: {key.id} | IV:{" "}
+                          {key.iv ? key.iv.slice(0, 16) : "N/A"}...
+                        </small>
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn-link text-danger p-1"
+                      onClick={() => handleDelete(key.id)}
+                      disabled={isLoading}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
 
-              <div className="col-md-6">
-                <label className="form-label small">เลือกรอบสอบจากระบบ</label>
+        {/* [ ⭐️ Card: เข้ารหัส (Official) (แก้ไข) ⭐️ ] */}
+        <div className="card shadow-sm">
+          <div className="card-header bg-white">
+            <h6 className="mb-0">3. เข้ารหัสข้อมูล (Official Bulk Run)</h6>
+          </div>
+          <div className="card-body">
+            {/* Status Check (เหมือนเดิม) */}
+            <div className="mb-3">
+              <label className="form-label small text-muted">
+                ตรวจสอบเงื่อนไข:
+              </label>
+              <div className="d-flex flex-column flex-sm-row gap-3">
+                <div
+                  className={`p-3 rounded border w-100 ${
+                    prerequisites?.hasTwoKeys
+                      ? "border-success bg-success-subtle"
+                      : "border-danger bg-danger-subtle"
+                  }`}
+                >
+                  {prerequisites?.hasTwoKeys ? (
+                    <CheckCircle2 size={16} className="text-success me-2" />
+                  ) : (
+                    <XCircle size={16} className="text-danger me-2" />
+                  )}
+                  <span>คีย์ 2 อัน ({activeKeys.length} / 2)</span>
+                </div>
+                <div
+                  className={`p-3 rounded border w-100 ${
+                    prerequisites?.hasImportedUsers
+                      ? "border-success bg-success-subtle"
+                      : "border-danger bg-danger-subtle"
+                  }`}
+                >
+                  {prerequisites?.hasImportedUsers ? (
+                    <CheckCircle2 size={16} className="text-success me-2" />
+                  ) : (
+                    <XCircle size={16} className="text-danger me-2" />
+                  )}
+                  <span>นำเข้าข้อมูลผู้สอบ (Users) แล้ว</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Form (แก้ไข: ลบ User Code Input) */}
+            <div className="row g-3">
+              <div className="col-12">
+                <label htmlFor="enc-session" className="form-label">
+                  เลือก Session ที่จะเข้ารหัส
+                </label>
                 <select
+                  id="enc-session"
                   className="form-select"
                   value={selectedSessionId}
-                  onChange={(e) => {
-                    setSelectedSessionId(e.target.value);
-                    setTweak(e.target.value);
-                  }}
+                  onChange={(e) => setSelectedSessionId(e.target.value)}
+                  disabled={!sessions.length || isEncryptionLoading}
                 >
-                  {sessionOptions.length === 0 && <option value="">ไม่มีข้อมูลรอบสอบ</option>}
-                  {sessionOptions.map((s) => (
+                  {sessions.length === 0 && (
+                    <option value="">ไม่มี Session</option>
+                  )}
+                  {sessions.map((s: any) => (
                     <option key={s.id} value={s.id}>
-                      {s.label} · {s.date ? new Date(s.date).toLocaleDateString("th-TH") : "-"}
+                      {s.label}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            <div className="d-flex flex-wrap align-items-center gap-2 mt-3">
-              <button className="btn btn-primary d-inline-flex align-items-center gap-2" onClick={handleActivate}>
-                <ShieldCheck size={16} />
-                Activate คีย์
-              </button>
-              <button className="btn btn-outline-secondary d-inline-flex align-items-center gap-2" onClick={handleDeactivate}>
-                <Unlock size={16} />
-                Inactive
-              </button>
-
-              {activeKeyPreview && (
-                <div className="small text-muted text-break ms-sm-2">
-                  คีย์ที่ใช้งาน (mock): {activeKeyPreview.slice(0, 32)}…
-                </div>
+            <button
+              className="btn btn-primary w-100 mt-3 d-inline-flex align-items-center justify-content-center gap-2"
+              onClick={handleRunBulkEncryption}
+              disabled={
+                !canEncrypt || isEncryptionLoading || !selectedSessionId
+              }
+            >
+              {isEncryptionLoading ? (
+                <Loader2 size={16} className="spin-animation" />
+              ) : (
+                <Rocket size={16} />
               )}
-            </div>
-          </div>
-        </div>
+              เข้ารหัสทั้ง Session (Run Bulk Encryption)
+            </button>
 
-        {/* Card: ทดลองเข้ารหัส / ถอดรหัส */}
-        <div className="card shadow-sm">
-          <div className="card-header bg-white">
-            <div className="d-flex align-items-center gap-2">
-              <Lock className="text-primary" size={18} />
-              <h6 className="mb-0">ทดลองเข้ารหัส / ถอดรหัส userID</h6>
-            </div>
-          </div>
-          <div className="card-body">
-            <div className="row g-4">
-              <div className="col-md-4">
-                <label className="form-label small">userID (เช่น SID / National ID)</label>
-                <input className="form-control" value={userId} onChange={(e) => setUserId(e.target.value)} />
+            {/* Result (แก้ไข: แสดงสถิติ) */}
+            {encryptionStatus === "succeeded" && lastBulkEncryptionStats && (
+              <div className="alert alert-success small py-2 mt-3 mb-0">
+                <ShieldCheck size={16} className="me-2" />
+                เข้ารหัสสำเร็จ! จำนวน {lastBulkEncryptionStats.usersEncrypted}{" "}
+                รายการ
               </div>
-              <div className="col-md-4">
-                <label className="form-label small">ciphertext (ผลลัพธ์หลังเข้ารหัส)</label>
-                <input className="form-control" value={cipherText} onChange={(e) => setCipherText(e.target.value)} />
-              </div>
-              <div className="col-md-4">
-                <label className="form-label small">plaintext ที่ถอดรหัสได้</label>
-                <input className="form-control" value={plainText} readOnly />
-              </div>
-            </div>
+            )}
 
-            <div className="d-flex gap-2 mt-3">
-              <button className="btn btn-primary" onClick={handleEncrypt}>
-                เข้ารหัส
-              </button>
-              <button className="btn btn-outline-secondary" onClick={handleDecrypt}>
-                ถอดรหัส
-              </button>
-            </div>
-
-            <div className="small text-muted mt-2">
-              รูปแบบ ciphertext (mock): <code>base64(iv).base64(ciphertext)</code>
-            </div>
+            {encryptionStatus === "failed" && (
+              <div className="alert alert-danger small py-2 mt-3 mb-0">
+                {keyManagementError}
+              </div>
+            )}
           </div>
         </div>
       </div>
     </ShowIfCan>
   );
 }
-
-
 

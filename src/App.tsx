@@ -16,7 +16,7 @@ import GraderManagementPage from "@/pages/GraderManagement";
 import GradingStationPage from "@/pages/GradingStation";
 import ScoreReviewPage from "@/pages/ScoreReview";
 import KeyManagementPage from "@/pages/key";
-import UserSearchPage from "@/pages/UserSearch";
+//import UserSearchPage from "@/pages/UserSearch";
 import { AppLayout } from "@/components/layout/AppLayout";
 
 function ProtectedApp() {
@@ -78,7 +78,7 @@ function AppContent() {
           <Route path="/graders" element={<GraderManagementPage />} />
           <Route path="/grading-station" element={<GradingStationPage />} />
           <Route path="/score-review" element={<ScoreReviewPage />} />
-          <Route path="/user-search" element={<UserSearchPage />} />
+          {/* <Route path="/user-search" element={<UserSearchPage />} /> */}
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<NotFound />} />

@@ -5,8 +5,7 @@ import { FileSpreadsheet, Upload } from "lucide-react";
 
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { selectActiveCampaign, selectActiveCampaignSessions } from "@/store/slices/examData.slice";
-import { selectCurrentSession } from "@/store/slices/sessions.slice";
+import { selectActiveCampaign } from "@/store/slices/examData.slice";
 import {
   importUsersThunk,
   selectUserImportError,
@@ -57,8 +56,6 @@ export default function ImportCsvPage() {
   const { toast } = useToast();
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  const sessions = useAppSelector(selectActiveCampaignSessions);
-  const currentSession = useAppSelector(selectCurrentSession);
   const importStatus = useAppSelector(selectUserImportStatus);
   const importError = useAppSelector(selectUserImportError);
   const importStats = useAppSelector(selectUserImportStats);
@@ -68,7 +65,6 @@ export default function ImportCsvPage() {
   const [previewRows, setPreviewRows] = useState(PREVIEW_ROW_OPTIONS[1]);
   const [parsed, setParsed] = useState<ParsedState | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
 
   const [excelBuffer, setExcelBuffer] = useState<ArrayBuffer | null>(null);
   const [excelSheetNames, setExcelSheetNames] = useState<string[]>([]);
@@ -77,17 +73,15 @@ export default function ImportCsvPage() {
   const supportsImport = Boolean(activeCampaign);
   const isImporting = importStatus === "loading";
 
+  // ถ้ามีการเปลี่ยน campaign ให้เคลียร์ state preview เพื่อลดความสับสน
   useEffect(() => {
-    if (!sessions.length) {
-      setSelectedSessionId("");
-      return;
-    }
-    if (selectedSessionId && sessions.some((session) => session.id === selectedSessionId)) {
-      return;
-    }
-    const defaultSessionId = currentSession?.id ?? sessions[0].id;
-    setSelectedSessionId(defaultSessionId);
-  }, [sessions, currentSession, selectedSessionId]);
+    setFileName(null);
+    setParsed(null);
+    setError(null);
+    setExcelBuffer(null);
+    setExcelSheetNames([]);
+    setExcelSelectedSheet("");
+  }, [activeCampaign?.id]);
 
   const resetState = () => {
     setFileName(null);
@@ -154,7 +148,9 @@ export default function ImportCsvPage() {
               setError(results.errors[0]?.message ?? "Failed to parse CSV.");
               return;
             }
-            const rows = (results.data ?? []).map(trimRow).filter((row) => Object.values(row).some(Boolean));
+            const rows = (results.data ?? [])
+              .map(trimRow)
+              .filter((row) => Object.values(row).some(Boolean));
             const headers = Object.keys(rows[0] ?? {});
             if (!rows.length) {
               setParsed(null);
@@ -193,7 +189,6 @@ export default function ImportCsvPage() {
       const result = await dispatch(
         importUsersThunk({
           campaignId: activeCampaign.id,
-          sessionId: selectedSessionId || null,
           rows: parsed.rows,
         })
       ).unwrap();
@@ -202,9 +197,6 @@ export default function ImportCsvPage() {
         "Existing " + result.totalUsersFound,
         "Campaign links " + result.totalCampaignLinks,
       ];
-      if (selectedSessionId) {
-        parts.push("Session links " + result.totalSessionLinks);
-      }
       toast({
         title: "Import completed",
         description: parts.join(" · "),
@@ -226,13 +218,13 @@ export default function ImportCsvPage() {
 
   const summaryText =
     parsed && `${parsed.rows.length.toLocaleString()} rows · ${parsed.headers.length} columns`;
+
   const statsParts = importStats
     ? [
         "Created " + importStats.totalUsersCreated,
         "Existing " + importStats.totalUsersFound,
         "Campaign links " + importStats.totalCampaignLinks,
-        importStats.totalSessionLinks ? "Session links " + importStats.totalSessionLinks : null,
-      ].filter((item): item is string => Boolean(item))
+      ]
     : [];
   const statsText = statsParts.length ? statsParts.join(" · ") : null;
 
@@ -321,31 +313,14 @@ export default function ImportCsvPage() {
             )}
 
             <div className="row g-4 mt-1">
-              <div className="col-md-6">
-                <label className="form-label">Assign to session</label>
-                <select
-                  className="form-select"
-                  value={selectedSessionId}
-                  onChange={(event) => setSelectedSessionId(event.target.value)}
-                  disabled={!sessions.length}
-                >
-                  {!sessions.length && <option value="">No sessions available</option>}
-                  {sessions.map((session) => (
-                    <option key={session.id} value={session.id}>
-                      {session.label}
-                    </option>
-                  ))}
-                </select>
-                {!sessions.length && (
-                  <div className="small text-warning mt-1">
-                    Create sessions for this campaign before importing candidates.
-                  </div>
-                )}
-              </div>
-              <div className="col-md-6">
-                {activeCampaign && (
-                  <div className="small text-muted mt-4">
+              <div className="col-md-12">
+                {activeCampaign ? (
+                  <div className="alert alert-info mb-0" role="alert">
                     Importing into campaign: <strong>{activeCampaign.name}</strong>
+                  </div>
+                ) : (
+                  <div className="small text-warning mt-1">
+                    Please select an active campaign before importing candidates.
                   </div>
                 )}
               </div>
@@ -438,5 +413,3 @@ export default function ImportCsvPage() {
     </ShowIfCan>
   );
 }
-
-
