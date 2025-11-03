@@ -1,19 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { Scanner, boundingBox } from "@yudiel/react-qr-scanner";
 import {
-  Scanner,
-  boundingBox,
-} from "@yudiel/react-qr-scanner";
-import { AlertTriangle, CheckCircle2, QrCode, Search, Trash2, Plus, X } from "lucide-react";
+  AlertTriangle,
+  CheckCircle2,
+  QrCode,
+  Search,
+  Trash2,
+  Plus,
+  X,
+  Loader2,
+  DatabaseZap,
+} from "lucide-react";
 
-// คงของเดิมที่เป็น business logic / auth / store
+// business logic / auth / store
 import { useToast } from "@/components/ui/use-toast";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { selectActiveCampaign } from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectActiveCampaignSessions } from "@/store/slices/examData.slice";
+
+// bags slice (actions + thunks + selectors)
 import {
-  bagCreated,
-  bagFinalized,
+  bagFinalized, // (ยังเผื่อไว้สำหรับ client-side fallback)
   bagRemoved,
   bagScanAdded,
   bagScanRemoved,
@@ -23,12 +31,18 @@ import {
   selectBagById,
   selectDefaultBagCapacity,
   selectBagStatsForCampaign,
+  bulkCreateBagsThunk,
+  finalizeAndLinkBagThunk,
+  selectBagsSlice,
 } from "@/store/slices/bags.slice";
 
+// ------------------------------
+// Form types
+// ------------------------------
 interface CreateBagForm {
-  bagId: string;
+  prefix: string;
+  count: number;
   sessionId: string;
-  subjectId?: string;
   capacity: number;
 }
 
@@ -42,14 +56,15 @@ const STATUS_STYLE: Record<
 };
 
 export default function BagsPage() {
-  const activeCampaign = useAppSelector(selectActiveCampaign);
-  const bags = useAppSelector(selectBagsForCampaign(activeCampaign?.id ?? null));
-  const bagStats = useAppSelector(selectBagStatsForCampaign(activeCampaign?.id ?? null));
-  const defaultCapacity = useAppSelector(selectDefaultBagCapacity);
   const dispatch = useAppDispatch();
   const { toast } = useToast();
 
-  const sessions = useMemo(() => activeCampaign?.sessions ?? [], [activeCampaign]);
+  const activeCampaign = useAppSelector(selectActiveCampaign);
+  const sessions = useAppSelector(selectActiveCampaignSessions);
+  const bags = useAppSelector(selectBagsForCampaign(activeCampaign?.id ?? null));
+  const bagStats = useAppSelector(selectBagStatsForCampaign(activeCampaign?.id ?? null));
+  const defaultCapacity = useAppSelector(selectDefaultBagCapacity);
+  const { status: bagStatus } = useAppSelector(selectBagsSlice);
 
   const [searchText, setSearchText] = useState("");
   const [composeBagId, setComposeBagId] = useState<string | null>(null);
@@ -59,38 +74,24 @@ export default function BagsPage() {
   const deviceId: string | undefined = undefined;
 
   const createForm = useForm<CreateBagForm>();
-  const watchSessionId = createForm.watch("sessionId");
 
+  // Reset ค่าเริ่มต้นตอนเปิด modal
   useEffect(() => {
     if (!createDialogOpen) return;
-    const defaultSessionId = sessions[0]?.id ?? "";
-    const defaultSubjectId = sessions[0]?.subjects[0]?.id;
+    const defaultSessionId = sessions?.[0]?.id ?? "";
     createForm.reset({
-      bagId: `BAG-${String((bags.length ?? 0) + 1).padStart(3, "0")}`,
+      prefix: "BAG-",
+      count: 120,
       sessionId: defaultSessionId,
-      subjectId: defaultSubjectId,
       capacity: defaultCapacity,
     });
-  }, [createDialogOpen, sessions, createForm, bags.length, defaultCapacity]);
-
-  useEffect(() => {
-    if (!watchSessionId) return;
-    const session = sessions.find((item) => item.id === watchSessionId);
-    if (!session) return;
-    const currentSubject = createForm.getValues("subjectId");
-    if (!currentSubject || !session.subjects.some((s) => s.id === currentSubject)) {
-      createForm.setValue("subjectId", session.subjects[0]?.id);
-    }
-  }, [watchSessionId, sessions, createForm]);
+  }, [createDialogOpen, sessions, createForm, defaultCapacity]);
 
   const composeBag = useAppSelector((state) =>
-    composeBagId && activeCampaign ? selectBagById(activeCampaign.id, composeBagId)(state) : null
+    composeBagId && activeCampaign
+      ? selectBagById(activeCampaign.id, composeBagId)(state)
+      : null
   );
-
-  const availableSubjects = useMemo(() => {
-    if (!watchSessionId) return [];
-    return sessions.find((session) => session.id === watchSessionId)?.subjects ?? [];
-  }, [sessions, watchSessionId]);
 
   const filteredBags = useMemo(() => {
     const term = searchText.trim().toLowerCase();
@@ -105,124 +106,167 @@ export default function BagsPage() {
     });
   }, [bags, searchText]);
 
-  const handleCreateBag = createForm.handleSubmit((values) => {
+  // ------------------------------
+  // Bulk Create
+  // ------------------------------
+  const handleBulkCreateBags = createForm.handleSubmit(async (values) => {
     if (!activeCampaign) {
-      toast({ title: "กรุณาเลือกสนามสอบ", description: "ไม่พบสนามสอบที่ใช้งานอยู่", variant: "destructive" });
+      toast({ title: "กรุณาเลือกสนามสอบ", variant: "destructive" });
       return;
     }
     if (!values.sessionId) {
-      toast({ title: "ต้องเลือกรอบสอบ", description: "กรุณาเลือกรอบสอบก่อนสร้างถุงข้อสอบ", variant: "destructive" });
+      toast({ title: "ต้องเลือกรอบสอบ", variant: "destructive" });
       return;
     }
-    const session = sessions.find((item) => item.id === values.sessionId);
-    const subject = session?.subjects.find((item) => item.id === values.subjectId);
+    const session = sessions.find((s: any) => s.id === values.sessionId);
 
-    dispatch(
-      bagCreated({
-        campaignId: activeCampaign.id,
-        sessionId: values.sessionId,
-        sessionLabel: session?.label ?? "ไม่ระบุรอบสอบ",
-        subjectCode: subject?.code,
-        subjectName: subject?.name,
-        bagLabel: values.bagId,
-        capacity: values.capacity,
-      })
-    );
+    const payload = {
+      campaignId: activeCampaign.id,
+      sessionId: values.sessionId,
+      sessionLabel: session?.label ?? "ไม่ระบุรอบสอบ",
+      prefix: values.prefix,
+      count: values.count,
+      capacity: values.capacity,
+      subjectCode: session?.subjects?.[0]?.code ?? "MIXED",
+      subjectName: session?.subjects?.[0]?.name ?? "คละวิชา",
+    };
+
+    await dispatch(bulkCreateBagsThunk(payload)).unwrap();
 
     setCreateDialogOpen(false);
-    setComposeBagId(values.bagId);
-    toast({ title: "สร้างถุงข้อสอบแล้ว", description: `รหัส ${values.bagId}` });
+    toast({
+      title: "สร้างถุงข้อสอบ (Bulk) สำเร็จ",
+      description: `สร้าง ${values.count} ถุง (Prefix: ${values.prefix})`,
+    });
   });
 
-  const handleScan = async (data: string) => {
-    setScannerEnabled(true);
-    try {
-      const response = await fetch(`your-api-url?code=${encodeURIComponent(data)}`);
-      const result = await response.json();
-      if (response.ok && result.success) {
-        alert("Success! Welcome to the conference.");
-      } else {
-        alert(result.message);
-      }
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setScannerEnabled(false);
+  // ------------------------------
+  // Scan (QR Payload)
+  // ------------------------------
+  const handleScan = (data: string) => {
+    if (!composeBag || !activeCampaign || !scannerEnabled) return;
+
+    // กันสแกนซ้ำ
+    if (composeBag.scanned.includes(data)) {
+      toast({
+        title: "สแกนซ้ำ",
+        description: "QR Code นี้ถูกสแกนในถุงแล้ว",
+        variant: "destructive",
+      });
+      return;
     }
+
+    dispatch(
+      bagScanAdded({ campaignId: activeCampaign.id, bagId: composeBag.id, code: data })
+    );
+    setManualCode("");
+
+    // รีเฟรชกล้องเล็กน้อย
+    setScannerEnabled(false);
+    setTimeout(() => setScannerEnabled(true), 500);
   };
 
   const handleManualAdd = () => {
-    if (!composeBag || !activeCampaign) return;
-    const value = manualCode.trim();
-    if (!value) return;
-    dispatch(bagScanAdded({ campaignId: activeCampaign.id, bagId: composeBag.id, code: value }));
-    setManualCode("");
+    const v = manualCode.trim();
+    if (!v) return;
+    handleScan(v);
   };
 
-  const handleFinalize = () => {
+  // ------------------------------
+  // Finalize (ส่งไป backend เพื่อ link)
+  // ------------------------------
+  const handleFinalizeAndLink = async () => {
     if (!composeBag || !activeCampaign) return;
     const isComplete = composeBag.scanned.length >= composeBag.capacity;
+
     if (!isComplete) {
-      const ok = window.confirm(
-        `สแกนครบแล้ว ${composeBag.scanned.length}/${composeBag.capacity} เล่ม ต้องการยืนยันถุงไม่ครบหรือไม่?`
-      );
-      if (!ok) return;
+      toast({
+        title: "ถุงยังไม่ครบ",
+        description: `สแกน ${composeBag.scanned.length}/${composeBag.capacity} เล่ม`,
+        variant: "destructive",
+      });
+      return;
     }
-    dispatch(
-      bagFinalized({
-        campaignId: activeCampaign.id,
-        bagId: composeBag.id,
-        allowIncomplete: !isComplete,
-      })
-    );
-    toast({
-      title: "บันทึกถุงข้อสอบแล้ว",
-      description: isComplete ? "ถุงครบตามจำนวน" : "ถุงถูกบันทึกแม้ยังไม่ครบ 30 เล่ม",
-    });
-    setComposeBagId(null);
+
+    try {
+      const result = await dispatch(
+        finalizeAndLinkBagThunk({
+          campaignId: activeCampaign.id,
+          bagId: composeBag.id,
+          scannedCodes: composeBag.scanned,
+        })
+      ).unwrap();
+
+      toast({
+        title: "บันทึกและเชื่อมโยงข้อมูลสำเร็จ",
+        description: `ถุง ${composeBag.id} บันทึกสมุด ${result.bookletsCreated} เล่ม`,
+      });
+      setComposeBagId(null);
+    } catch (error: any) {
+      console.error("Finalize Error:", error);
+      toast({
+        title: "Finalize ล้มเหลว",
+        description: error?.message ?? "ไม่สามารถเชื่อมโยงข้อมูลกับ Backend ได้",
+        variant: "destructive",
+      });
+    }
   };
 
+  // ------------------------------
+  // Misc actions
+  // ------------------------------
   const handleRemoveCode = (code: string) => {
     if (!composeBag || !activeCampaign) return;
-    dispatch(bagScanRemoved({ campaignId: activeCampaign.id, bagId: composeBag.id, code }));
+    dispatch(
+      bagScanRemoved({ campaignId: activeCampaign.id, bagId: composeBag.id, code })
+    );
   };
 
   const handleClearCodes = () => {
     if (!composeBag || !activeCampaign) return;
-    const ok = window.confirm("ลบรายการสแกนทั้งหมดหรือไม่?");
-    if (!ok) return;
-    dispatch(bagScansCleared({ campaignId: activeCampaign.id, bagId: composeBag.id }));
+    if (window.confirm("ลบรายการสแกนทั้งหมดหรือไม่?")) {
+      dispatch(bagScansCleared({ campaignId: activeCampaign.id, bagId: composeBag.id }));
+    }
   };
 
   const handleDeleteBag = (bagId: string) => {
     if (!activeCampaign) return;
-    if (!window.confirm(`ลบถุง ${bagId} หรือไม่?`)) return;
-    dispatch(bagRemoved({ campaignId: activeCampaign.id, bagId }));
-    toast({ title: "ลบถุงแล้ว", description: bagId, variant: "destructive" });
+    if (window.confirm(`ลบถุง ${bagId} หรือไม่?`)) {
+      dispatch(bagRemoved({ campaignId: activeCampaign.id, bagId }));
+      toast({ title: "ลบถุงแล้ว", description: bagId, variant: "destructive" });
+    }
   };
 
   const handleCapacityChange = (value: number) => {
     if (!composeBag || !activeCampaign) return;
-    dispatch(bagCapacityUpdated({ campaignId: activeCampaign.id, bagId: composeBag.id, capacity: value }));
+    if (Number.isNaN(value) || value < 1) return;
+    dispatch(
+      bagCapacityUpdated({
+        campaignId: activeCampaign.id,
+        bagId: composeBag.id,
+        capacity: value,
+      })
+    );
   };
 
-  // helper สำหรับ modal bootstrap (ควบคุม class ด้วย state)
   const renderBackdrop = (open: boolean) =>
     open ? <div className="modal-backdrop show" style={{ zIndex: 1050 }} /> : null;
 
+  // ==============================
+  // Render
+  // ==============================
   return (
     <div className="d-flex flex-column gap-4">
-      {/* Header Card */}
+      {/* Header */}
       <div className="card shadow-sm">
         <div className="card-header bg-white">
           <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
             <div>
               <h5 className="mb-1">จัดการถุงข้อสอบ</h5>
               <small className="text-muted">
-                สแกนและประกอบถุงข้อสอบทีละ 30 เล่มให้ครบถ้วน ภายใต้สนามสอบเดียวกัน
+                สร้างถุงและสแกนสมุดคำตอบ (QR Payload) เพื่อเชื่อมโยงข้อมูล
               </small>
             </div>
-
             <div className="d-flex align-items-center flex-wrap gap-2">
               <span className="badge text-bg-secondary d-inline-flex align-items-center gap-1">
                 <QrCode size={14} /> ทั้งหมด {bagStats.total}
@@ -239,9 +283,20 @@ export default function BagsPage() {
 
         <div className="card-body d-flex flex-column flex-md-row gap-2 align-items-md-end justify-content-between">
           <div className="w-100 d-flex align-items-center gap-2">
-            <label htmlFor="bag-search" className="visually-hidden">ค้นหา</label>
+            <label htmlFor="bag-search" className="visually-hidden">
+              ค้นหา
+            </label>
             <div className="position-relative flex-fill">
-              <Search className="position-absolute" size={16} style={{ left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+              <Search
+                className="position-absolute"
+                size={16}
+                style={{
+                  left: 10,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  pointerEvents: "none",
+                }}
+              />
               <input
                 id="bag-search"
                 value={searchText}
@@ -258,13 +313,13 @@ export default function BagsPage() {
               onClick={() => setCreateDialogOpen(true)}
               disabled={!activeCampaign}
             >
-              <Plus size={16} /> สร้างถุงข้อสอบ
+              <Plus size={16} /> สร้างถุง (Bulk)
             </button>
           </ShowIfCan>
         </div>
       </div>
 
-      {/* Table Card */}
+      {/* Table */}
       <div className="card shadow-sm">
         <div className="card-body p-0">
           <div className="table-responsive">
@@ -288,7 +343,9 @@ export default function BagsPage() {
                     <td>
                       <div className="d-flex flex-column">
                         <span className="fw-medium">{bag.subjectCode ?? "-"}</span>
-                        <span className="small text-muted">{bag.subjectName ?? "ไม่ระบุวิชา"}</span>
+                        <span className="small text-muted">
+                          {bag.subjectName ?? "ไม่ระบุวิชา"}
+                        </span>
                       </div>
                     </td>
                     <td className="text-center">{bag.capacity}</td>
@@ -303,8 +360,10 @@ export default function BagsPage() {
                         <button
                           className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
                           onClick={() => setComposeBagId(bag.id)}
+                          disabled={bag.status === "ready" || bag.status === "incomplete"}
                         >
-                          <QrCode size={14} /> จัดถุง
+                          <QrCode size={14} />
+                          {bag.status === "draft" ? "สแกน/จัดถุง" : "ดูรายการ"}
                         </button>
                         <ShowIfCan permission="manage_bags">
                           <button
@@ -322,7 +381,7 @@ export default function BagsPage() {
                 {filteredBags.length === 0 && (
                   <tr>
                     <td colSpan={7} className="text-center text-muted py-4">
-                      ยังไม่มีถุงข้อสอบสำหรับสนามสอบนี้
+                      {bagStatus === "loading" ? "Loading..." : "ยังไม่มีถุงข้อสอบสำหรับสนามสอบนี้"}
                     </td>
                   </tr>
                 )}
@@ -343,65 +402,100 @@ export default function BagsPage() {
         <div className="modal-dialog modal-dialog-centered modal-lg">
           <div className="modal-content">
             <div className="modal-header">
-              <h6 className="modal-title">สร้างถุงข้อสอบ</h6>
-              <button type="button" className="btn-close" onClick={() => setCreateDialogOpen(false)} />
+              <h6 className="modal-title">สร้างถุงข้อสอบ (Bulk Create)</h6>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setCreateDialogOpen(false)}
+              />
             </div>
 
-            <form onSubmit={handleCreateBag}>
+            <form onSubmit={handleBulkCreateBags}>
               <div className="modal-body">
                 <div className="mb-3">
-                  <label htmlFor="bag-id" className="form-label">Bag ID</label>
-                  <input id="bag-id" className="form-control" {...createForm.register("bagId", { required: true })} />
-                </div>
-
-                <div className="mb-3">
-                  <label htmlFor="bag-session" className="form-label">เลือกรอบสอบ</label>
+                  <label htmlFor="bag-session" className="form-label">
+                    เลือกรอบสอบ
+                  </label>
                   <select
                     id="bag-session"
                     className="form-select"
                     {...createForm.register("sessionId", { required: true })}
                   >
-                    {sessions.map((session) => (
+                    <option value="">-- เลือกรอบสอบ --</option>
+                    {sessions.map((session: any) => (
                       <option key={session.id} value={session.id}>
-                        {session.label} · {new Date(session.examDate).toLocaleDateString("th-TH")}
+                        {session.label} ·{" "}
+                        {new Date(session.examDate).toLocaleDateString("th-TH")}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="mb-3">
-                  <label htmlFor="bag-subject" className="form-label">วิชาที่บรรจุ</label>
-                  <select
-                    id="bag-subject"
-                    className="form-select"
-                    {...createForm.register("subjectId")}
-                  >
-                    {availableSubjects.length === 0 && <option value="">ไม่มีวิชา</option>}
-                    {availableSubjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.code} · {subject.name}
-                      </option>
-                    ))}
-                  </select>
+                <div className="row g-3">
+                  <div className="col-sm-6">
+                    <label htmlFor="bag-prefix" className="form-label">
+                      คำนำหน้า (Prefix)
+                    </label>
+                    <input
+                      id="bag-prefix"
+                      className="form-control"
+                      {...createForm.register("prefix", { required: true })}
+                    />
+                  </div>
+                  <div className="col-sm-6">
+                    <label htmlFor="bag-count" className="form-label">
+                      จำนวน (ถุง)
+                    </label>
+                    <input
+                      id="bag-count"
+                      type="number"
+                      min={1}
+                      className="form-control"
+                      {...createForm.register("count", {
+                        valueAsNumber: true,
+                        required: true,
+                        min: 1,
+                      })}
+                    />
+                  </div>
                 </div>
 
-                <div className="mb-2">
-                  <label htmlFor="bag-capacity" className="form-label">จำนวนเล่มต่อถุง</label>
+                <div className="mt-3">
+                  <label htmlFor="bag-capacity" className="form-label">
+                    จำนวนเล่มต่อถุง
+                  </label>
                   <input
                     id="bag-capacity"
                     type="number"
                     min={1}
                     className="form-control"
-                    {...createForm.register("capacity", { valueAsNumber: true, required: true })}
+                    disabled
+                    {...createForm.register("capacity", {
+                      valueAsNumber: true,
+                      required: true,
+                    })}
                   />
                 </div>
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn btn-outline-secondary" onClick={() => setCreateDialogOpen(false)}>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setCreateDialogOpen(false)}
+                >
                   ยกเลิก
                 </button>
-                <button type="submit" className="btn btn-primary">สร้างถุง</button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={bagStatus === "loading"}
+                >
+                  {bagStatus === "loading" && (
+                    <Loader2 size={16} className="me-2 spin-animation" />
+                  )}
+                  สร้าง {createForm.getValues("count") ?? 0} ถุง
+                </button>
               </div>
             </form>
           </div>
@@ -422,23 +516,29 @@ export default function BagsPage() {
               <>
                 <div className="modal-header">
                   <h6 className="modal-title">
-                    ประกอบถุง : {composeBag.id}{" "}
+                    สแกนสมุดคำตอบ : {composeBag.id}{" "}
                     <span className="fw-normal text-muted">
                       ({composeBag.scanned.length}/{composeBag.capacity})
                     </span>
                   </h6>
-                  <button type="button" className="btn-close" onClick={() => setComposeBagId(null)} />
+                  <button
+                    type="button"
+                    className="btn-close"
+                    onClick={() => setComposeBagId(null)}
+                  />
                 </div>
 
                 <div className="modal-body">
                   <div className="row g-3">
-                    {/* Left: Scanned list */}
+                    {/* Left: scanned list */}
                     <div className="col-lg-7">
                       <div className="card border-0 shadow-sm">
                         <div className="card-header bg-white">
-                          <h6 className="mb-1">รายการสแกนแล้ว</h6>
+                          <h6 className="mb-1">รายการสแกนแล้ว (QR Payloads)</h6>
                           <small className="text-muted">
-                            วิชา {composeBag.subjectCode ?? "-"} · {composeBag.subjectName ?? "ไม่ระบุ"} · รอบ {composeBag.sessionLabel}
+                            วิชา {composeBag.subjectCode ?? "-"} ·{" "}
+                            {composeBag.subjectName ?? "ไม่ระบุ"} · รอบ{" "}
+                            {composeBag.sessionLabel}
                           </small>
                         </div>
                         <div className="card-body">
@@ -449,7 +549,9 @@ export default function BagsPage() {
                                 type="number"
                                 min={1}
                                 value={composeBag.capacity}
-                                onChange={(e) => handleCapacityChange(Number(e.target.value))}
+                                onChange={(e) =>
+                                  handleCapacityChange(Number(e.target.value))
+                                }
                                 className="form-control form-control-sm text-end"
                                 style={{ width: 90 }}
                               />
@@ -457,11 +559,22 @@ export default function BagsPage() {
                             </div>
                           </div>
 
-                          <div className="border rounded overflow-auto" style={{ maxHeight: 240 }}>
+                          <div
+                            className="border rounded overflow-auto"
+                            style={{ maxHeight: 240 }}
+                          >
                             <ul className="list-group list-group-flush">
                               {composeBag.scanned.map((code) => (
-                                <li key={code} className="list-group-item d-flex align-items-center justify-content-between">
-                                  <span className="fw-medium">{code}</span>
+                                <li
+                                  key={code}
+                                  className="list-group-item d-flex align-items-center justify-content-between"
+                                >
+                                  <span
+                                    className="fw-medium text-truncate"
+                                    style={{ maxWidth: "80%" }}
+                                  >
+                                    {code}
+                                  </span>
                                   <button
                                     className="btn btn-link text-danger p-1"
                                     onClick={() => handleRemoveCode(code)}
@@ -472,49 +585,80 @@ export default function BagsPage() {
                                 </li>
                               ))}
                               {composeBag.scanned.length === 0 && (
-                                <li className="list-group-item text-center text-muted">ยังไม่มีการสแกน QR Code</li>
+                                <li className="list-group-item text-center text-muted">
+                                  ยังไม่มีการสแกน QR Code
+                                </li>
                               )}
                             </ul>
                           </div>
 
                           <div className="d-flex justify-content-between small mt-2">
-                            <span className="text-muted">ครบ 30 เล่มหรือไม่</span>
-                            <span className={composeBag.scanned.length >= composeBag.capacity ? "text-success" : "text-warning"}>
-                              {composeBag.scanned.length >= composeBag.capacity ? "ครบแล้ว" : "ยังไม่ครบ"}
+                            <span className="text-muted">
+                              ครบ {composeBag.capacity} เล่มหรือไม่
+                            </span>
+                            <span
+                              className={
+                                composeBag.scanned.length >= composeBag.capacity
+                                  ? "text-success"
+                                  : "text-warning"
+                              }
+                            >
+                              {composeBag.scanned.length >= composeBag.capacity
+                                ? "ครบแล้ว"
+                                : "ยังไม่ครบ"}
                             </span>
                           </div>
 
                           <div className="d-flex justify-content-end mt-2">
-                            <button className="btn btn-link" onClick={handleClearCodes}>ล้างทั้งหมด</button>
+                            <button className="btn btn-link" onClick={handleClearCodes}>
+                              ล้างทั้งหมด
+                            </button>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right: Scanner & manual add */}
+                    {/* Right: scanner & manual add */}
                     <div className="col-lg-5">
                       <div className="card border-0 shadow-sm">
                         <div className="card-header bg-white">
-                          <h6 className="mb-1">สแกนเพิ่ม</h6>
-                          <small className="text-muted">ใช้กล้องโทรศัพท์สแกนหรือคีย์รหัสเอง</small>
+                          <h6 className="mb-1">สแกนเพิ่ม (QR Payload)</h6>
+                          <small className="text-muted">
+                            สแกน QR Code ที่เข้ารหัสจากใบเซ็นชื่อ
+                          </small>
                         </div>
                         <div className="card-body">
                           <div className="mb-3">
-                            <label className="form-label small text-uppercase text-muted">สแกนด้วยกล้อง</label>
+                            <label className="form-label small text-uppercase text-muted">
+                              สแกนด้วยกล้อง
+                            </label>
                             <div className="rounded border bg-black overflow-hidden">
                               {scannerEnabled ? (
                                 <Scanner
                                   formats={["qr_code"]}
                                   constraints={{ deviceId }}
-                                  onScan={(detected) => detected?.[0]?.rawValue && handleScan(detected[0].rawValue)}
+                                  onScan={(detected) =>
+                                    detected?.[0]?.rawValue &&
+                                    handleScan(detected[0].rawValue)
+                                  }
                                   onError={(error) => console.log(`onError: ${error}`)}
                                   styles={{ container: { height: "400px", width: "100%" } }}
-                                  components={{ onOff: true, torch: true, zoom: true, finder: true, tracker: boundingBox }}
-                                  allowMultiple={true}
-                                  scanDelay={2000}
+                                  components={{
+                                    onOff: true,
+                                    torch: true,
+                                    zoom: true,
+                                    finder: true,
+                                    tracker: boundingBox,
+                                  }}
+                                  allowMultiple={false}
+                                  scanDelay={1000}
                                 />
                               ) : (
-                                <div className="d-flex align-items-center justify-content-center text-muted" style={{ height: 192 }}>
+                                <div
+                                  className="d-flex align-items-center justify-content-center text-muted"
+                                  style={{ height: 400 }}
+                                >
+                                  <Loader2 size={24} className="me-2 spin-animation" />
                                   รีเซ็ตกล้อง...
                                 </div>
                               )}
@@ -522,7 +666,9 @@ export default function BagsPage() {
                           </div>
 
                           <div className="mb-2">
-                            <label className="form-label small text-uppercase text-muted">เพิ่มรหัสด้วยตนเอง</label>
+                            <label className="form-label small text-uppercase text-muted">
+                              เพิ่มรหัสด้วยตนเอง
+                            </label>
                             <div className="d-flex gap-2">
                               <input
                                 className="form-control"
@@ -530,7 +676,12 @@ export default function BagsPage() {
                                 onChange={(e) => setManualCode(e.target.value)}
                                 placeholder="กรอก QR code"
                               />
-                              <button className="btn btn-outline-secondary" onClick={handleManualAdd}>เพิ่ม</button>
+                              <button
+                                className="btn btn-outline-secondary"
+                                onClick={handleManualAdd}
+                              >
+                                เพิ่ม
+                              </button>
                             </div>
                           </div>
 
@@ -546,8 +697,27 @@ export default function BagsPage() {
                 </div>
 
                 <div className="modal-footer">
-                  <button className="btn btn-outline-secondary" onClick={() => setComposeBagId(null)}>ยกเลิก</button>
-                  <button className="btn btn-primary" onClick={handleFinalize}>บันทึกถุงข้อสอบ</button>
+                  <button
+                    className="btn btn-outline-secondary"
+                    onClick={() => setComposeBagId(null)}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    className="btn btn-primary d-inline-flex align-items-center gap-2"
+                    onClick={handleFinalizeAndLink}
+                    disabled={
+                      bagStatus === "loading" ||
+                      composeBag.scanned.length < composeBag.capacity
+                    }
+                  >
+                    {bagStatus === "loading" ? (
+                      <Loader2 size={16} className="spin-animation" />
+                    ) : (
+                      <DatabaseZap size={16} />
+                    )}
+                    บันทึกและเชื่อมโยงข้อมูล
+                  </button>
                 </div>
               </>
             )}

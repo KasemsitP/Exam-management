@@ -3,7 +3,6 @@ import { authSlice } from "./slices/auth.slice";
 import { sessionsSlice } from "./slices/sessions.slice";
 import { subjectsSlice } from "./slices/subjects.slice";
 import { seatsSlice } from "./slices/seats.slice";
-import { bagsSlice } from "./slices/bags.slice";
 import { gradingSlice } from "./slices/grading.slice";
 //import { campaignsSlice } from "./slices/campaigns.slice";
 import { examDataSlice } from "./slices/examData.slice"
@@ -14,6 +13,8 @@ import { bagHandoverSlice } from "./slices/bagHandover.slice";
 import { examRoomsSlice } from "./slices/examRooms.slice";
 import { examEntitiesSlice } from "./slices/examEntities.slice";
 import { keyManagementSlice } from "./slices/key.slice";
+import { userSessionsSlice } from "./slices/userSessions.slice"; 
+import {bagsSlice} from "./slices/bags.slice";
 export const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
@@ -31,6 +32,9 @@ export const store = configureStore({
     examRooms: examRoomsSlice.reducer,
     examEntities: examEntitiesSlice.reducer,
     keyManagement: keyManagementSlice.reducer,
+    userSessions: userSessionsSlice.reducer,
+
+    
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

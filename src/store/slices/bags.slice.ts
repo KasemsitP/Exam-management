@@ -1,220 +1,333 @@
-import { createSlice, nanoid, PayloadAction } from "@reduxjs/toolkit";
-import { campaignRemoved } from "./examData.slice";
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import axios from 'axios';
 
-export type BagStatus = "draft" | "ready" | "incomplete";
+type LocalRootState = {
+  bags: BagsState;
+};
 
-export interface ExamBag {
-  id: string;
-  campaignId: string;
-  sessionId: string;
-  sessionLabel: string;
-  subjectCode?: string;
-  subjectName?: string;
-  capacity: number;
-  scanned: string[];
-  status: BagStatus;
-  createdAt: string;
+// (Interfaces - เหมือนเดิม)
+export interface Bag {
+  id: string; 
+  campaignId: string;
+  sessionId: string;
+  sessionLabel: string;
+  subjectCode?: string;
+  subjectName?: string;
+  capacity: number;
+  scanned: string[]; 
+  status: "draft" | "ready" | "incomplete";
+}
+
+export interface BagStats {
+  total: number;
+  completed: number;
+  inProgress: number;
+}
+
+interface BulkCreatePayload {
+  campaignId: string;
+  sessionId: string;
+  sessionLabel: string;
+  subjectCode?: string;
+  subjectName?: string;
+  prefix: string;
+  count: number;
+  capacity: number;
+}
+
+interface FinalizeLinkPayload {
+  campaignId: string;
+  bagId: string;
+  scannedCodes: string[];
+}
+
+interface FinalizeLinkResponse {
+  bagId: string;
+  bookletsCreated: number;
+  status: "ready" | "incomplete";
 }
 
 interface BagsState {
-  defaultCapacity: number;
-  byCampaign: Record<string, ExamBag[]>;
+  bags: Record<string, Bag>; 
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
+  defaultCapacity: number;
+  stats: Record<string, BagStats>; 
 }
 
 const initialState: BagsState = {
-  defaultCapacity: 30,
-  byCampaign: {
-    "camp-y68-t2": [
-      {
-        id: "BAG-Y68-D1-01",
-        campaignId: "camp-y68-t2",
-        sessionId: "sess-y68-t2-d1",
-        sessionLabel: "Y68-T2-D1 - Main Site",
-        subjectCode: "LAW101",
-        subjectName: "Civil Law I",
-        capacity: 30,
-        scanned: ["LAW101-0001", "LAW101-0002", "LAW101-0003", "LAW101-0004"],
-        status: "draft",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "BAG-Y68-D1-02",
-        campaignId: "camp-y68-t2",
-        sessionId: "sess-y68-t2-d1",
-        sessionLabel: "Y68-T2-D1 - Main Site",
-        subjectCode: "LAW215",
-        subjectName: "Civil Procedure",
-        capacity: 30,
-        scanned: ["LAW215-0121", "LAW215-0122", "LAW215-0123"],
-        status: "draft",
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: "BAG-Y68-D2-01",
-        campaignId: "camp-y68-t2",
-        sessionId: "sess-y68-t2-d2",
-        sessionLabel: "Y68-T2-D2 - Main Site",
-        subjectCode: "LAW205",
-        subjectName: "Criminal Procedure",
-        capacity: 30,
-        scanned: ["LAW205-0001", "LAW205-0002", "LAW205-0003", "LAW205-0004"],
-        status: "draft",
-        createdAt: new Date().toISOString(),
-      },
-    ],
-  },
+  bags: {},
+  status: "idle",
+  error: null,
+  defaultCapacity: 30,
+  stats: {},
 };
 
-const findBag = (state: BagsState, campaignId: string, bagId: string) => {
-  return state.byCampaign[campaignId]?.find((bag) => bag.id === bagId) ?? null;
-};
+// ========== (Thunks - API Calls) ==========
+
+// ⭐️ (1. THUNK ใหม่: GET) ⭐️
+export const fetchBagsForCampaignThunk = createAsyncThunk<
+  Bag[],
+  string, // (รับ campaignId)
+  { rejectValue: string }
+>(
+  "bags/fetchForCampaign",
+  async (campaignId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/api/bags/campaign/${campaignId}`);
+      return response.data as Bag[];
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "Fetch bags failed");
+      }
+      return rejectWithValue("Fetch bags failed");
+    }
+  }
+);
+
+export const bulkCreateBagsThunk = createAsyncThunk<
+  Bag[], 
+  BulkCreatePayload, 
+  { rejectValue: string }
+>(
+  "bags/bulkCreate",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await axios.post("/api/bags/bulk-create", payload);
+      return response.data as Bag[]; 
+    } catch (error: unknown) {
+      // ... (Error handling)
+      return rejectWithValue("Bulk Create failed");
+    }
+  }
+);
+
+export const finalizeAndLinkBagThunk = createAsyncThunk<
+  FinalizeLinkResponse,
+  FinalizeLinkPayload,
+  { rejectValue: string }
+>(
+  "bags/finalizeAndLink",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await axios.post("/api/bags/finalize-and-link", payload);
+      return response.data as FinalizeLinkResponse;
+    } catch (error: unknown) {
+      // ... (Error handling)
+      return rejectWithValue("Finalize failed");
+    }
+  }
+);
+
+// ⭐️ (2. THUNK ใหม่: DELETE) ⭐️
+export const deleteBagThunk = createAsyncThunk<
+  { bagId: string; campaignId: string }, // (สิ่งที่ Return)
+  { campaignId: string; bagId: string }, // (สิ่งที่รับ)
+  { rejectValue: string }
+>(
+  "bags/delete",
+  async (payload, { rejectWithValue }) => {
+    try {
+      await axios.delete(`/api/bags/${payload.bagId}`);
+      return payload; // (ส่ง Payload กลับไปให้ Reducer)
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "Delete bag failed");
+      }
+      return rejectWithValue("Delete bag failed");
+    }
+  }
+);
+
+// ========== (Slice) ==========
 
 const bagsSlice = createSlice({
-  name: "bags",
-  initialState,
-  reducers: {
-    bagCreated: {
-      prepare: (
-        payload: {
-          campaignId: string;
-          sessionId: string;
-          sessionLabel: string;
-          subjectCode?: string;
-          subjectName?: string;
-          capacity?: number;
-          bagLabel?: string;
-        }
-      ) => {
-        const bagLabel =
-          payload.bagLabel ??
-          `BAG-${payload.sessionLabel.replace(/\s+/g, "-").toUpperCase()}-${nanoid(3).toUpperCase()}`;
-        return {
-          payload: {
-            id: bagLabel,
-            campaignId: payload.campaignId,
-            sessionId: payload.sessionId,
-            sessionLabel: payload.sessionLabel,
-            subjectCode: payload.subjectCode,
-            subjectName: payload.subjectName,
-            capacity: payload.capacity ?? initialState.defaultCapacity,
-          },
-        };
-      },
-      reducer: (state, action: PayloadAction<Omit<ExamBag, "status" | "scanned" | "createdAt">>) => {
-        const campaignBags = state.byCampaign[action.payload.campaignId] ?? [];
-        const exists = campaignBags.some((bag) => bag.id === action.payload.id);
-        if (exists) {
-          return;
-        }
-        state.byCampaign[action.payload.campaignId] = [
-          ...campaignBags,
-          {
-            ...action.payload,
-            status: "draft",
-            scanned: [],
-            createdAt: new Date().toISOString(),
-          },
-        ];
-      },
-    },
-    bagRemoved: (state, action: PayloadAction<{ campaignId: string; bagId: string }>) => {
-      const campaignBags = state.byCampaign[action.payload.campaignId];
-      if (!campaignBags) return;
-      state.byCampaign[action.payload.campaignId] = campaignBags.filter(
-        (bag) => bag.id !== action.payload.bagId
-      );
-    },
-    bagScanAdded: (
-      state,
-      action: PayloadAction<{ campaignId: string; bagId: string; code: string }>
-    ) => {
-      const target = findBag(state, action.payload.campaignId, action.payload.bagId);
-      if (!target) return;
-      const code = action.payload.code.trim();
-      if (!code || target.scanned.includes(code) || target.scanned.length >= target.capacity) return;
-      target.scanned = [...target.scanned, code];
-    },
-    bagScanRemoved: (
-      state,
-      action: PayloadAction<{ campaignId: string; bagId: string; code: string }>
-    ) => {
-      const target = findBag(state, action.payload.campaignId, action.payload.bagId);
-      if (!target) return;
-      target.scanned = target.scanned.filter((item) => item !== action.payload.code);
-      if (target.scanned.length < target.capacity && target.status === "ready") {
-        target.status = "incomplete";
-      }
-    },
-    bagScansCleared: (state, action: PayloadAction<{ campaignId: string; bagId: string }>) => {
-      const target = findBag(state, action.payload.campaignId, action.payload.bagId);
-      if (!target) return;
-      target.scanned = [];
-      target.status = "draft";
-    },
-    bagFinalized: (
-      state,
-      action: PayloadAction<{ campaignId: string; bagId: string; allowIncomplete?: boolean }>
-    ) => {
-      const target = findBag(state, action.payload.campaignId, action.payload.bagId);
-      if (!target) return;
-      const isComplete = target.scanned.length >= target.capacity;
-      if (!isComplete && !action.payload.allowIncomplete) {
-        return;
-      }
-      target.status = isComplete ? "ready" : "incomplete";
-    },
-    bagCapacityUpdated: (
-      state,
-      action: PayloadAction<{ campaignId: string; bagId: string; capacity: number }>
-    ) => {
-      const target = findBag(state, action.payload.campaignId, action.payload.bagId);
-      if (!target) return;
-      target.capacity = Math.max(1, action.payload.capacity);
-      if (target.scanned.length > target.capacity) {
-        target.scanned = target.scanned.slice(0, target.capacity);
-      }
-    },
-  },
-  extraReducers: (builder) => {
-    builder.addCase(campaignRemoved, (state, action) => {
-      delete state.byCampaign[action.payload];
-    });
-  },
+  name: "bags",
+  initialState,
+  reducers: {
+    // ... (Reducers เดิม: bagCreated, bagRemoved, ... bagFinalized) ...
+    bagCreated: (state, action: PayloadAction<Bag>) => {
+      const bag = action.payload;
+      state.bags[bag.id] = bag; 
+      const campaignId = action.payload.campaignId;
+      if (!state.stats[campaignId]) state.stats[campaignId] = { total: 0, completed: 0, inProgress: 0 };
+      state.stats[campaignId].total++;
+      state.stats[campaignId].inProgress++;
+    },
+    bagRemoved: (state, action: PayloadAction<{ campaignId: string; bagId: string }>) => {
+      const bag = state.bags[action.payload.bagId];
+      if (!bag) return;
+      
+      // (อัปเดต Stats)
+      const campaignId = bag.campaignId;
+      if (state.stats[campaignId]) {
+        state.stats[campaignId].total--;
+        if (bag.status === 'draft') state.stats[campaignId].inProgress--;
+        if (bag.status === 'ready') state.stats[campaignId].completed--;
+      }
+      
+      delete state.bags[action.payload.bagId];
+    },
+    bagCapacityUpdated: (state, action: PayloadAction<{ campaignId: string; bagId: string; capacity: number }>) => {
+      const bag = state.bags[action.payload.bagId];
+      if (bag) {
+        bag.capacity = action.payload.capacity; 
+      }
+    },
+    bagScanAdded: (state, action: PayloadAction<{ campaignId: string; bagId: string; code: string }>) => {
+      const { bagId, code } = action.payload;
+      const bag = state.bags[bagId];
+      if (bag && !bag.scanned.includes(code)) {
+        bag.scanned.push(code);
+      }
+    },
+    bagScanRemoved: (state, action: PayloadAction<{ campaignId: string; bagId: string; code: string }>) => {
+      const { bagId, code } = action.payload;
+      const bag = state.bags[bagId];
+      if (bag) {
+        bag.scanned = bag.scanned.filter((c) => c !== code);
+      }
+    },
+    bagScansCleared: (state, action: PayloadAction<{ campaignId: string; bagId: string }>) => {
+      const bag = state.bags[action.payload.bagId];
+      if (bag) bag.scanned = [];
+    },
+    bagFinalized: (state, action: PayloadAction<{ campaignId: string; bagId: string; allowIncomplete: boolean }>) => {
+      const { bagId, allowIncomplete } = action.payload;
+      const newStatus = allowIncomplete ? "incomplete" : "ready";
+      const bag = state.bags[bagId];
+      if (bag) {
+        bag.status = newStatus; 
+      }
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      // (Bulk Create)
+      .addCase(bulkCreateBagsThunk.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(bulkCreateBagsThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        action.payload.forEach(bag => {
+          state.bags[bag.id] = bag;
+        });
+        if (action.payload.length > 0) {
+          const campaignId = action.payload[0].campaignId;
+          if (!state.stats[campaignId]) state.stats[campaignId] = { total: 0, completed: 0, inProgress: 0 };
+          state.stats[campaignId].total += action.payload.length;
+          state.stats[campaignId].inProgress += action.payload.length;
+        }
+      })
+      .addCase(bulkCreateBagsThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed to bulk create bags";
+      })
+
+      // (Finalize and Link)
+      .addCase(finalizeAndLinkBagThunk.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(finalizeAndLinkBagThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        const bag = state.bags[action.payload.bagId];
+        if (bag) {
+          bag.status = action.payload.status;
+          const campaignId = bag.campaignId;
+          if (state.stats[campaignId]) {
+            state.stats[campaignId].inProgress--;
+            if (action.payload.status === 'ready') {
+              state.stats[campaignId].completed++;
+            }
+          }
+        }
+      })
+      .addCase(finalizeAndLinkBagThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed to finalize bag";
+      })
+      
+      // ⭐️ (3. REDUCERS ใหม่) ⭐️
+      // (Fetch Bags)
+      .addCase(fetchBagsForCampaignThunk.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(fetchBagsForCampaignThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        // (แปลง Array (Payload) เป็น Object (State)
+        const newBags: Record<string, Bag> = {};
+        let stats: BagStats = { total: 0, completed: 0, inProgress: 0 };
+        let campaignId = "";
+
+        action.payload.forEach(bag => {
+          newBags[bag.id] = bag;
+          if (!campaignId) campaignId = bag.campaignId;
+          // (คำนวณ Stats ใหม่)
+          stats.total++;
+          if (bag.status === 'ready') stats.completed++;
+          if (bag.status === 'draft') stats.inProgress++;
+        });
+        
+        state.bags = newBags;
+        if (campaignId) {
+          state.stats[campaignId] = stats;
+        }
+      })
+      .addCase(fetchBagsForCampaignThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed to fetch bags";
+      })
+      // (Delete Bag)
+      .addCase(deleteBagThunk.pending, (state) => {
+        state.status = "loading"; // (อาจจะใช้ status ย่อย)
+      })
+      .addCase(deleteBagThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        // (เรียก Reducer 'bagRemoved' ที่เราเขียนไว้)
+        bagsSlice.caseReducers.bagRemoved(state, action);
+      })
+      .addCase(deleteBagThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed to delete bag";
+      });
+  },
 });
 
+// ========== (Actions) ==========
 export const {
-  bagCapacityUpdated,
-  bagCreated,
-  bagFinalized,
-  bagRemoved,
-  bagScanAdded,
-  bagScanRemoved,
-  bagScansCleared,
+  bagCreated,
+  bagRemoved,
+  bagCapacityUpdated,
+  bagScanAdded,
+  bagScanRemoved,
+  bagScansCleared,
+  bagFinalized,
 } = bagsSlice.actions;
+
+// ========== (Selectors) ==========
+export const selectBagsSlice = (state: LocalRootState) => state.bags;
+export const selectDefaultBagCapacity = (state: LocalRootState) => state.bags.defaultCapacity;
+export const selectAllBagsAsArray = (state: LocalRootState) => Object.values(state.bags.bags);
+export const selectBagsForCampaign = (campaignId: string | null) => (state: LocalRootState) => {
+  if (!campaignId) return [];
+  return Object.values(state.bags.bags).filter((bag) => bag.campaignId === campaignId);
+};
+export const selectBagById = (campaignId: string, bagId: string) => (state: LocalRootState) => {
+  const bag = state.bags.bags[bagId]; 
+  if (bag && bag.campaignId === campaignId) {
+    return bag;
+  }
+  return undefined; 
+};
+export const selectBagStatsForCampaign = (campaignId: string | null) => (state: LocalRootState) => {
+  if (!campaignId || !state.bags.stats[campaignId]) {
+    return { total: 0, completed: 0, inProgress: 0 };
+   }
+  return state.bags.stats[campaignId];
+};
 
 export { bagsSlice };
 
-export const selectBagsForCampaign =
-  (campaignId: string | null) =>
-  (state: { bags: BagsState }): ExamBag[] =>
-    campaignId ? state.bags.byCampaign[campaignId] ?? [] : [];
-
-export const selectBagById =
-  (campaignId: string, bagId: string) =>
-  (state: { bags: BagsState }) =>
-    findBag(state.bags, campaignId, bagId);
-
-export const selectBagStatsForCampaign =
-  (campaignId: string | null) =>
-  (state: { bags: BagsState }) => {
-    if (!campaignId) {
-      return { total: 0, completed: 0, inProgress: 0 };
-    }
-    const list = state.bags.byCampaign[campaignId] ?? [];
-    const total = list.length;
-    const completed = list.filter((bag) => bag.status === "ready").length;
-    const inProgress = list.filter((bag) => bag.status !== "ready").length;
-    return { total, completed, inProgress };
-  };
-
-export const selectDefaultBagCapacity = (state: { bags: BagsState }) => state.bags.defaultCapacity;

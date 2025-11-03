@@ -1,50 +1,50 @@
 import { useMemo } from "react";
 import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  BarChart,
-  Bar,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  BarChart,
+  Bar,
 } from "recharts";
 import {
-  CalendarDays,
-  GraduationCap,
-  Package,
-  ClipboardList,
-  AlertTriangle,
-  Users,
-  Target,
-  TrendingUp,
+  CalendarDays,
+  GraduationCap,
+  Package,
+  ClipboardList,
+  AlertTriangle,
+  Users,
+  Target,
+  TrendingUp,
 } from "lucide-react";
-import { useAppSelector } from "@/store/hook";
-import { selectCurrentSession } from "@/store/slices/sessions.slice";
+import { useAppDispatch, useAppSelector } from "@/store/hook"; // ⭐️ (เพิ่ม useAppDispatch)
+import { selectCurrentSession, sessionSelected} from "@/store/slices/sessions.slice"; // ⭐️ (เพิ่ม setCurrentSession)
 import {
-  selectActiveCampaign,
-  selectActiveCampaignSessions,
-  selectSubjectsForSession,
+  selectActiveCampaign,
+  selectActiveCampaignSessions,
+  selectSubjectsForSession,
 } from "@/store/slices/examData.slice";
 import {
-  selectBagStatsForCampaign,
-  selectDefaultBagCapacity,
+  selectBagStatsForCampaign,
+  selectDefaultBagCapacity,
 } from "@/store/slices/bags.slice";
 import { selectGradingMetrics, selectGradingQueue } from "@/store/slices/grading.slice";
 import { selectSeatViolations } from "@/store/slices/seats.slice";
 import { selectCurrentUser } from "@/store/slices/auth.slice";
 
 const weeklyGradingData = [
-  { name: "จันทร์", graded: 120, pending: 80 },
-  { name: "อังคาร", graded: 150, pending: 60 },
-  { name: "พุธ", graded: 170, pending: 55 },
-  { name: "พฤหัส", graded: 190, pending: 45 },
-  { name: "ศุกร์", graded: 210, pending: 35 },
+  { name: "จันทร์", graded: 120, pending: 80 },
+  { name: "อังคาร", graded: 150, pending: 60 },
+  { name: "พุธ", graded: 170, pending: 55 },
+  { name: "พฤหัส", graded: 190, pending: 45 },
+  { name: "ศุกร์", graded: 210, pending: 35 },
 ];
 
 // สีกราฟ/พายชาร์ต
@@ -53,54 +53,63 @@ const muted = "#9AA3AD";
 const pieColors = ["#0EA5E9", "#22C55E", "#F97316"];
 
 export default function Dashboard() {
-  const activeCampaign = useAppSelector(selectActiveCampaign);
-  const currentSession = useAppSelector(selectCurrentSession);
-  const sessions = useAppSelector(selectActiveCampaignSessions);
-  const subjects = useAppSelector(
-    activeCampaign && currentSession
-      ? selectSubjectsForSession(activeCampaign.id, currentSession.id)
-      : () => []
-  );
-  const bagStats = useAppSelector(selectBagStatsForCampaign(activeCampaign?.id ?? null));
-  const defaultBagCapacity = useAppSelector(selectDefaultBagCapacity);
-  const gradingMetrics = useAppSelector(selectGradingMetrics);
-  const gradingQueue = useAppSelector(selectGradingQueue);
-  const seatViolations = useAppSelector(selectSeatViolations);
-  const user = useAppSelector(selectCurrentUser);
+  const dispatch = useAppDispatch(); // ⭐️ (เพิ่ม dispatch)
+  const activeCampaign = useAppSelector(selectActiveCampaign);
+  const currentSession = useAppSelector(selectCurrentSession);
+  const sessions = useAppSelector(selectActiveCampaignSessions);
+  const subjects = useAppSelector(
+    activeCampaign && currentSession
+      ? selectSubjectsForSession(activeCampaign.id, currentSession.id)
+      : () => []
+  );
+  const bagStats = useAppSelector(selectBagStatsForCampaign(activeCampaign?.id ?? null));
+  const defaultBagCapacity = useAppSelector(selectDefaultBagCapacity);
+  const gradingMetrics = useAppSelector(selectGradingMetrics);
+  const gradingQueue = useAppSelector(selectGradingQueue);
+  const seatViolations = useAppSelector(selectSeatViolations);
+  const user = useAppSelector(selectCurrentUser);
 
-  const queueSummary = useMemo(() => {
-    const queued = gradingQueue.filter((item) => item.status === "queued").length;
-    const grading = gradingQueue.filter((item) => item.status === "grading").length;
-    const graded =
-      gradingMetrics.gradedCount ||
-      gradingQueue.filter((item) => item.status === "graded").length;
-    return { queued, grading, graded };
-  }, [gradingQueue, gradingMetrics.gradedCount]);
+  const queueSummary = useMemo(() => {
+    const queued = gradingQueue.filter((item) => item.status === "queued").length;
+    const grading = gradingQueue.filter((item) => item.status === "grading").length;
+    const graded =
+      gradingMetrics.gradedCount ||
+      gradingQueue.filter((item) => item.status === "graded").length;
+    return { queued, grading, graded };
+  }, [gradingQueue, gradingMetrics.gradedCount]);
 
-  const gradePieData = useMemo(
-    () => [
-      { name: "ตรวจเสร็จ", value: queueSummary.graded },
-      { name: "กำลังตรวจ", value: queueSummary.grading },
-      { name: "รอคิว", value: queueSummary.queued },
-    ],
-    [queueSummary]
-  );
+  const gradePieData = useMemo(
+    () => [
+      { name: "ตรวจเสร็จ", value: queueSummary.graded },
+      { name: "กำลังตรวจ", value: queueSummary.grading },
+      { name: "รอคิว", value: queueSummary.queued },
+    ],
+    [queueSummary]
+  );
 
-  const subjectScoreData = useMemo(() => {
-    if (!subjects.length) {
-      return [
-        { name: "MTH101", average: 74, target: 80 },
-        { name: "PHY201", average: 69, target: 80 },
-        { name: "CHE110", average: 77, target: 80 },
-      ];
-    }
-    return subjects.map((subject, index) => ({
-      name: subject.code ?? `SUB-${index + 1}`,
-      average: 68 + ((index * 7) % 18),
-      target: 80,
-    }));
-  }, [subjects]);
+  const subjectScoreData = useMemo(() => {
+    if (!subjects.length) {
+      return [
+        { name: "MTH101", average: 74, target: 80 },
+        { name: "PHY201", average: 69, target: 80 },
+        { name: "CHE110", average: 77, target: 80 },
+      ];
+    }
+    return subjects.map((subject, index) => ({
+      name: subject.code ?? `SUB-${index + 1}`,
+      average: 68 + ((index * 7) % 18),
+      target: 80,
+    }));
+  }, [subjects]);
 
+  
+  const handleSessionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const sessionId = e.target.value;
+    const selectedSession = sessions.find((s: any) => s.id === sessionId);
+    if (selectedSession) {
+      dispatch(sessionSelected(sessionId));
+    }
+  };
   return (
     <div className="d-flex flex-column gap-4">
       {/* Header */}
@@ -117,6 +126,20 @@ export default function Dashboard() {
           </div>
 
           <div className="d-flex flex-wrap align-items-center gap-2">
+            <select
+              className="form-select form-select-sm"
+              style={{ width: "200px" }}
+              value={currentSession?.id ?? ""}
+              onChange={handleSessionChange}
+            >
+              <option value="">-- เลือกรอบสอบ --</option>
+              {sessions.map((s: any) => (
+                <option key={s.id} value={s.id}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+
             <span className="badge text-bg-light d-inline-flex align-items-center gap-1">
               <CalendarDays size={14} />
               {currentSession?.examDate
@@ -159,7 +182,7 @@ export default function Dashboard() {
               <div className="text-muted small">รายวิชาที่จัดสอบ</div>
               <div className="h3 mb-1">{subjects.length}</div>
               <div className="small text-muted">
-                รวม {subjects.reduce((t, s) => t + (s.questions ?? 0), 0)} ชุดคำถามในรอบปัจจุบัน
+                รวม {subjects.reduce((t, s: any) => t + (s.questions ?? 0), 0)} ชุดคำถามในรอบปัจจุบัน
               </div>
             </div>
           </div>
@@ -188,9 +211,8 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Charts row */}
+      {/* Charts */}
       <section className="row g-3">
-        {/* Area chart */}
         <div className="col-lg-8">
           <div className="card shadow-sm h-100">
             <div className="card-header bg-white">
@@ -222,7 +244,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Right column: pie + kpis */}
+        {/* Pie + KPIs */}
         <div className="col-lg-4 d-flex flex-column gap-3">
           <div className="card shadow-sm">
             <div className="card-header bg-white">
@@ -259,6 +281,7 @@ export default function Dashboard() {
                   <div>กำลังตรวจ {queueSummary.grading} | รอคิว {queueSummary.queued}</div>
                 </div>
               </div>
+
               <div className="d-flex align-items-center gap-3 border rounded p-2">
                 <Target size={16} className="text-primary" />
                 <div>
@@ -266,6 +289,7 @@ export default function Dashboard() {
                   <div>เป้าหมายมาตรฐาน 80 คะแนน</div>
                 </div>
               </div>
+
               <div className="d-flex align-items-center gap-3 border rounded p-2">
                 <TrendingUp size={16} className="text-primary" />
                 <div>
@@ -280,7 +304,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Bottom row */}
+      {/* Bottom section */}
       <section className="row g-3">
         <div className="col-lg-8">
           <div className="card shadow-sm h-100">
@@ -316,6 +340,7 @@ export default function Dashboard() {
                 {queueSummary.queued} รายการรอคิว
               </span>
             </div>
+
             <div className="card-body d-flex flex-column gap-2">
               {gradingQueue.slice(0, 4).map((entry) => (
                 <div
@@ -343,6 +368,7 @@ export default function Dashboard() {
                   </span>
                 </div>
               ))}
+
               {gradingQueue.length === 0 && (
                 <div className="text-center text-muted small">ยังไม่มีงานรอตรวจ</div>
               )}
@@ -350,21 +376,31 @@ export default function Dashboard() {
           </div>
 
           {seatViolations.length > 0 && (
-            <div className="card shadow-sm border-warning-subtle" style={{ background: "rgba(255,193,7,.15)" }}>
+            <div
+              className="card shadow-sm border-warning-subtle"
+              style={{ background: "rgba(255,193,7,.15)" }}
+            >
               <div className="card-header bg-white d-flex align-items-center gap-2">
                 <AlertTriangle size={16} className="text-warning" />
                 <div>
                   <h6 className="mb-0">ข้อมูลที่ต้องตรวจสอบ</h6>
-                  <small className="text-warning">ระบบพบการแจ้งเตือน {seatViolations.length} รายการจากการจัดที่นั่ง</small>
+                  <small className="text-warning">
+                    ระบบพบการแจ้งเตือน {seatViolations.length} รายการจากการจัดที่นั่ง
+                  </small>
                 </div>
               </div>
               <div className="card-body d-flex flex-column gap-2 small">
                 {seatViolations.map((violation) => (
-                  <div key={violation.id} className="border rounded px-2 py-2 bg-warning bg-opacity-10">
+                  <div
+                    key={violation.id}
+                    className="border rounded px-2 py-2 bg-warning bg-opacity-10"
+                  >
                     {violation.message}
                   </div>
                 ))}
-                <button className="btn btn-outline-warning btn-sm mt-1">ดูรายละเอียดการจัดที่นั่ง</button>
+                <button className="btn btn-outline-warning btn-sm mt-1">
+                  ดูรายละเอียดการจัดที่นั่ง
+                </button>
               </div>
             </div>
           )}
