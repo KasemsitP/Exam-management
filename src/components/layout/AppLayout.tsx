@@ -40,6 +40,7 @@ const NAV_ITEMS = [
   { to: "/grading-station", label: "สถานีตรวจ", icon: GraduationCap },
   { to: "/score-review", label: "ตรวจทานคะแนน", icon: ClipboardCheck },
   { to: "/user-search", label: "ค้นหาผู้ใช้", icon: Search },
+  { to: "/accounts", label: "จัดการบัญชีผู้ใช้", icon: Users }
 ];
 
 export function AppLayout() {
@@ -163,7 +164,7 @@ export function AppLayout() {
       <div className="flex-grow-1 d-flex flex-column" style={{ backgroundColor: "#fff7ed" }}>
         <header className="bg-white border-bottom py-3 px-3 px-md-4 d-flex justify-content-between align-items-center">
           <div>
-            <h1 className="h5 mb-0 text-secondary">ระบบจัดการสนามสอบ</h1>
+            <h1 className="h5 mb-0 text-secondary">ระบบจัดการข้อสอบ</h1>
             <div className="mt-1 small">
               {activeCampaign ? (
                 <>

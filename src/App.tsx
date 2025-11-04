@@ -16,6 +16,7 @@ import GraderManagementPage from "@/pages/GraderManagement";
 import GradingStationPage from "@/pages/GradingStation";
 import ScoreReviewPage from "@/pages/ScoreReview";
 import KeyManagementPage from "@/pages/key";
+import AccountsPage from "./pages/AccountManagement";
 //import UserSearchPage from "@/pages/UserSearch";
 import { AppLayout } from "@/components/layout/AppLayout";
 
@@ -79,6 +80,7 @@ function AppContent() {
           <Route path="/grading-station" element={<GradingStationPage />} />
           <Route path="/score-review" element={<ScoreReviewPage />} />
           {/* <Route path="/user-search" element={<UserSearchPage />} /> */}
+          <Route path="/accounts" element={<AccountsPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<NotFound />} />

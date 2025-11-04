@@ -236,9 +236,9 @@ export default function ImportCsvPage() {
             <FileSpreadsheet size={24} />
           </div>
           <div>
-            <h1 className="h4 mb-1">Import Candidates (CSV / Excel)</h1>
+            <h1 className="h4 mb-1">นำเข้าข้อมูลรายชื่อผู้เข้าสอบ (CSV / Excel)</h1>
             <p className="text-muted small mb-0">
-              Upload a .csv or .xlsx file. You can preview the content before committing the import.
+              อัปโหลดไฟล์ CSV หรือ Excel ที่มีรายชื่อผู้เข้าสอบ
             </p>
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function ImportCsvPage() {
           <div className="card-body">
             <div className="row g-4">
               <div className="col-md-6">
-                <label className="form-label">Select file</label>
+                <label className="form-label">เลือกไฟล์</label>
                 <input
                   type="file"
                   accept=".csv,.xlsx,.xls"
@@ -275,7 +275,7 @@ export default function ImportCsvPage() {
               </div>
 
               <div className="col-md-3">
-                <label className="form-label">Preview rows</label>
+                <label className="form-label">ตัวอย่างแถว</label>
                 <select
                   className="form-select"
                   value={previewRows}
@@ -316,11 +316,11 @@ export default function ImportCsvPage() {
               <div className="col-md-12">
                 {activeCampaign ? (
                   <div className="alert alert-info mb-0" role="alert">
-                    Importing into campaign: <strong>{activeCampaign.name}</strong>
+                    นำเข้าสู่รอบสอบ: <strong>{activeCampaign.name}</strong>
                   </div>
                 ) : (
                   <div className="small text-warning mt-1">
-                    Please select an active campaign before importing candidates.
+                    โปรดเลือกข้อมูลรอบสอบที่ใช้งานอยู่ก่อนที่จะนำเข้าข้อมูล
                   </div>
                 )}
               </div>
@@ -371,7 +371,7 @@ export default function ImportCsvPage() {
                     disabled={!supportsImport || isImporting}
                   >
                     <Upload size={16} />
-                    {isImporting ? "Importing..." : "Import now"}
+                    {isImporting ? "กำลังนำเข้าข้อมูล" : "นำเข้าข้อมูล"}
                   </button>
                 </div>
               </div>

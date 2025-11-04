@@ -12,7 +12,8 @@ export type Permission =
   | "grade_exams"
   | "view_sessions"
   | "view_reports"
-  | "view_qr";
+  | "view_qr"
+  | "manage_accounts";
 
 const ALL_PERMISSIONS: Permission[] = [
   "manage_bags",
@@ -27,6 +28,7 @@ const ALL_PERMISSIONS: Permission[] = [
   "view_sessions",
   "view_reports",
   "view_qr",
+  "manage_accounts"
 ];
 
 const rolePermissions: Record<Role, Permission[]> = {

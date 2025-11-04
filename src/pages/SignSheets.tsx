@@ -74,7 +74,7 @@ const padTo = <T,>(arr: T[], size: number, filler: T) =>
 
 const QR_SIZE = 96;    // ขนาด QR (หน้าเว็บ)
 const QR_BOX = 110;
-const ROWS_PER_PAGE = 7;
+const ROWS_PER_PAGE = 6;
 
 // ========== PDF Helpers ==========
 async function makeQR(value: string, size = 300): Promise<string> {
@@ -90,7 +90,7 @@ export async function exportSignSheetsPDF({
   course,
   org,
   sessionText,
-  rowsPerPage = 7,
+  rowsPerPage = 6,
   fileName = "ใบเซ็นชื่อนักสอบ.pdf",
   useThaiFont = false, // ถ้าตั้ง vfs ฟอนต์ไทยด้านบน ให้ส่ง true แล้วไปตั้ง defaultStyle.font = "THSarabun"
 }: {
@@ -355,7 +355,7 @@ export default function SignSheetsPage() {
                     course,
                     org,
                     sessionText,
-                    rowsPerPage: 7,
+                    rowsPerPage: ROWS_PER_PAGE,
                     fileName: `ใบเซ็นชื่อ_${org.replaceAll(" ", "")}.pdf`,
                      useThaiFont: true, // ถ้าตั้ง vfs ฟอนต์ไทยไว้ด้านบน เปิดบรรทัดนี้
                   })

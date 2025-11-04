@@ -15,6 +15,7 @@ import { examEntitiesSlice } from "./slices/examEntities.slice";
 import { keyManagementSlice } from "./slices/key.slice";
 import { userSessionsSlice } from "./slices/userSessions.slice"; 
 import {bagsSlice} from "./slices/bags.slice";
+import { accountsSlice } from "./slices/account.slice";
 export const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
@@ -33,6 +34,7 @@ export const store = configureStore({
     examEntities: examEntitiesSlice.reducer,
     keyManagement: keyManagementSlice.reducer,
     userSessions: userSessionsSlice.reducer,
+    accounts: accountsSlice.reducer,
 
     
   },

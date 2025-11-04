@@ -99,6 +99,11 @@ const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
+        setAuthenticated(state, action: PayloadAction<AuthUser>) {
+      state.user = action.payload;
+      state.status = "authenticated";
+      state.error = undefined;
+    },
     // 7. เปลี่ยน `logout` reducer
     // เป็น action ง่ายๆ สำหรับ Clear State (จะถูกเรียกโดย logout thunk)
     clearAuth: (state) => {
@@ -154,7 +159,7 @@ const authSlice = createSlice({
 });
 
 // 8. Export action ใหม่
-export const { setUser, clearAuth } = authSlice.actions;
+export const { setUser, clearAuth ,setAuthenticated} = authSlice.actions;
 export { authSlice };
 
 // Selectors (ยังคงเดิม)

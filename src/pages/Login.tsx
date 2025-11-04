@@ -8,19 +8,15 @@ import {
   selectAuthError,
   selectAuthStatus,
   selectCurrentUser,
+  setAuthenticated
 } from "@/store/slices/auth.slice";
 
 interface LoginFormValues {
   username: string;
   password: string;
 }
+import { AuthUser, Role } from "@/store/slices/auth.slice";
 
-const SAMPLE_USERS = [
-  { username: "admin", password: "admin123", role: "ผู้ดูแลระบบ" },
-  { username: "staff", password: "staff123", role: "เจ้าหน้าที่สนามสอบ" },
-  { username: "proctor", password: "proctor123", role: "กรรมการคุมสอบ" },
-  { username: "grader", password: "grader123", role: "ผู้ตรวจข้อสอบ" },
-];
 
 export default function Login() {
   const dispatch = useAppDispatch();
@@ -51,6 +47,42 @@ export default function Login() {
   const onSubmit = (values: LoginFormValues) => {
     dispatch(login(values));
   };
+const DEV_TOKEN_KEY = "examflow_dev_token";
+const DEV_USER_KEY = "examflow_user";
+
+// ...
+const handleBypass = () => {
+  if (import.meta.env.MODE !== "development") {
+    toast({
+      title: "Bypass ถูกปิด",
+      description: "ใช้ได้เฉพาะโหมด development เท่านั้น",
+      variant: "destructive",
+    });
+    return;
+  }
+
+ const mockUser: AuthUser = {
+  id: "u-1",
+  name: "Dev Admin",
+  username: "admin",
+  roles: ["admin"] as Role[],   // <- บังคับให้เป็น Role[]
+  avatar: "DA",
+};
+
+  // อัปเดต Redux ให้เป็นสถานะล็อกอิน
+  dispatch(setAuthenticated(mockUser));
+
+  // (ถ้าคุณยังอยากเก็บ token สำหรับ bootstrap อื่น ๆ ก็เซ็ตเพิ่มได้)
+  localStorage.setItem("examflow_dev_token", "token-admin");
+  localStorage.setItem("examflow_user", JSON.stringify(mockUser));
+
+  toast({
+    title: "เข้าสู่ระบบแบบ Bypass (Dev)",
+    description: `ยินดีต้อนรับ ${mockUser.name}`,
+  });
+
+  navigate("/dashboard", { replace: true });
+};
 
   return (
     <div className="min-vh-100 w-100 d-flex align-items-center justify-content-center position-relative overflow-hidden px-3 px-md-5 py-5">
@@ -95,16 +127,13 @@ export default function Login() {
         >
           <div className="card-body p-4 p-md-5">
             <div className="text-center mb-4">
-              <h1 className="h4 fw-semibold mb-1 text-body">เข้าสู่ระบบศูนย์ควบคุมการสอบ</h1>
-              <p className="text-muted mb-0">
-                ระบุชื่อผู้ใช้และรหัสผ่านที่ได้รับ เพื่อเข้าใช้งานแพลตฟอร์มบริหารสนามสอบ
-              </p>
+              <h1 className="h4 fw-semibold mb-1 text-body">ระบบจัดการข้อสอบ</h1>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="d-grid gap-3">
               <div>
                 <label htmlFor="username" className="form-label">
-                  ชื่อผู้ใช้ / อีเมล
+                  ชื่อผู้ใช้
                 </label>
                 <input
                   id="username"
@@ -133,48 +162,23 @@ export default function Login() {
                 </div>
               )}
 
-              <div className="d-flex justify-content-between small text-muted">
-                <span>ลืมรหัสผ่าน?</span>
-                <span>ติดต่อผู้ดูแลระบบ</span>
-              </div>
 
-              <div
-                className="p-3 rounded-3"
-                style={{
-                  border: "1px dashed rgba(16,185,129,0.5)",
-                  background: "rgba(236,253,245,0.8)",
-                  color: "#065f46",
-                }}
-              >
-                <p className="fw-semibold mb-2" style={{ color: "#064e3b" }}>
-                  บัญชีตัวอย่างสำหรับการสาธิต
-                </p>
-                <div className="row g-1">
-                  {SAMPLE_USERS.map((demo) => (
-                    <div key={demo.username} className="col-12 col-sm-6">
-                      <span className="fw-medium" style={{ color: "#064e3b" }}>
-                        {demo.username}
-                      </span>{" "}
-                      / {demo.password}{" "}
-                      <span style={{ color: "#059669" }}>({demo.role})</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+
 
               <button
                 type="submit"
                 className="btn btn-success btn-lg w-100 shadow"
                 disabled={status === "loading"}
-                style={{ boxShadow: "0 10px 24px rgba(16,185,129,0.3)" }}
+                style={{ boxShadow: "0 10px 24px rgba(215, 186, 38, 0.3)" }}
               >
                 {status === "loading" ? "กำลังตรวจสอบข้อมูล..." : "เข้าสู่ระบบ"}
               </button>
 
               <p className="text-center small text-muted mb-0">
-                &copy; {new Date().getFullYear()} ExamFlow Control Center
+                &copy; {new Date().getFullYear()} ระบบจัดการข้อสอบ
               </p>
             </form>
+            <button onClick={handleBypass}>bypass</button>
           </div>
       </div>
     </div>

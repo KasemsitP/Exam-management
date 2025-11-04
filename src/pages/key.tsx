@@ -99,7 +99,7 @@ export default function KeyManagementPage() {
     }
     if (!canGenerate) {
       toast({
-        title: "Campaign นี้มีคีย์ครบ 2 อันแล้ว",
+        title: "รอบสอบนี้มีคีย์ครบ 2 อันแล้ว",
         variant: "destructive",
       });
       return;
@@ -165,7 +165,7 @@ export default function KeyManagementPage() {
             <Lock size={24} />
           </div>
           <div>
-            <h1 className="h4 mb-1">Key & Encryption Management</h1>
+            <h1 className="h4 mb-1">คีย์และการเข้ารหัส</h1>
             {activeCampaign && (
               <div className="small text-muted">
                 สนามสอบ:{" "}
@@ -211,14 +211,14 @@ export default function KeyManagementPage() {
                   ) : (
                     <Plus size={16} />
                   )}
-                  Save New Key
+                  สร้างคีย์ใหม่
                 </button>
               </div>
             </div>
             {!canGenerate && activeKeys.length >= 2 && (
               <div className="alert alert-success small py-2 mt-3 mb-0">
                 <ShieldCheck size={16} className="me-2" />
-                Campaign นี้มีคีย์ครบ 2 อันแล้ว (ไม่สามารถเพิ่มได้)
+                รอบสอบนี้มีคีย์ครบ 2 อันแล้ว (ไม่สามารถเพิ่มได้)
               </div>
             )}
           </div>
@@ -248,20 +248,16 @@ export default function KeyManagementPage() {
             {activeKeys.length > 0 && (
               <ul className="list-group">
                 {activeKeys.map((key: any) => (
-                  <li
+                  <li 
                     key={key.id}
                     className="list-group-item d-flex align-items-center justify-content-between"
                   >
                     <div className="d-flex align-items-center gap-3">
                       <Hash size={16} className="text-muted" />
                       <div className="d-flex flex-column">
-                        <span className="fw-semibold text-monospace">
+                        <span   className="fw-semibold text-monospace">
                           {key.key}
                         </span>
-                        <small className="text-muted">
-                          ID: {key.id} | IV:{" "}
-                          {key.iv ? key.iv.slice(0, 16) : "N/A"}...
-                        </small>
                       </div>
                     </div>
                     <button

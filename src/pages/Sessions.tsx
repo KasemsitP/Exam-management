@@ -486,9 +486,9 @@ export default function CampaignsPage() {
         <div className="card-header bg-white">
           <div className="d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center justify-content-lg-between">
             <div>
-              <h5 className="card-title mb-1">วันที่การแคมเปญและเซสชัน</h5>
+              <h5 className="card-title mb-1">สร้างรอบสอบและวันที่สอบ</h5>
               <p className="card-text text-muted mb-0">
-                หาดการข้อมูลแคมเปญ หรือรายวิชา เพื่อความกังวลเพิ่มเติม
+                Campaign และ Session การสอบ
               </p>
             </div>
             <ShowIfCan permission="manage_subjects">
