@@ -123,7 +123,6 @@ export const updateAccountThunk = createAsyncThunk<
       const response = await axios.put(`/api/accounts/${payload.id}`, payload);
       return response.data as Account;
     } catch (error: unknown) {
-      // ... (Error handling)
       return rejectWithValue("Update failed");
     }
   }

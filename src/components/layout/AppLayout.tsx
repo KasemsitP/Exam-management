@@ -36,7 +36,7 @@ const NAV_ITEMS = [
   { to: "/import-csv", label: "นำเข้าข้อมูล", icon: DownloadCloud },
   { to: "/keys", label: "รหัสผ่าน / คีย์", icon: KeyRound },
   { to: "/sign-sheets", label: "ใบบันทึกการสอบ", icon: FilePenLine },
-  { to: "/graders", label: "ผู้ตรวจข้อสอบ", icon: Users },
+  // { to: "/graders", label: "ผู้ตรวจข้อสอบ", icon: Users },
   { to: "/grading-station", label: "สถานีตรวจ", icon: GraduationCap },
   { to: "/score-review", label: "ตรวจทานคะแนน", icon: ClipboardCheck },
   { to: "/user-search", label: "ค้นหาผู้ใช้", icon: Search },

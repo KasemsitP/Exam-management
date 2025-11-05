@@ -12,7 +12,7 @@ import BagsPage from "@/pages/Bags";
 import BagHandoverPage from "@/pages/BagHandover";
 import ImportCsvPage from "@/pages/importcsv";
 import SignSheetsPage from "@/pages/SignSheets";
-import GraderManagementPage from "@/pages/GraderManagement";
+// import GraderManagementPage from "@/pages/GraderManagement";
 import GradingStationPage from "@/pages/GradingStation";
 import ScoreReviewPage from "@/pages/ScoreReview";
 import KeyManagementPage from "@/pages/key";
@@ -76,7 +76,7 @@ function AppContent() {
           <Route path="/import-csv" element={<ImportCsvPage />} />
           <Route path="/keys" element={<KeyManagementPage />} />
           <Route path="/sign-sheets" element={<SignSheetsPage />} />
-          <Route path="/graders" element={<GraderManagementPage />} />
+          {/* <Route path="/graders" element={<GraderManagementPage />} /> */}
           <Route path="/grading-station" element={<GradingStationPage />} />
           <Route path="/score-review" element={<ScoreReviewPage />} />
           {/* <Route path="/user-search" element={<UserSearchPage />} /> */}

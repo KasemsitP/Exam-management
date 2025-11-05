@@ -47,10 +47,8 @@ export default function Login() {
   const onSubmit = (values: LoginFormValues) => {
     dispatch(login(values));
   };
-const DEV_TOKEN_KEY = "examflow_dev_token";
-const DEV_USER_KEY = "examflow_user";
 
-// ...
+
 const handleBypass = () => {
   if (import.meta.env.MODE !== "development") {
     toast({
