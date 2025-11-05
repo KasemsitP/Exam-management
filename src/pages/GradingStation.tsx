@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Scanner } from "@yudiel/react-qr-scanner";
+import { Scanner ,  boundingBox } from "@yudiel/react-qr-scanner";
 import {
   AlertCircle,
   CheckCircle2,
@@ -18,12 +18,12 @@ import { ShowIfCan } from "@/components/auth/ShowIfCan";
 
 const ROOM_PASSWORD = "5556";
 
-interface ParsedPayload {
-  campaignName?: string;
-  sessionName?: string;
-  userId?: string;
-  raw: string;
-}
+// interface ParsedPayload {
+//   campaignName?: string;
+//   sessionName?: string;
+//   userId?: string;
+//   raw: string;
+// }
 
 interface RecordedScore {
   time: string;
@@ -32,19 +32,19 @@ interface RecordedScore {
   score: number;
 }
 
-const parseQrPayload = (payload: string): ParsedPayload => {
-  const result: ParsedPayload = { raw: payload };
-  payload.split("|").forEach((chunk) => {
-    const [key, value] = chunk.split(":");
-    if (!key || value === undefined) return;
-    const normalized = key.trim().toUpperCase();
-    const trimmed = value.trim();
-    if (normalized === "STD") result.userId = trimmed;
-    if (normalized === "COURSE") result.campaignName = trimmed;
-    if (normalized === "SES") result.sessionName = trimmed;
-  });
-  return result;
-};
+// const parseQrPayload = (payload: string): ParsedPayload => {
+//   const result: ParsedPayload = { raw: payload };
+//   payload.split("|").forEach((chunk) => {
+//     const [key, value] = chunk.split(":");
+//     if (!key || value === undefined) return;
+//     const normalized = key.trim().toUpperCase();
+//     const trimmed = value.trim();
+//     if (normalized === "STD") result.userId = trimmed;
+//     if (normalized === "COURSE") result.campaignName = trimmed;
+//     if (normalized === "SES") result.sessionName = trimmed;
+//   });
+//   return result;
+// };
 
 export default function GradingStationPage() {
   const { toast } = useToast();
@@ -99,37 +99,35 @@ export default function GradingStationPage() {
 
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [isUnlocked, setIsUnlocked] = useState(false);
-
-  const [scanData, setScanData] = useState<ParsedPayload | null>(null);
+  const [pause, setPause] = useState(false);
+  const [scanData, setScanData] = useState<string>("");
   const [score, setScore] = useState("");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [recent, setRecent] = useState<RecordedScore[]>([]);
 
   const assignedSubject = graderProfile?.subjects[0];
 
-  const handleUnlock = () => {
-    if (roomCodeInput.trim() === ROOM_PASSWORD) {
-      setIsUnlocked(true);
-      toast({ title: "ปลดล็อกสถานีตรวจแล้ว" });
-    } else {
-      toast({
-        title: "รหัสห้องไม่ถูกต้อง",
-        description: "โปรดตรวจสอบรหัสอีกครั้ง",
-        variant: "destructive",
-      });
-    }
-  };
+  // const handleUnlock = () => {
+  //   if (roomCodeInput.trim() === ROOM_PASSWORD) {
+  //     setIsUnlocked(true);
+  //     toast({ title: "ปลดล็อกสถานีตรวจแล้ว" });
+  //   } else {
+  //     toast({
+  //       title: "รหัสห้องไม่ถูกต้อง",
+  //       description: "โปรดตรวจสอบรหัสอีกครั้ง",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
 
-  const handleScan = (results: { rawValue: string }[]) => {
-    if (!isUnlocked) return;
-    const first = results?.[0]?.rawValue;
-    if (!first) return;
-    const parsed = parseQrPayload(first);
-    setScanData(parsed);
+  const handleScan = (result: string) => {
+    setPause(true);
+    setScanData(result)
     toast({
       title: "สแกนสำเร็จ",
-      description: `พบรหัสผู้เข้าสอบ: ${parsed.userId ?? "ไม่ระบุ"}`,
+      description: `พบรหัสผู้เข้าสอบ: ${result ?? "ไม่ระบุ"}`,
     });
+    setPause(false)
   };
 
   const handleConfirmScore = () => {
@@ -148,7 +146,7 @@ export default function GradingStationPage() {
     if (!scanData || !graderProfile || !score) return;
     const record: RecordedScore = {
       time: new Date().toLocaleTimeString("th-TH"),
-      userId: scanData.userId ?? "-",
+      userId: scanData ?? "-",
       grader: graderProfile.code,
       score: Number(score),
     };
@@ -157,6 +155,7 @@ export default function GradingStationPage() {
     setScore("");
     setIsConfirmOpen(false);
     toast({ title: "บันทึกคะแนนแล้ว" });
+    
   };
 
   // Bootstrap modal backdrop helper
@@ -210,7 +209,7 @@ export default function GradingStationPage() {
           </div>
         </div>
 
-     
+
 
         {graderProfile && (
           <div className="row g-4 mt-1">
@@ -228,27 +227,44 @@ export default function GradingStationPage() {
                   </label>
                   <div className="rounded overflow-hidden border bg-black mb-2">
                     <Scanner
-                      onScan={handleScan}
+                      formats={["qr_code",
+                        "micro_qr_code",
+                        "rm_qr_code",]}
+                      onScan={(detectedCodes) => {
+                        if (detectedCodes.length > 0) {
+                          handleScan(detectedCodes[0].rawValue);
+                        }
+                      }}
                       onError={(error) => console.warn("scanner error", error)}
                       constraints={{ facingMode: "environment" }}
                       styles={{
                         container: { width: "100%" },
                         video: { width: "100%" },
                       }}
+                      components={{
+                        onOff: true,
+                        torch: true,
+                        zoom: true,
+                        finder: true,
+                        tracker: boundingBox,
+                      }}
+                      allowMultiple={false}
+                      scanDelay={2000}
+                      paused={pause}
                     />
                   </div>
 
                   {scanData ? (
                     <div className="border rounded p-2 bg-light small mb-3">
                       <span className="badge text-bg-light me-2">
-                        รหัสผู้เข้าสอบ {scanData.userId ?? "-"}
+                        รหัสผู้เข้าสอบ {scanData ?? "-"}
                       </span>
-                      <span className="badge text-bg-light me-2">
+                      {/* <span className="badge text-bg-light me-2">
                         แคมเปญ: {scanData.campaignName ?? "-"}
                       </span>
                       <span className="badge text-bg-light">
                         เซสชัน: {scanData.sessionName ?? "-"}
-                      </span>
+                      </span> */}
                     </div>
                   ) : (
                     <div className="small text-muted mb-3">
@@ -258,6 +274,14 @@ export default function GradingStationPage() {
 
                   {/* Form (เอาหน้า/ช่องกรอก "เลขข้อ" ออกแล้ว) */}
                   <div className="row g-3">
+                    <input
+                      type="number"
+                      className="form-control"
+                      placeholder="คะแนน"
+                      value={scanData}
+                      disabled
+                      min={0}
+                    />
                     <div className="col-md-6">
                       <label className="form-label">คะแนน</label>
                       <input
@@ -270,7 +294,7 @@ export default function GradingStationPage() {
                       />
                     </div>
 
-                {/*    <div className="col-12">
+                    {/*    <div className="col-12">
                       <label className="form-label">หมายเหตุ (ถ้ามี)</label>
                       <input
                         className="form-control"
@@ -363,7 +387,7 @@ export default function GradingStationPage() {
               <div className="modal-body small text-muted">
                 <p>
                   รหัสผู้เข้าสอบ:{" "}
-                  <span className="text-body">{scanData?.userId ?? "-"}</span>
+                  <span className="text-body">{scanData ?? "-"}</span>
                 </p>
                 <p>
                   คะแนน: <span className="text-body">{score || "-"}</span>
