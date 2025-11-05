@@ -1,21 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Building2, DoorOpen, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, DoorOpen, Plus, Search, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { selectActiveCampaign } from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectActiveCampaignSessions } from "@/store/slices/examData.slice";
+
 import {
-  roomRemoved,
-  roomUpserted,
+  fetchRoomsBySessionThunk,
+  saveRoomThunk,
+  deleteRoomThunk,
   selectRoomSummary,
   selectRoomsBySession,
+  selectExamRoomsSlice,
 } from "@/store/slices/examRooms.slice";
+
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 
 interface RoomFormValues {
   sessionId: string;
   roomCode: string;
   capacity: number;
+  applyToAllSessions?: boolean;
 }
 
 export default function ExamRoomsPage() {
@@ -23,51 +28,81 @@ export default function ExamRoomsPage() {
   const { toast } = useToast();
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  const sessions = activeCampaign?.sessions ?? [];
+  const sessions = useAppSelector(selectActiveCampaignSessions) ?? [];
+  const { status: roomStatus } = useAppSelector(selectExamRoomsSlice);
 
+  // -------- Session selection ----------
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(sessions[0]?.id ?? null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingRoom, setEditingRoom] = useState<{ sessionId: string; roomCode: string } | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-
   useEffect(() => {
     if (!sessions.length) {
       setSelectedSessionId(null);
       return;
     }
-    if (!selectedSessionId || !sessions.some((s) => s.id === selectedSessionId)) {
+    if (!selectedSessionId || !sessions.some((s: any) => s.id === selectedSessionId)) {
       setSelectedSessionId(sessions[0].id);
     }
   }, [sessions, selectedSessionId]);
 
-  const rooms = useAppSelector(selectRoomsBySession(selectedSessionId));
-  const summary = useAppSelector(selectRoomSummary(selectedSessionId));
+  // -------- Fetch rooms when session changes ----------
+  useEffect(() => {
+    if (selectedSessionId) {
+      dispatch(fetchRoomsBySessionThunk(selectedSessionId));
+    }
+  }, [selectedSessionId, dispatch]);
 
+  // -------- Data/selectors (fallbacks) ----------
+  const rooms =
+    useAppSelector(selectRoomsBySession(selectedSessionId ?? "")) ?? [];
+
+  const summary =
+    useAppSelector(selectRoomSummary(selectedSessionId ?? "")) ?? {
+      totalRooms: 0,
+      totalCapacity: 0,
+    };
+
+  // -------- Form ----------
   const form = useForm<RoomFormValues>({
-    defaultValues: { sessionId: selectedSessionId ?? "", roomCode: "", capacity: 30 },
+    defaultValues: {
+      sessionId: selectedSessionId ?? "",
+      roomCode: "",
+      capacity: 30,
+      applyToAllSessions: false,
+    },
   });
+
+  const [editingRoom, setEditingRoom] = useState<{ sessionId: string; roomCode: string } | null>(null);
 
   useEffect(() => {
     const current = selectedSessionId ?? sessions[0]?.id ?? "";
-    if (current && !form.getValues("sessionId")) form.setValue("sessionId", current);
-  }, [form, selectedSessionId, sessions]);
+    if (current && (!form.getValues("sessionId") || !editingRoom)) {
+      form.setValue("sessionId", current);
+    }
+  }, [form, selectedSessionId, sessions, editingRoom]);
 
   const resetForm = () => {
-    form.reset({ sessionId: selectedSessionId ?? sessions[0]?.id ?? "", roomCode: "", capacity: 30 });
+    form.reset({
+      sessionId: selectedSessionId ?? sessions[0]?.id ?? "",
+      roomCode: "",
+      capacity: 30,
+      applyToAllSessions: false,
+    });
     setEditingRoom(null);
   };
 
+  // -------- Search/filter ----------
+  const [searchTerm, setSearchTerm] = useState("");
   const filteredRooms = useMemo(() => {
     if (!searchTerm.trim()) return rooms;
     const term = searchTerm.trim().toLowerCase();
     return rooms.filter((r) => r.roomCode.toLowerCase().includes(term));
   }, [rooms, searchTerm]);
 
-  const onSubmit = (values: RoomFormValues) => {
-    if (!values.sessionId) {
-      toast({ title: "กรุณาเลือกเซสชัน", variant: "destructive" });
-      return;
-    }
+  // watch for UI text
+  const watchApplyToAll = form.watch("applyToAllSessions");
+  const watchRoomCode = form.watch("roomCode");
+
+  // -------- Submit ----------
+  const onSubmit = async (values: RoomFormValues) => {
     const roomCode = values.roomCode.trim();
     if (!roomCode) {
       toast({ title: "กรุณาระบุรหัสห้องสอบ", variant: "destructive" });
@@ -78,11 +113,59 @@ export default function ExamRoomsPage() {
       toast({ title: "จำนวนที่รองรับต้องมากกว่า 0", variant: "destructive" });
       return;
     }
-    dispatch(roomUpserted({ sessionId: values.sessionId, roomCode, capacity }));
-    toast({
-      title: editingRoom ? "บันทึกห้องสอบเรียบร้อย" : "เพิ่มห้องสอบสำเร็จ",
-      description: `${roomCode} รองรับ ${capacity.toLocaleString()} คน`,
-    });
+
+    // Bulk add (apply to all) when creating new
+    if (values.applyToAllSessions && !editingRoom) {
+      toast({
+        title: "กำลังเพิ่มห้องสอบ (ทุกเซสชัน)…",
+        description: `เพิ่ม ${roomCode} ทั้งหมด ${sessions.length} เซสชัน`,
+      });
+
+      const jobs = sessions.map((session: any) =>
+        dispatch(
+          saveRoomThunk({ sessionId: session.id, roomCode, capacity })
+        ).unwrap()
+      );
+
+      try {
+        await Promise.all(jobs);
+        toast({
+          title: "สำเร็จ",
+          description: `${roomCode} ถูกเพิ่มใน ${sessions.length} เซสชัน`,
+        });
+        if (selectedSessionId) {
+          dispatch(fetchRoomsBySessionThunk(selectedSessionId));
+        }
+      } catch (error: any) {
+        toast({
+          title: "เพิ่มแบบกลุ่มล้มเหลว",
+          description: error?.message ?? "API Error",
+          variant: "destructive",
+        });
+      }
+    } else {
+      // Single add/edit
+      if (!values.sessionId) {
+        toast({ title: "กรุณาเลือกเซสชัน", variant: "destructive" });
+        return;
+      }
+      try {
+        await dispatch(
+          saveRoomThunk({ sessionId: values.sessionId, roomCode, capacity })
+        ).unwrap();
+        toast({
+          title: editingRoom ? "บันทึกห้องสอบเรียบร้อย" : "เพิ่มห้องสอบสำเร็จ",
+          description: `${roomCode} รองรับ ${capacity.toLocaleString()} คน`,
+        });
+      } catch (error: any) {
+        toast({
+          title: "บันทึกล้มเหลว",
+          description: error?.message ?? "API Error",
+          variant: "destructive",
+        });
+      }
+    }
+
     resetForm();
     setDialogOpen(false);
   };
@@ -94,26 +177,39 @@ export default function ExamRoomsPage() {
 
   const handleEdit = (sessionId: string, roomCode: string, capacity: number) => {
     setEditingRoom({ sessionId, roomCode });
-    form.reset({ sessionId, roomCode, capacity });
+    form.reset({ sessionId, roomCode, capacity, applyToAllSessions: false });
     setDialogOpen(true);
   };
 
-  const handleRemove = (sessionId: string, roomCode: string) => {
+  const handleRemove = async (sessionId: string, roomCode: string) => {
     if (!window.confirm(`ยืนยันลบห้องสอบ ${roomCode} หรือไม่`)) return;
-    dispatch(roomRemoved({ sessionId, roomCode }));
-    toast({ title: "ลบห้องสอบแล้ว", description: roomCode });
-    if (editingRoom && editingRoom.roomCode === roomCode && editingRoom.sessionId === sessionId) {
-      resetForm();
-      setDialogOpen(false);
+
+    try {
+      await dispatch(deleteRoomThunk({ sessionId, roomCode })).unwrap();
+      toast({ title: "ลบห้องสอบแล้ว", description: roomCode });
+
+      if (editingRoom && editingRoom.roomCode === roomCode && editingRoom.sessionId === sessionId) {
+        resetForm();
+        setDialogOpen(false);
+      }
+    } catch (error: any) {
+      toast({
+        title: "ลบล้มเหลว",
+        description: error?.message ?? "API Error",
+        variant: "destructive",
+      });
     }
   };
 
   const selectedSessionLabel = useMemo(() => {
     if (!selectedSessionId) return "-";
-    return sessions.find((s) => s.id === selectedSessionId)?.label ?? "-";
+    const session = sessions.find((s: any) => s.id === selectedSessionId);
+    return session?.label ?? session?.label ?? "-";
   }, [selectedSessionId, sessions]);
 
-  const renderBackdrop = (open: boolean) => (open ? <div className="modal-backdrop show" /> : null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const renderBackdrop = (open: boolean) =>
+    open ? <div className="modal-backdrop show" style={{ zIndex: 1050 }} /> : null;
 
   if (!activeCampaign || sessions.length === 0) {
     return (
@@ -149,14 +245,20 @@ export default function ExamRoomsPage() {
                 value={selectedSessionId ?? ""}
                 onChange={(e) => setSelectedSessionId(e.target.value)}
               >
-                {sessions.map((s) => (
-                  <option key={s.id} value={s.id}>{s.label}</option>
+                {sessions.map((s: any) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label ?? s.title}
+                  </option>
                 ))}
               </select>
 
               {/* Search */}
               <div className="position-relative">
-                <Search size={16} className="position-absolute" style={{ left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                <Search
+                  size={16}
+                  className="position-absolute"
+                  style={{ left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}
+                />
                 <input
                   className="form-control ps-5"
                   style={{ width: 220 }}
@@ -205,7 +307,14 @@ export default function ExamRoomsPage() {
           </div>
 
           <div className="card-body">
-            {rooms.length === 0 ? (
+            {roomStatus === "loading" && (
+              <div className="text-center text-muted p-4">
+                <Loader2 size={24} className="spin-animation" />
+                <p>Loading rooms...</p>
+              </div>
+            )}
+
+            {roomStatus !== "loading" && rooms.length === 0 ? (
               <div className="border border-dashed rounded p-4 text-center text-muted">
                 ยังไม่มีห้องสอบในเซสชันนี้ กรุณาเพิ่มห้องใหม่
               </div>
@@ -255,7 +364,7 @@ export default function ExamRoomsPage() {
           className={`modal ${dialogOpen ? "show" : ""}`}
           style={{ display: dialogOpen ? "block" : "none" }}
           role="dialog"
-          aria-modal={dialogOpen}
+          aria-modal={dialogOpen ? true : undefined}
         >
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
@@ -264,7 +373,11 @@ export default function ExamRoomsPage() {
                 <button
                   type="button"
                   className="btn-close"
-                  onClick={() => { setDialogOpen(false); resetForm(); }}
+                  onClick={() => {
+                    setDialogOpen(false);
+                    resetForm();
+                  }}
+                  aria-label="Close"
                 />
               </div>
 
@@ -272,22 +385,29 @@ export default function ExamRoomsPage() {
                 <div className="modal-body">
                   {/* Session */}
                   <div className="mb-3">
-                    <label htmlFor="room-session" className="form-label">เลือกเซสชัน</label>
+                    <label htmlFor="room-session" className="form-label">
+                      เลือกเซสชัน
+                    </label>
                     <select
                       id="room-session"
                       className="form-select"
                       value={form.watch("sessionId")}
                       onChange={(e) => form.setValue("sessionId", e.target.value)}
+                      disabled={Boolean(editingRoom) || Boolean(form.watch("applyToAllSessions"))}
                     >
-                      {sessions.map((s) => (
-                        <option key={s.id} value={s.id}>{s.label}</option>
+                      {sessions.map((s: any) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label ?? s.title}
+                        </option>
                       ))}
                     </select>
                   </div>
 
                   {/* Room code */}
                   <div className="mb-3">
-                    <label htmlFor="room-code" className="form-label">รหัสห้องสอบ</label>
+                    <label htmlFor="room-code" className="form-label">
+                      รหัสห้องสอบ
+                    </label>
                     <input
                       id="room-code"
                       className="form-control"
@@ -299,27 +419,49 @@ export default function ExamRoomsPage() {
 
                   {/* Capacity */}
                   <div className="mb-1">
-                    <label htmlFor="room-capacity" className="form-label">จำนวนที่รองรับ (คน)</label>
+                    <label htmlFor="room-capacity" className="form-label">
+                      จำนวนที่รองรับ (คน)
+                    </label>
                     <input
                       id="room-capacity"
                       type="number"
                       min={1}
                       className="form-control"
-                      {...form.register("capacity", { valueAsNumber: true })}
+                      {...form.register("capacity", { valueAsNumber: true, min: 1 })}
                     />
                   </div>
+
+                  {/* Apply to all sessions */}
+                  {!editingRoom && (
+                    <div className="form-check mt-3">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="applyToAll"
+                        {...form.register("applyToAllSessions")}
+                      />
+                      <label className="form-check-label" htmlFor="applyToAll">
+                        เพิ่มห้อง <strong className="text-primary">{watchRoomCode || "(รหัสห้อง)"}</strong> นี้ลงใน{" "}
+                        <strong>ทุก Session</strong> ({sessions.length} รอบ)
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 <div className="modal-footer">
                   <button
                     type="button"
                     className="btn btn-outline-secondary"
-                    onClick={() => { resetForm(); setDialogOpen(false); }}
+                    onClick={() => {
+                      resetForm();
+                      setDialogOpen(false);
+                    }}
                   >
                     ยกเลิก
                   </button>
-                  <button type="submit" className="btn btn-primary">
-                    {editingRoom ? "บันทึก" : "เพิ่มห้องสอบ"}
+                  <button type="submit" className="btn btn-primary" disabled={roomStatus === "loading"}>
+                    {roomStatus === "loading" && <Loader2 size={16} className="me-2 spin-animation" />}
+                    {editingRoom ? "บันทึก" : watchApplyToAll ? "เพิ่ม (ทุก Session)" : "เพิ่มห้องสอบ"}
                   </button>
                 </div>
               </form>

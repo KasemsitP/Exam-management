@@ -392,7 +392,7 @@ export default function Dashboard() {
               <div className="card-body d-flex flex-column gap-2 small">
                 {seatViolations.map((violation) => (
                   <div
-                    key={violation.id}
+                    key={violation.message}
                     className="border rounded px-2 py-2 bg-warning bg-opacity-10"
                   >
                     {violation.message}

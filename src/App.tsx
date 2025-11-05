@@ -19,6 +19,7 @@ import KeyManagementPage from "@/pages/key";
 import AccountsPage from "./pages/AccountManagement";
 //import UserSearchPage from "@/pages/UserSearch";
 import { AppLayout } from "@/components/layout/AppLayout";
+import QrPage from '@/pages/QRScanner'
 
 function ProtectedApp() {
   return (
@@ -81,6 +82,7 @@ function AppContent() {
           <Route path="/score-review" element={<ScoreReviewPage />} />
           {/* <Route path="/user-search" element={<UserSearchPage />} /> */}
           <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/qrscanner" element={<QrPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<NotFound />} />

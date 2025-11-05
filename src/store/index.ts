@@ -10,12 +10,15 @@ import { usersSlice } from "./slices/users.slice";
 import { gradersSlice } from "./slices/graders.slice";
 import { scoreReviewSlice } from "./slices/scoreReview.slice";
 import { bagHandoverSlice } from "./slices/bagHandover.slice";
-import { examRoomsSlice } from "./slices/examRooms.slice";
 import { examEntitiesSlice } from "./slices/examEntities.slice";
 import { keyManagementSlice } from "./slices/key.slice";
 import { userSessionsSlice } from "./slices/userSessions.slice"; 
 import {bagsSlice} from "./slices/bags.slice";
 import { accountsSlice } from "./slices/account.slice";
+import { userCampaignsSlice} from "./slices/usercampaign.slice";
+import { roomSeatsSlice} from "./slices/roomseat.slice"
+import { examRoomsSlice } from "./slices/examRooms.slice";
+import { qrSlice } from "./slices/qrscanner.slice";
 export const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
@@ -35,8 +38,10 @@ export const store = configureStore({
     keyManagement: keyManagementSlice.reducer,
     userSessions: userSessionsSlice.reducer,
     accounts: accountsSlice.reducer,
+    userCampaigns : userCampaignsSlice.reducer,
+    roomSeats : roomSeatsSlice.reducer,
+    qr: qrSlice.reducer
 
-    
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -16,6 +16,7 @@ export interface CampaignSession {
   label: string;
   examDate: string;
   note?: string;
+  site_id? : number;
   subjects: CampaignSubject[];
 }
 

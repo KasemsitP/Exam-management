@@ -15,6 +15,7 @@ import {
   LogOut,
   Menu,
   X,
+  QrCode,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
   { to: "/score-review", label: "ตรวจทานคะแนน", icon: ClipboardCheck },
   { to: "/user-search", label: "ค้นหาผู้ใช้", icon: SearchIcon },
   { to: "/accounts", label: "จัดการบัญชีผู้ใช้", icon: Users },
+  { to: "/qrscanner", label: "สแกนคิวอาร์โค้ด", icon: QrCode },
 ];
 
 export function AppLayout() {

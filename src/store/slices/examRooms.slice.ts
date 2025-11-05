@@ -1,218 +1,204 @@
-import { createSlice, nanoid, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import axios from "axios";
+import { RootState } from ".."; // (ต้อง Import RootState)
 
+// ------------------------------
+// Interfaces
+// ------------------------------
+
+// (Interface นี้ต้องตรงกับตาราง exam_rooms)
 export interface ExamRoom {
-  sessionId: string;
-  roomCode: string;
-  capacity: number;
-  seatRows?: number;
-  seatColumns?: number;
+  sessionId: string; // (Frontend ID: "sess-10")
+  roomCode: string;
+  capacity: number;
 }
 
-export interface RoomSeat {
-  sessionId: string;
-  roomCode: string;
-  seatCode: string;
-  rowNo: number;
-  colNo: number;
+// (Payload สำหรับ Thunk)
+interface SaveRoomPayload {
+  sessionId: string;
+  roomCode: string;
+  capacity: number;
+}
+interface DeleteRoomPayload {
+  sessionId: string;
+  roomCode: string;
 }
 
+// (State Interface)
 interface ExamRoomsState {
-  rooms: ExamRoom[];
-  seats: RoomSeat[];
+  // (เก็บห้องโดยแบ่งตาม Session ID)
+  roomsBySession: Record<string, ExamRoom[]>; 
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
 }
-
-const toRowLabel = (index: number): string => {
-  let value = index;
-  let label = "";
-  while (value >= 0) {
-    label = String.fromCharCode(65 + (value % 26)) + label;
-    value = Math.floor(value / 26) - 1;
-  }
-  return label;
-};
-
-const generateSeatsForRoom = (
-  sessionId: string,
-  roomCode: string,
-  rows: number,
-  cols: number
-): RoomSeat[] => {
-  const seats: RoomSeat[] = [];
-  for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
-    for (let colIndex = 0; colIndex < cols; colIndex += 1) {
-      const rowNo = rowIndex + 1;
-      const colNo = colIndex + 1;
-      const seatCode = `${toRowLabel(rowIndex)}${String(colNo).padStart(2, "0")}`;
-      seats.push({
-        sessionId,
-        roomCode,
-        seatCode,
-        rowNo,
-        colNo,
-      });
-    }
-  }
-  return seats;
-};
-
-const initialRooms: ExamRoom[] = [
-  { sessionId: "sess-y68-t2-d1", roomCode: "MAIN-401", capacity: 48, seatRows: 6, seatColumns: 8 },
-  { sessionId: "sess-y68-t2-d1", roomCode: "MAIN-402", capacity: 42, seatRows: 6, seatColumns: 7 },
-  { sessionId: "sess-y68-t2-d2", roomCode: "MAIN-501", capacity: 36, seatRows: 6, seatColumns: 6 },
-];
-
-const initialSeats: RoomSeat[] = initialRooms.flatMap((room) =>
-  room.seatRows && room.seatColumns
-    ? generateSeatsForRoom(room.sessionId, room.roomCode, room.seatRows, room.seatColumns)
-    : []
-);
 
 const initialState: ExamRoomsState = {
-  rooms: initialRooms,
-  seats: initialSeats,
+  roomsBySession: {},
+  status: "idle",
+  error: null,
 };
 
-interface RoomUpsertPayload {
-  sessionId: string;
-  roomCode: string;
-  capacity: number;
-  seatRows?: number;
-  seatColumns?: number;
-  regenerateLayout?: boolean;
-}
+// ------------------------------
+// Thunks (API Calls)
+// ------------------------------
+
+export const fetchRoomsBySessionThunk = createAsyncThunk<
+  ExamRoom[],
+  string, // (sessionId: "sess-10")
+  { rejectValue: string }
+>(
+  "examRooms/fetchBySession",
+  async (sessionId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/api/exam-rooms/session/${sessionId}`);
+      return response.data as ExamRoom[];
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "Fetch rooms failed");
+      }
+      return rejectWithValue("Fetch rooms failed");
+    }
+  }
+);
+
+export const saveRoomThunk = createAsyncThunk<
+  ExamRoom,
+  SaveRoomPayload,
+  { rejectValue: string }
+>(
+  "examRooms/save",
+  async (payload, { rejectWithValue }) => {
+    try {
+      // (API นี้จะจัดการ Upsert)
+      const response = await axios.post(`/api/exam-rooms`, payload);
+      return response.data as ExamRoom;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "Save room failed");
+      }
+      return rejectWithValue("Save room failed");
+    }
+  }
+);
+
+export const deleteRoomThunk = createAsyncThunk<
+  DeleteRoomPayload, // (ส่ง Payload เดิมกลับมา)
+  DeleteRoomPayload,
+  { rejectValue: string }
+>(
+  "examRooms/delete",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const { sessionId, roomCode } = payload;
+      await axios.delete(`/api/exam-rooms/${sessionId}/${roomCode}`);
+      return payload; // (ส่งกลับไปให้ Reducer)
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "Delete room failed");
+      }
+      return rejectWithValue("Delete room failed");
+    }
+  }
+);
+
+// ------------------------------
+// Slice
+// ------------------------------
 
 const examRoomsSlice = createSlice({
-  name: "examRooms",
-  initialState,
-  reducers: {
-    roomUpserted: (state, action: PayloadAction<RoomUpsertPayload>) => {
-      const payload = action.payload;
-      const existing = state.rooms.find(
-        (room) => room.sessionId === payload.sessionId && room.roomCode === payload.roomCode
-      );
-
-      const sanitizeCapacity = Math.max(1, Math.floor(payload.capacity));
-
-      if (existing) {
-        existing.capacity = sanitizeCapacity;
-        if (payload.seatRows && payload.seatColumns) {
-          existing.seatRows = payload.seatRows;
-          existing.seatColumns = payload.seatColumns;
-        }
-      } else {
-        state.rooms.push({
-          sessionId: payload.sessionId,
-          roomCode: payload.roomCode,
-          capacity: sanitizeCapacity,
-          seatRows: payload.seatRows,
-          seatColumns: payload.seatColumns,
-        });
-      }
-
-      const shouldRegenerate =
-        payload.regenerateLayout && payload.seatRows && payload.seatColumns
-          ? payload.seatRows > 0 && payload.seatColumns > 0
-          : false;
-
-      if (shouldRegenerate) {
-        state.seats = state.seats.filter(
-          (seat) =>
-            !(
-              seat.sessionId === payload.sessionId && seat.roomCode === payload.roomCode
-            )
-        );
-        state.seats.push(
-          ...generateSeatsForRoom(
-            payload.sessionId,
-            payload.roomCode,
-            payload.seatRows!,
-            payload.seatColumns!
-          )
-        );
-      }
-    },
-    roomRemoved: (
-      state,
-      action: PayloadAction<{ sessionId: string; roomCode: string }>
-    ) => {
-      state.rooms = state.rooms.filter(
-        (room) =>
-          !(
-            room.sessionId === action.payload.sessionId &&
-            room.roomCode === action.payload.roomCode
-          )
-      );
-      state.seats = state.seats.filter(
-        (seat) =>
-          !(
-            seat.sessionId === action.payload.sessionId &&
-            seat.roomCode === action.payload.roomCode
-          )
-      );
-    },
-    seatsManuallyReplaced: (
-      state,
-      action: PayloadAction<{
-        sessionId: string;
-        roomCode: string;
-        seats: Array<Omit<RoomSeat, "sessionId" | "roomCode">>;
-      }>
-    ) => {
-      const { sessionId, roomCode, seats } = action.payload;
-      state.seats = state.seats.filter(
-        (seat) => !(seat.sessionId === sessionId && seat.roomCode === roomCode)
-      );
-      state.seats.push(
-        ...seats.map((seat) => ({
-          sessionId,
-          roomCode,
-          seatCode: seat.seatCode || `SEAT-${nanoid(4)}`,
-          rowNo: seat.rowNo,
-          colNo: seat.colNo,
-        }))
-      );
-    },
-  },
+  name: "examRooms",
+  initialState,
+  reducers: {
+    // (Action เก่า (Client-side) ไม่ได้ใช้แล้ว)
+    // roomUpserted: (state, action: PayloadAction<ExamRoom>) => { ... }
+    // roomRemoved: (state, action: PayloadAction<{ sessionId: string; roomCode: string }>) => { ... }
+  },
+  extraReducers: (builder) => {
+    builder
+      // (Fetch)
+      .addCase(fetchRoomsBySessionThunk.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(fetchRoomsBySessionThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        if (action.payload.length > 0) {
+          const sessionId = action.payload[0].sessionId;
+          state.roomsBySession[sessionId] = action.payload;
+        } else if (action.meta.arg) {
+          // (ถ้า Session นั้นไม่มีห้อง)
+          state.roomsBySession[action.meta.arg] = [];
+        }
+      })
+      .addCase(fetchRoomsBySessionThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed";
+      })
+      // (Save / Upsert)
+      .addCase(saveRoomThunk.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(saveRoomThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        const room = action.payload;
+        const sessionId = room.sessionId;
+        if (!state.roomsBySession[sessionId]) {
+          state.roomsBySession[sessionId] = [];
+        }
+        // (เช็คว่ามีอยู่แล้วหรือยัง)
+        const index = state.roomsBySession[sessionId].findIndex(
+          (r) => r.roomCode === room.roomCode
+        );
+        if (index !== -1) {
+          state.roomsBySession[sessionId][index] = room; // (Update)
+        } else {
+          state.roomsBySession[sessionId].push(room); // (Add)
+        }
+      })
+      .addCase(saveRoomThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload;
+      })
+      // (Delete)
+      .addCase(deleteRoomThunk.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(deleteRoomThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        const { sessionId, roomCode } = action.payload;
+        if (state.roomsBySession[sessionId]) {
+          state.roomsBySession[sessionId] = state.roomsBySession[sessionId].filter(
+            (r) => r.roomCode !== roomCode
+          );
+        }
+      })
+      .addCase(deleteRoomThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload;
+      });
+  },
 });
 
-export const { roomUpserted, roomRemoved, seatsManuallyReplaced } = examRoomsSlice.actions;
-export { examRoomsSlice };
+// (Actions - ไม่มีแล้ว เพราะเราใช้ Thunks)
+// export const { roomUpserted, roomRemoved } = examRoomsSlice.actions;
 
-export const selectRoomsBySession =
-  (sessionId: string | null) =>
-  (state: { examRooms: ExamRoomsState }): ExamRoom[] => {
-    if (!sessionId) return [];
-    return state.examRooms.rooms
-      .filter((room) => room.sessionId === sessionId)
-      .sort((a, b) => a.roomCode.localeCompare(b.roomCode));
-  };
+// ------------------------------
+// Selectors
+// ------------------------------
+export const selectExamRoomsSlice = (state: RootState) => state.examRooms;
 
-export const selectRoomSeats =
-  (sessionId: string | null, roomCode: string | null) =>
-  (state: { examRooms: ExamRoomsState }): RoomSeat[] => {
-    if (!sessionId || !roomCode) return [];
-    return state.examRooms.seats
-      .filter(
-        (seat) => seat.sessionId === sessionId && seat.roomCode === roomCode
-      )
-      .sort((a, b) => {
-        if (a.rowNo === b.rowNo) return a.colNo - b.colNo;
-        return a.rowNo - b.rowNo;
-      });
-  };
+const selectEmptyRooms: ExamRoom[] = []; // (สำหรับ Default)
 
-export const selectRoomSummary =
-  (sessionId: string | null) =>
-  (state: { examRooms: ExamRoomsState }) => {
-    const rooms = selectRoomsBySession(sessionId)(state);
-    const totalCapacity = rooms.reduce((total, room) => total + room.capacity, 0);
-    const totalSeats = rooms.reduce((total, room) => {
-      if (!room.seatRows || !room.seatColumns) return total;
-      return total + room.seatRows * room.seatColumns;
-    }, 0);
-    return {
-      totalRooms: rooms.length,
-      totalCapacity,
-      totalSeats,
-    };
-  };
+export const selectRoomsBySession = (sessionId: string | null) => (state: RootState) => {
+  if (!sessionId) return selectEmptyRooms;
+  return state.examRooms.roomsBySession[sessionId] ?? selectEmptyRooms;
+};
+
+export const selectRoomSummary = (sessionId: string | null) => (state: RootState) => {
+  const rooms = selectRoomsBySession(sessionId)(state);
+  const totalRooms = rooms.length;
+  const totalCapacity = rooms.reduce((sum, room) => sum + room.capacity, 0);
+  return { totalRooms, totalCapacity };
+};
+
+export {examRoomsSlice}

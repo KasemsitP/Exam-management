@@ -1,0 +1,92 @@
+import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import axios from "axios";
+import { RootState } from ".."; // (ต้อง Import RootState)
+import { UserSessionData } from "./userSessions.slice"; // (ใช้ Interface เดิม)
+
+// ------------------------------
+// Interfaces
+// ------------------------------
+
+interface VerifyQrPayload {
+  qrPayload: string;   // (Base64 string)
+  campaignId: string; // (e.g., "camp-1")
+  sessionId: string;  // (e.g., "sess-10")
+}
+
+// (Backend ควรตอบกลับเป็น UserSessionData)
+type VerifyQrResponse = UserSessionData;
+
+interface ProctorState {
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
+  scannedUser: UserSessionData | null;
+}
+
+const initialState: ProctorState = {
+  status: "idle",
+  error: null,
+  scannedUser: null,
+};
+
+// ------------------------------
+// Thunk (API Call)
+// ------------------------------
+export const verifyQrCodeThunk = createAsyncThunk<
+  VerifyQrResponse,
+  VerifyQrPayload,
+  { rejectValue: string }
+>(
+  "proctor/verifyQr",
+  async (payload, { rejectWithValue }) => {
+    try {
+      // (นี่คือ API ใหม่ที่เราจะสร้าง)
+      const response = await axios.post("/api/verify/qr-payload", payload);
+      return response.data as VerifyQrResponse;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "Verify failed");
+      }
+      return rejectWithValue("Verify failed");
+    }
+  }
+);
+
+// ------------------------------
+// Slice
+// ------------------------------
+const qrSlice = createSlice({
+  name: "qr",
+  initialState,
+  reducers: {
+    clearScanResult: (state) => {
+      state.status = "idle";
+      state.error = null;
+      state.scannedUser = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(verifyQrCodeThunk.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+        state.scannedUser = null;
+      })
+      .addCase(verifyQrCodeThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.scannedUser = action.payload;
+      })
+      .addCase(verifyQrCodeThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed";
+      });
+  },
+});
+
+export const { clearScanResult } = qrSlice.actions;
+
+// ------------------------------
+// Selectors
+// ------------------------------
+export const selectProctorScanState = (state: RootState) => state.qr;
+
+export {qrSlice}
