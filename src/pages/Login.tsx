@@ -50,29 +50,22 @@ export default function Login() {
 
 
 const handleBypass = () => {
-  if (import.meta.env.MODE !== "development") {
     toast({
       title: "Bypass ถูกปิด",
       description: "ใช้ได้เฉพาะโหมด development เท่านั้น",
       variant: "destructive",
     });
-    return;
-  }
 
  const mockUser: AuthUser = {
   id: "u-1",
   name: "Dev Admin",
   username: "admin",
-  roles: ["admin"] as Role[],   // <- บังคับให้เป็น Role[]
+  roles: ["admin"] as Role[],   
   avatar: "DA",
 };
 
   // อัปเดต Redux ให้เป็นสถานะล็อกอิน
   dispatch(setAuthenticated(mockUser));
-
-  // (ถ้าคุณยังอยากเก็บ token สำหรับ bootstrap อื่น ๆ ก็เซ็ตเพิ่มได้)
-  localStorage.setItem("examflow_dev_token", "token-admin");
-  localStorage.setItem("examflow_user", JSON.stringify(mockUser));
 
   toast({
     title: "เข้าสู่ระบบแบบ Bypass (Dev)",

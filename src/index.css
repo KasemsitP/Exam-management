@@ -30,3 +30,30 @@ a {
 a:hover {
   text-decoration: underline;
 }
+
+/* ทำให้ลิงก์เมนูไม่ล้นบรรทัดบนมือถือ */
+@media (max-width: 576px) {
+  .nav-link, .list-group-item .fw-semibold {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ลดระยะห่าง/ขนาดฟอนต์โดยรวมใน header */
+  header h1.h6 {
+    line-height: 1.2;
+  }
+}
+
+/* ปรับสีไฮไลต์เมนูที่เลือก ให้เห็นชัดบนพื้นส้มอ่อน */
+.bg-orange-100 {
+  background-color: rgba(255, 176, 107, 0.2) !important;
+}
+.text-orange-700 {
+  color: #8d3d00 !important;
+}
+
+/* helper class (เผื่อใช้ต่อ) */
+.translate-x--100 {
+  transform: translateX(-100%);
+}
