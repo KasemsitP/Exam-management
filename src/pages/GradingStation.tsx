@@ -120,16 +120,19 @@ export default function GradingStationPage() {
   //   }
   // };
 
-  const handleScan = (result: string) => {
-    setPause(true);
-    setScanData(result)
-    toast({
-      title: "สแกนสำเร็จ",
-      description: `พบรหัสผู้เข้าสอบ: ${result ?? "ไม่ระบุ"}`,
-    });
-    setPause(false)
-  };
+const handleScan = (result: string) => {
+  setPause(true);
+  setScanData(result);
+  toast({
+    title: "สแกนสำเร็จ",
+    description: `พบรหัสผู้เข้าสอบ: ${result ?? "ไม่ระบุ"}`,
+  });
 
+  // resume หลัง 1.5 วินาที
+  setTimeout(() => {
+    setPause(false);
+  }, 1500);
+};
   const handleConfirmScore = () => {
     if (!scanData || !score) {
       toast({
@@ -274,14 +277,6 @@ export default function GradingStationPage() {
 
                   {/* Form (เอาหน้า/ช่องกรอก "เลขข้อ" ออกแล้ว) */}
                   <div className="row g-3">
-                    <input
-                      type="number"
-                      className="form-control"
-                      placeholder="คะแนน"
-                      value={scanData}
-                      disabled
-                      min={0}
-                    />
                     <div className="col-md-6">
                       <label className="form-label">คะแนน</label>
                       <input
