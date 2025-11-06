@@ -1,25 +1,31 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from ".."; // (ต้อง Import RootState)
-import { UserSessionData } from "./userSessions.slice"; // (ใช้ Interface เดิม)
+//import { UserSessionData } from "./userSessions.slice"; // (ใช้ Interface เดิม)
 
-// ------------------------------
-// Interfaces
-// ------------------------------
+export interface QRverification {
+  user_session_id: number;
+  session_id : number;
+  user_id: number;
+  userCode: string;
+  firstName: string;
+  lastName: string;
+  roomName: string | null; 
+  qr_payload: string | null; 
+}
 
 interface VerifyQrPayload {
   qrPayload: string;   // (Base64 string)
   campaignId: string; // (e.g., "camp-1")
-  sessionId: string;  // (e.g., "sess-10")
 }
 
 // (Backend ควรตอบกลับเป็น UserSessionData)
-type VerifyQrResponse = UserSessionData;
+type VerifyQrResponse = QRverification
 
 interface ProctorState {
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
-  scannedUser: UserSessionData | null;
+  scannedUser: QRverification | null;
 }
 
 const initialState: ProctorState = {

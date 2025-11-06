@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
-import { selectCurrentSession } from "@/store/slices/sessions.slice";
 import {
   verifyQrCodeThunk,
   selectProctorScanState,
@@ -122,12 +121,10 @@ export default function ProctorScanPage() {
   const [manualPayload, setManualPayload] = useState("");
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  const currentSession = useAppSelector(selectCurrentSession);
 
   const { status, error, scannedUser } = useAppSelector(selectProctorScanState);
 
   const campaignLabel = activeCampaign?.name ?? "N/A";
-  const sessionLabel = currentSession?.label ?? currentSession?.note ?? "N/A";
 
   // ปิด/เปิด pause เมื่อกำลังยิง API
   useEffect(() => {
@@ -148,10 +145,10 @@ export default function ProctorScanPage() {
   const canScan = useMemo(() => scannerEnabled && !pause && status !== "loading", [scannerEnabled, pause, status]);
 
   const verifyPayload = async (payload: string) => {
-    if (!activeCampaign || !currentSession) {
+    if (!activeCampaign ) {
       toast({
         title: "ข้อผิดพลาด",
-        description: "กรุณาเลือก Campaign และ Session ก่อนสแกน",
+        description: "กรุณาเลือก Campaign ก่อน",
         variant: "destructive",
       });
       return;
@@ -161,7 +158,6 @@ export default function ProctorScanPage() {
         verifyQrCodeThunk({
           qrPayload: payload,
           campaignId: activeCampaign.id,
-          sessionId: currentSession.id,
         })
       ).unwrap();
     } catch (err: any) {
@@ -222,7 +218,6 @@ export default function ProctorScanPage() {
               <h4 className="mb-0">สแกนยืนยันตัวตนผู้สอบ</h4>
             </div>
             <div className="small text-muted mt-1">
-              รอบสอบ: <span className="fw-semibold">{sessionLabel}</span> | แคมเปญ:{" "}
               <span className="fw-semibold">{campaignLabel}</span>
             </div>
           </div>
