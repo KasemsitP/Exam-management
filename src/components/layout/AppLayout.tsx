@@ -31,7 +31,7 @@ import {
 // ---------------- UI config ----------------
 const NAV_ITEMS = [
   { to: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
-  { to: "/campaign-sessions", label: "แคมเปญ / เซสชัน", icon: CalendarDays },
+  { to: "/campaign-sessions", label: "จัดการรอบสอบ", icon: CalendarDays },
   { to: "/seat-allocation", label: "จัดที่นั่งสอบ", icon: FolderKanban },
   { to: "/exam-rooms", label: "ห้องสอบ", icon: ClipboardCheck },
   { to: "/bags", label: "ถุงข้อสอบ", icon: PackageCheck },
@@ -39,8 +39,8 @@ const NAV_ITEMS = [
   { to: "/import-csv", label: "นำเข้าข้อมูล", icon: DownloadCloud },
   { to: "/keys", label: "รหัสผ่าน / คีย์", icon: KeyRound },
   { to: "/sign-sheets", label: "ใบบันทึกการสอบ", icon: FilePenLine },
-  { to: "/grading-station", label: "สถานีตรวจ", icon: GraduationCap },
-  { to: "/score-review", label: "ตรวจทานคะแนน", icon: ClipboardCheck },
+  { to: "/grading-station", label: "บันทึกคะแนน", icon: GraduationCap },
+  { to: "/score-review", label: "ใบสรุปคะแนน", icon: ClipboardCheck },
   { to: "/user-search", label: "ค้นหาผู้ใช้", icon: SearchIcon },
   { to: "/accounts", label: "จัดการบัญชีผู้ใช้", icon: Users },
   { to: "/qrscanner", label: "สแกนคิวอาร์โค้ด", icon: QrCode },

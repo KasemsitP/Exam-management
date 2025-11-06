@@ -91,7 +91,7 @@ export async function exportSignSheetsPDF({
   org,
   sessionText,
   rowsPerPage = 6,
-  fileName = "ใบเซ็นชื่อนักสอบ.pdf",
+  fileName = "ใบเซ็นชื่อผู้เข้าสอบ.pdf",
   useThaiFont = false, // ถ้าตั้ง vfs ฟอนต์ไทยด้านบน ให้ส่ง true แล้วไปตั้ง defaultStyle.font = "THSarabun"
 }: {
   rows: RowItem[];
@@ -302,8 +302,8 @@ export default function SignSheetsPage() {
   const handlePrint = () => {
     if (!filtered.length) {
       toast({
-        title: "ไม่พบข้อมูลนักสอบ",
-        description: "กรุณาเพิ่มข้อมูลนักสอบก่อนพิมพ์",
+        title: "ไม่พบข้อมูลผู้เข้าสอบ",
+        description: "กรุณาเพิ่มข้อมูลผู้เข้าสอบก่อนพิมพ์",
         variant: "destructive",
       });
       return;
@@ -321,9 +321,9 @@ export default function SignSheetsPage() {
           </div>
           <div className="flex-grow-1 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-sm-between gap-2">
             <div>
-              <h5 className="mb-1">ใบเซ็นชื่อและ QR นักสอบ</h5>
+              <h5 className="mb-1">ใบเซ็นชื่อและ QR code ผู้เข้าสอบ</h5>
               <div className="text-muted small">
-                สำหรับตรวจสอบการเข้าห้องสอบและออกจากห้องสอบ
+                สำหรับแปะบนเล่มข้อสอบของผู้เข้าสอบ
               </div>
             </div>
             <div className="d-flex flex-wrap gap-2">
@@ -527,7 +527,7 @@ export default function SignSheetsPage() {
 
             {userSessionsStatus === "succeeded" && filtered.length === 0 && (
               <div className="d-flex align-items-center justify-content-center text-muted" style={{ height: 180 }}>
-                ไม่พบข้อมูลนักสอบในรอบนี้
+                ไม่พบข้อมูลผู้เข้าสอบในรอบนี้
               </div>
             )}
 
