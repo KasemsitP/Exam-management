@@ -7,7 +7,8 @@ import "./index.css";
 import axios from 'axios';
 import "./App.css";
 
-axios.defaults.baseURL = "http://localhost:8000"; 
+// axios.defaults.baseURL = "http://localhost:8000"; 
+axios.defaults.baseURL = "https://backend-exam-yy5g.onrender.com"; 
 axios.defaults.withCredentials = true; //  เพื่อให้ส่ง/รับ httpOnly cookie ได้
 createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
