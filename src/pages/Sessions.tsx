@@ -29,8 +29,11 @@ import {
   ExamCampaign,
   CampaignSession,
   CampaignSubject,
+  updateCampaignThunk,
 } from "@/store/slices/examData.slice";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
+import { showSuccess } from "@/components/ui/successAlert";
+import { showError } from "@/components/ui/ErrorAlert";
 
 interface CampaignFormValues {
   code: string;
@@ -141,13 +144,21 @@ export default function CampaignsPage() {
     },
   });
 
+
+  const formatDate = (date: string | Date) => {
+  const d = new Date(date);
+  const month = `${d.getMonth() + 1}`.padStart(2, "0");
+  const day = `${d.getDate()}`.padStart(2, "0");
+  const year = d.getFullYear();
+  return `${year}-${month}-${day}`;
+};
   const resetCampaignForm = (campaign?: ExamCampaign | null) => {
     if (campaign) {
       campaignForm.reset({
         code: campaign.code,
         name: campaign.name,
-        startDate: campaign.startDate,
-        endDate: campaign.endDate,
+      startDate: formatDate(campaign.startDate),
+      endDate: formatDate(campaign.endDate),
         description: campaign.description ?? "",
         isActive: campaign.isActive,
       });
@@ -230,7 +241,7 @@ export default function CampaignsPage() {
       .map<VisibleCampaign | null>((campaign) => {
         const campaignMatches = keyword
           ? campaign.name.toLowerCase().includes(keyword) ||
-            campaign.description?.toLowerCase().includes(keyword)
+          campaign.description?.toLowerCase().includes(keyword)
           : true;
 
         const sessions = campaign.sessions.filter((session) => {
@@ -264,8 +275,8 @@ export default function CampaignsPage() {
   const handleCampaignSubmit = async (values: CampaignFormValues) => {
     const normalizedCode = values.code.trim().toUpperCase();
     if (editingCampaign) {
-      dispatch(
-        campaignUpdated({
+      try {
+        await dispatch(updateCampaignThunk({
           ...editingCampaign,
           code: normalizedCode,
           name: values.name,
@@ -273,9 +284,16 @@ export default function CampaignsPage() {
           endDate: values.endDate,
           description: values.description,
           isActive: values.isActive,
-        })
-      );
-      toast({ title: "อัปเดตแคมเปญเรียบร้อย", description: values.name });
+        })).unwrap();
+            showSuccess("อัปเดตรอบสอบเรียบร้อย", values.name);
+        setCampaignDialogOpen(false);
+      } catch (error) {
+        showError("ไม่สามารถอัพเดทรอบสอบได้", getErrorMessage(error));
+        setCampaignDialogOpen(false);
+        return;
+      }
+
+      //  toast({ title: "อัปเดตรอบสอบเรียบร้อย", description: values.name })
     } else {
       try {
         await dispatch(
@@ -288,10 +306,7 @@ export default function CampaignsPage() {
             isActive: values.isActive,
           })
         ).unwrap();
-        toast({
-          title: "สร้างแคมเปญใหม่เรียบร้อย",
-          description: values.name,
-        });
+        showSuccess("อัปเดตรอบสอบเรียบร้อย", values.name);
         setCampaignDialogOpen(false);
         return;
       } catch (error) {

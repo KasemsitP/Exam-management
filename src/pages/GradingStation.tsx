@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { Scanner, boundingBox } from "@yudiel/react-qr-scanner";
 import {
   AlertCircle,
@@ -15,14 +15,34 @@ import {
   Keyboard,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { useAppSelector } from "@/store/hook";
-import { selectCurrentUser } from "@/store/slices/auth.slice";
-import { selectActiveCampaign } from "@/store/slices/examData.slice";
-import { selectGradersForCampaign } from "@/store/slices/graders.slice";
+
+// --- (Imports สำหรับ Redux) ---
+import { useAppSelector, useAppDispatch } from "@/store/hook";
+import {
+  submitScoreThunk,
+  selectIsGradingLoading,
+  selectGradingError,
+  clearGradingError,
+  Payload,
+  verifyAndAllocateThunk, // (Import Type)
+} from "@/store/slices/grading.slice"; // (Slice สำหรับ Submit)
+
+import { selectCurrentUser } from "@/store/slices/auth.slice"; // (Slice Auth)
+import { selectActiveCampaign } from "@/store/slices/examData.slice"; // (Slice Data)
+import {
+  // (Imports เดิม)
+  selectGradersForCampaign,
+  selectGradersStatus,
+  fetchGradersForCampaignThunk,
+  CrmGrader,
+
+} from "@/store/slices/graders.slice";
+
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
+import { DeleteCamp } from "@/utils/camp";
+// --- (Interfaces) ---
 
-const ROOM_PASSWORD = "5556";
-
+// (สำหรับแสดงผลใน "รายการล่าสุด")
 interface RecordedScore {
   time: string;
   userId: string;
@@ -30,68 +50,98 @@ interface RecordedScore {
   score: number;
 }
 
+
+
 export default function GradingStationPage() {
   const { toast } = useToast();
+  const dispatch = useAppDispatch();
+
+  // --- 1. ดึงข้อมูลจาก Slices ---
   const user = useAppSelector(selectCurrentUser);
   const activeCampaign = useAppSelector(selectActiveCampaign);
+
+  // (จาก graders.slice.ts - ส่วน Grader Profile)
   const graders = useAppSelector(
-    selectGradersForCampaign(activeCampaign?.id ?? null)
+    selectGradersForCampaign(
+      activeCampaign?.id ? Number(DeleteCamp(activeCampaign.id)) : null
+    )
   );
+  const gradersStatus = useAppSelector(selectGradersStatus);
+
+
+  // (จาก grading.slice.ts - ส่วน Submit)
+  const isLoading = useAppSelector(selectIsGradingLoading);
+  const gradingError = useAppSelector(selectGradingError);
+
+  // --- 2. Fetch Graders (ถ้ายังไม่มี) ---
+  useEffect(() => {
+    if (activeCampaign && gradersStatus === "idle") {
+      dispatch(fetchGradersForCampaignThunk(activeCampaign.id ? Number(DeleteCamp(activeCampaign.id)) : null));
+    }
+  }, [activeCampaign, gradersStatus, dispatch]);
 
   const graderProfile = useMemo(() => {
-    if (!user) {
-      return {
-        id: "mock-grader",
-        campaignId: activeCampaign?.id ?? "camp-y68-t2",
-        code: "TCH001",
-        firstName: "ผู้ตรวจ",
-        lastName: "ทดสอบ",
-        username: "demo-grader",
-        password: "pass1234",
-        subjects: [
-          {
-            sessionId: "sess-y68-t2-d1",
-            sessionLabel: "Y68-T2-D1 - สนามหลัก",
-            subjectId: "sub-law101-d1",
-            subjectName: "กฎหมายแพ่ง 1",
-            questionRange: "1-120",
-          },
-        ],
-      };
-    }
-    return (
-      graders.find((g) => g.username === user.username) ?? {
-        id: "mock-grader",
-        campaignId: activeCampaign?.id ?? "camp-y68-t2",
-        code: "TCH001",
-        firstName: "ผู้ตรวจ",
-        lastName: "ทดสอบ",
-        username: user.username,
-        password: user.password ?? "grader123",
-        subjects: [
-          {
-            sessionId: "sess-y68-t2-d1",
-            sessionLabel: "Y68-T2-D1 - สนามหลัก",
-            subjectId: "sub-law101-d1",
-            subjectName: "กฎหมายแพ่ง 1",
-            questionRange: "1-120",
-          },
-        ],
-      }
-    );
-  }, [graders, user, activeCampaign]);
+    if (!user || !graders || graders.length === 0) return null;
 
-  const assignedSubject = graderProfile?.subjects[0];
+    const userId = String(user.id);
+
+    const profile = graders.find(
+      (g: any) => String(g.account_id) === userId
+    ) ?? null;
+
+    console.log("Matched graderProfile:", profile);
+    return profile;
+  }, [graders, user]);
+
+  // useEffect(() => {
+  //   // console.log("Grader Profile:", graderProfile);
+  //   // console.log("campaign:", activeCampaign);
+  //   //   console.log("user", user)
+  //   // console.log("graders", graders)
+  //   //     console.log("Grader Profile:", graderProfile);
+  // })
+
+  // useEffect(() => {
+  //   if (graderProfile && assignmentStatus === "idle" && activeCampaign) {
+  //     // (แก้ไข) ส่ง campaignId ไปก็พอ (Backend รู้ graderId จาก auth)
+  //     dispatch(fetchActiveAssignmentThunk(activeCampaign.id ? Number(DeleteCamp(activeCampaign.id)) : null));
+  //   }
+  // }, [graderProfile, assignmentStatus, activeCampaign, dispatch]);
+
+  // (จัดการ Error หากดึง Assignment ไม่ได้)
+
+  const myAssignments = useMemo(() => {
+    if (!user || !graders || graders.length === 0) return [];
+    const userId = String(user.id);
+    return graders.filter((g: any) => String(g.account_id) === userId);
+  }, [graders, user]);
+
+  // assignment ที่กำลัง “active” (ใช้ตอนบันทึกคะแนน)
+  const [activeAssignment, setActiveAssignment] = useState<CrmGrader | null>(null);
+
+  useEffect(() => {
+    if (myAssignments.length > 0) {
+      setActiveAssignment(myAssignments[0]);   // default เอาอันแรก
+    } else {
+      setActiveAssignment(null);
+    }
+  }, [myAssignments]);
+
 
   /* ---------------------- สถานะ/ฟังก์ชันควบคุมสแกนเนอร์ ---------------------- */
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const [pauseAfterSuccess, setPauseAfterSuccess] = useState(true);
   const [pause, setPause] = useState(false);
-  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
+  const [facingMode, setFacingMode] = useState<"environment" | "user">(
+    "environment"
+  );
   const [cooldownMs, setCooldownMs] = useState(1200);
   const lastScanRef = useRef<number>(0);
   const [manualPayload, setManualPayload] = useState("");
-  const canScan = useMemo(() => scannerEnabled && !pause, [scannerEnabled, pause]);
+  const canScan = useMemo(
+    () => scannerEnabled && !pause,
+    [scannerEnabled, pause]
+  );
 
   /* --------------------------- สถานะการให้คะแนน --------------------------- */
   const [scanData, setScanData] = useState<string | null>("");
@@ -99,9 +149,19 @@ export default function GradingStationPage() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [recent, setRecent] = useState<RecordedScore[]>([]);
 
-  // const [roomCodeInput, setRoomCodeInput] = useState("");
-  // const [isUnlocked, setIsUnlocked] = useState(false);
-  // const handleUnlock = () => { ... }
+  // (useEffect สำหรับแจ้งเตือน Error จาก Redux 'grading')
+  useEffect(() => {
+    if (gradingError) {
+      toast({
+        title: "เกิดข้อผิดพลาด",
+        description: gradingError,
+        variant: "destructive",
+      });
+      dispatch(clearGradingError());
+    }
+  }, [gradingError, dispatch, toast]);
+
+  /* -------------------------- ฟังก์ชัน Handler ทั้งหมด ------------------------- */
 
   const handleScan = async (value: string) => {
     const now = Date.now();
@@ -112,6 +172,22 @@ export default function GradingStationPage() {
     setScannerEnabled(false);
     setPause(true);
 
+    const result = await dispatch(
+    verifyAndAllocateThunk({
+      qrPayload: value,
+      campaignId: activeAssignment!.campaign_id,
+      sessionId: activeAssignment.session_id,
+      subjectId: activeAssignment.subject_id,
+      questionNo: activeAssignment.question_no,
+      graderId: graderProfile.grader_id,
+    })
+  );
+
+  if (verifyAndAllocateThunk.rejected.match(result)) {
+    // error ถูกเก็บใน gradingState.error แล้ว
+    return;
+  }
+
     setScanData(value ?? null);
     toast({
       title: "สแกนสำเร็จ",
@@ -119,10 +195,8 @@ export default function GradingStationPage() {
     });
 
     if (pauseAfterSuccess) {
-      // ให้กรอกคะแนน/บันทึกก่อน แล้วค่อยเริ่มกล้องใหม่หลังบันทึก
       return;
     }
-    // ไม่พัก -> เปิดกล้องต่ออัตโนมัติ
     setTimeout(() => {
       setPause(false);
       setScannerEnabled(true);
@@ -152,10 +226,11 @@ export default function GradingStationPage() {
   };
 
   const handleConfirmScore = () => {
-    if (!scanData || !score) {
+    if (!scanData || !user || !activeAssignment || !score) {
       toast({
         title: "ข้อมูลไม่ครบ",
-        description: "กรุณาสแกน QR และกรอกคะแนนก่อน",
+        description:
+          "กรุณาสแกน QR, ตรวจสอบโปรไฟล์ผู้ตรวจ, และกรอกคะแนนก่อน",
         variant: "destructive",
       });
       return;
@@ -163,24 +238,58 @@ export default function GradingStationPage() {
     setIsConfirmOpen(true);
   };
 
-  const handleSaveScore = () => {
-    if (!scanData || !graderProfile || !score) return;
-    const record: RecordedScore = {
-      time: new Date().toLocaleTimeString("th-TH"),
-      userId: scanData ?? "-",
-      grader: graderProfile.code,
+  const handleSaveScore = async () => {
+    if (!scanData || !user || !activeAssignment || !score) {
+      setIsConfirmOpen(false);
+      return;
+    }
+    console.log(activeAssignment)
+    const payload: Payload = {
+      qrPayload: scanData,
+      campaignId: activeAssignment.campaign_id,
+      subjectId: activeAssignment.subject_id,
+      sessionId: activeAssignment.session_id,
+      graderId: activeAssignment.grader_id,
+      questionNo: activeAssignment.question_no,
       score: Number(score),
     };
-    setRecent((prev) => [record, ...prev].slice(0, 6));
-    setScanData(null);
-    setScore("");
-    setIsConfirmOpen(false);
-    toast({ title: "บันทึกคะแนนแล้ว" });
 
-    // เปิดกล้องต่อหลังบันทึกถ้าเคยพักไว้
-    if (pauseAfterSuccess) {
-      setPause(false);
-      setScannerEnabled(true);
+    try {
+      const resultAction = await dispatch(submitScoreThunk(payload));
+
+      if (resultAction.type.endsWith("/rejected")) {
+        const errorPayload = resultAction.payload as string;
+        throw new Error(errorPayload);
+      }
+
+      const result = resultAction.payload as { slotId: string; score: number };
+
+      const record: RecordedScore = {
+        time: new Date().toLocaleTimeString("th-TH"),
+        userId: scanData ?? "-",
+        grader:
+          (user as any)?.full_name ??
+          user?.username ??
+          `Grader #${activeAssignment.grader_id}`,
+        score: Number(score),
+      };
+
+      setRecent((prev) => [record, ...prev].slice(0, 6));
+      setScanData(null);
+      setScore("");
+      toast({
+        title: "บันทึกคะแนนสำเร็จ!",
+        description: `Slot ID: ${result.slotId} | คะแนน: ${result.score}`,
+      });
+
+      if (pauseAfterSuccess) {
+        setPause(false);
+        setScannerEnabled(true);
+      }
+    } catch (error: any) {
+      console.error("Failed to save score:", error);
+    } finally {
+      setIsConfirmOpen(false);
     }
   };
 
@@ -197,10 +306,37 @@ export default function GradingStationPage() {
         </h6>
       </div>
       <div className="card-body text-muted small">
-        โปรดตรวจสอบสิทธิ์ผู้ใช้หรือกำหนดผู้ตรวจสำหรับแคมเปญนี้ก่อนเริ่มใช้งาน
+        {gradersStatus === 'loading' && (
+          <span>กำลังโหลดโปรไฟล์ผู้ตรวจ...</span>
+        )}
+        {gradersStatus === 'succeeded' && !graderProfile && (
+          <span>ไม่พบโปรไฟล์ผู้ตรวจสำหรับบัญชีของคุณในแคมเปญนี้</span>
+        )}
       </div>
     </div>
   );
+
+  // (Render บัตรใหม่สำหรับ "กำลังโหลด Assignment")
+const renderNoAssignment = () => (
+  <div className="card border-dashed">
+    <div className="card-header bg-white">
+      <h6 className="mb-0 d-flex align-items-center gap-2">
+        <AlertCircle className="text-primary" size={18} />
+        {gradersStatus === "loading"
+          ? "กำลังค้นหางานที่ได้รับมอบหมาย..."
+          : "ไม่พบงานที่ได้รับมอบหมาย"}
+      </h6>
+    </div>
+    <div className="card-body text-muted small">
+      {gradersStatus === "loading"
+        ? "กำลังดึงข้อมูลวิชาและข้อที่ต้องตรวจจากเซิร์ฟเวอร์..."
+        : "ไม่พบข้อมูลการมอบหมายงานสำหรับผู้ตรวจนี้ในแคมเปญนี้"}
+    </div>
+  </div>
+);
+
+
+  /* --------------------------------- JSX -------------------------------- */
 
   return (
     <ShowIfCan permission="grade_exams">
@@ -208,36 +344,50 @@ export default function GradingStationPage() {
         {/* Header */}
         <div className="card shadow-sm mb-3">
           <div className="card-body">
-            <h1 className="h4 mb-2">สถานีตรวจคะแนน (สแกน QR + บันทึกคะแนน)</h1>
+            <h1 className="h4 mb-2">
+              สถานีตรวจคะแนน (สแกน QR + บันทึกคะแนน)
+            </h1>
             <div className="text-muted small mb-2">
               สำหรับผู้ตรวจคะแนน ใช้สแกน QR ของผู้เข้าสอบแล้วบันทึกคะแนน
             </div>
 
-            {graderProfile ? (
+            {graderProfile && activeAssignment ? (
               <div className="d-flex flex-wrap gap-2 small">
                 <span className="badge text-bg-light d-inline-flex align-items-center gap-1 text-capitalize">
-                  <UserRound size={14} />{" "}
-                  {`${graderProfile.firstName} ${graderProfile.lastName}`}
+                  <UserRound size={14} />
+                  {/* ชื่อผู้ตรวจ จาก auth */}
+                  { // ลองใช้ full_name ก่อน ถ้าไม่มีใช้ username แทน
+                    (user as any)?.full_name ?? user.username ?? `Grader #${activeAssignment.grader_id}`
+                  }
                 </span>
+
                 <span className="badge text-bg-light d-inline-flex align-items-center gap-1">
-                  <ClipboardList size={14} />{" "}
-                  {assignedSubject?.subjectName ?? "ยังไม่ระบุวิชา"}
+                  <ClipboardList size={14} />
+                  {activeAssignment.subject_name} (ข้อ {activeAssignment.question_no})
                 </span>
+
                 <span className="badge text-bg-light d-inline-flex align-items-center gap-1">
-                  <KeyRound size={14} /> เซสชัน: {assignedSubject?.sessionLabel ?? "-"}
+                  <KeyRound size={14} />
+                  เซสชัน: {activeAssignment.session_code ?? "-"}
                 </span>
               </div>
             ) : (
-              <div className="small text-danger">
-                ไม่พบข้อมูลผู้ตรวจ โปรดติดต่อผู้ดูแลระบบ
+              <div className="small text-warning">
+                {gradersStatus === "loading"
+                  ? "กำลังโหลดข้อมูลผู้ตรวจและงานที่ได้รับมอบหมาย..."
+                  : "ไม่พบงานที่ได้รับมอบหมายสำหรับบัญชีนี้ในแคมเปญนี้"}
               </div>
             )}
           </div>
         </div>
 
+        {/* ( --- นี่คือ Logic การ Render ใหม่ --- ) */}
         {!graderProfile ? (
           renderNoProfile()
+        ) : !activeAssignment ? (
+          renderNoAssignment()
         ) : (
+          // 3. (Profile + Assignment) พร้อมแล้ว -> แสดงหน้าสแกน
           <div className="row g-4 mt-1">
             {/* Left: Scanner & Form */}
             <div className="col-lg-7">
@@ -252,20 +402,19 @@ export default function GradingStationPage() {
                   <div className="small text-muted">
                     สถานะกล้อง:{" "}
                     <span
-                      className={`badge ${
-                        !scannerEnabled
-                          ? "bg-secondary"
-                          : pause
+                      className={`badge ${!scannerEnabled
+                        ? "bg-secondary"
+                        : pause
                           ? "bg-warning"
                           : "bg-success"
-                      }`}
+                        }`}
                     >
                       {!scannerEnabled ? "หยุดอยู่" : pause ? "พักอยู่" : "พร้อม"}
                     </span>
                   </div>
                 </div>
 
-                {/* Controls (เหมือน ProctorScanPage) */}
+                {/* Controls */}
                 <div className="px-3 pt-2 d-flex flex-wrap align-items-center gap-2">
                   <div className="form-check me-2">
                     <input
@@ -275,7 +424,10 @@ export default function GradingStationPage() {
                       checked={pauseAfterSuccess}
                       onChange={(e) => setPauseAfterSuccess(e.target.checked)}
                     />
-                    <label className="form-check-label small" htmlFor="pauseAfterSuccess">
+                    <label
+                      className="form-check-label small"
+                      htmlFor="pauseAfterSuccess"
+                    >
                       พักกล้องเมื่อสแกนสำเร็จ
                     </label>
                   </div>
@@ -294,7 +446,8 @@ export default function GradingStationPage() {
                   </select>
 
                   <button
-                    className={`btn btn-${scannerEnabled ? "outline-secondary" : "success"} btn-sm d-inline-flex align-items-center gap-1`}
+                    className={`btn btn-${scannerEnabled ? "outline-secondary" : "success"
+                      } btn-sm d-inline-flex align-items-center gap-1`}
                     onClick={() => {
                       const next = !scannerEnabled;
                       setScannerEnabled(next);
@@ -309,7 +462,9 @@ export default function GradingStationPage() {
                   <button
                     className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
                     onClick={() =>
-                      setFacingMode((m) => (m === "environment" ? "user" : "environment"))
+                      setFacingMode((m) =>
+                        m === "environment" ? "user" : "environment"
+                      )
                     }
                     title="สลับกล้อง"
                   >
@@ -330,11 +485,15 @@ export default function GradingStationPage() {
                   {scanData ? (
                     <div className="alert alert-success py-2 d-flex align-items-center gap-2 mb-0">
                       <CheckCircle2 size={16} />
-                      <span className="small">รหัสผู้เข้าสอบล่าสุด: {scanData}</span>
+                      <span className="small">
+                        รหัสผู้เข้าสอบล่าสุด: {scanData}
+                      </span>
                     </div>
                   ) : (
                     <div className="alert alert-secondary py-2 d-flex align-items-center gap-2 mb-0">
-                      <span className="small">ยังไม่ได้สแกน — โปรดสแกนก่อนบันทึกคะแนน</span>
+                      <span className="small">
+                        ยังไม่ได้สแกน — โปรดสแกนก่อนบันทึกคะแนน
+                      </span>
                     </div>
                   )}
                 </div>
@@ -345,7 +504,6 @@ export default function GradingStationPage() {
                     className="rounded overflow-hidden border bg-black mb-2 position-relative"
                     style={{ minHeight: 220 }}
                   >
-                    {/* กรณีปิดกล้อง */}
                     {!scannerEnabled && (
                       <div
                         className="d-flex flex-column justify-content-center align-items-center text-muted py-5"
@@ -356,7 +514,6 @@ export default function GradingStationPage() {
                       </div>
                     )}
 
-                    {/* กรณีเปิดกล้อง */}
                     {scannerEnabled && (
                       <>
                         <Scanner
@@ -367,7 +524,10 @@ export default function GradingStationPage() {
                           }}
                           onError={(e) => console.warn("scanner error:", e)}
                           constraints={{ facingMode }}
-                          styles={{ container: { width: "100%" }, video: { width: "100%" } }}
+                          styles={{
+                            container: { width: "100%" },
+                            video: { width: "100%" },
+                          }}
                           components={{
                             onOff: true,
                             torch: true,
@@ -380,7 +540,6 @@ export default function GradingStationPage() {
                           paused={pause}
                         />
 
-                        {/* พักชั่วคราว overlay */}
                         {pause && (
                           <div
                             className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center"
@@ -389,7 +548,9 @@ export default function GradingStationPage() {
                             <Pause className="mb-2 text-white" />
                             <div className="text-white text-center px-3">
                               กำลังพักกล้องชั่วคราว
-                              <div className="small text-white-50">กด “เริ่ม” เพื่อกลับไปสแกนต่อ</div>
+                              <div className="small text-white-50">
+                                กด “เริ่ม” เพื่อกลับไปสแกนต่อ
+                              </div>
                             </div>
                           </div>
                         )}
@@ -409,12 +570,15 @@ export default function GradingStationPage() {
                         value={manualPayload}
                         onChange={(e) => setManualPayload(e.target.value)}
                       />
-                      <button className="btn btn-outline-primary" onClick={verifyManualPayload}>
+                      <button
+                        className="btn btn-outline-primary"
+                        onClick={verifyManualPayload}
+                      >
                         ตรวจสอบ
                       </button>
                     </div>
                     <div className="form-text">
-                      ใช้เมื่อกล้องอ่านไม่ติด หรือรับข้อมูลจากช่องทางอื่น (เช่น เจ้าหน้าที่กรอกแทน)
+                      ใช้เมื่อกล้องอ่านไม่ติด หรือรับข้อมูลจากช่องทางอื่น
                     </div>
                   </div>
 
@@ -437,8 +601,18 @@ export default function GradingStationPage() {
                     <button
                       className="btn btn-primary d-inline-flex align-items-center gap-2"
                       onClick={handleConfirmScore}
+                      disabled={isLoading}
                     >
-                      <CheckCircle2 size={16} /> บันทึกคะแนน
+                      {isLoading ? (
+                        <span
+                          className="spinner-border spinner-border-sm"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
+                      {isLoading ? "กำลังบันทึก..." : "บันทึกคะแนน"}
                     </button>
                     <button
                       className="btn btn-outline-secondary"
@@ -464,7 +638,8 @@ export default function GradingStationPage() {
                 <div className="card-body">
                   {recent.length === 0 ? (
                     <div className="text-muted small">
-                      ยังไม่มีรายการบันทึกคะแนน จะแสดงที่นี่หลังจากบันทึกสำเร็จ
+                      ยังไม่มีรายการบันทึกคะแนน
+                      _       จะแสดงที่นี่หลังจากบันทึกสำเร็จ
                     </div>
                   ) : (
                     <div className="table-responsive">
@@ -481,7 +656,9 @@ export default function GradingStationPage() {
                             <tr key={`${r.userId}-${idx}`}>
                               <td>{r.time}</td>
                               <td>{r.userId}</td>
-                              <td className="text-end fw-semibold">{r.score}</td>
+                              <td className="text-end fw-semibold">
+                                {r.score}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -527,11 +704,24 @@ export default function GradingStationPage() {
                 <button
                   className="btn btn-outline-secondary"
                   onClick={() => setIsConfirmOpen(false)}
+                  disabled={isLoading}
                 >
                   ยกเลิก
                 </button>
-                <button className="btn btn-primary" onClick={handleSaveScore}>
-                  บันทึก
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSaveScore}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span
+                      className="spinner-border spinner-border-sm me-1"
+                      role="status"
+                      aria-hidden="true"
+                      section-divider-eof
+                    ></span>
+                  ) : null}
+                  {isLoading ? "กำลังบันทึก..." : "บันทึก"}
                 </button>
               </div>
             </div>

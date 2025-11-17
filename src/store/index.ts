@@ -9,8 +9,7 @@ import { examDataSlice } from "./slices/examData.slice"
 import { usersSlice } from "./slices/users.slice";
 import { gradersSlice } from "./slices/graders.slice";
 import { scoreReviewSlice } from "./slices/scoreReview.slice";
-import { bagHandoverSlice } from "./slices/bagHandover.slice";
-import { examEntitiesSlice } from "./slices/examEntities.slice";
+import { bagHandoverSlice} from "./slices/bagHandover.slice";
 import { keyManagementSlice } from "./slices/key.slice";
 import { userSessionsSlice } from "./slices/userSessions.slice"; 
 import {bagsSlice} from "./slices/bags.slice";
@@ -32,15 +31,15 @@ export const store = configureStore({
     users: usersSlice.reducer,
     graders: gradersSlice.reducer,
     scoreReview: scoreReviewSlice.reducer,
-    bagHandover: bagHandoverSlice.reducer,
     examRooms: examRoomsSlice.reducer,
-    examEntities: examEntitiesSlice.reducer,
     keyManagement: keyManagementSlice.reducer,
     userSessions: userSessionsSlice.reducer,
     accounts: accountsSlice.reducer,
     userCampaigns : userCampaignsSlice.reducer,
     roomSeats : roomSeatsSlice.reducer,
-    qr: qrSlice.reducer
+    qr: qrSlice.reducer,
+    bagHandover: bagHandoverSlice.reducer,
+
 
   },
   middleware: (getDefaultMiddleware) =>

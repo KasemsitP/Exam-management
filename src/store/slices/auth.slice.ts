@@ -3,6 +3,8 @@ import axios from "axios";
 
 export type Role = "admin" | "manager" | "staff" | "grader";
 
+
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -10,6 +12,7 @@ export interface AuthUser {
   roles: Role[];
   avatar?: string;
   password?: string;
+
 }
 
 interface AuthState {

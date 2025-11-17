@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RequireAuth } from "@/components/auth/RequireAuth";
-import { useAppDispatch, useAppSelector } from "@/store/hook"; 
-import { hydrateAuth , selectAuthStatus } from "@/store/slices/auth.slice";
+import { useAppDispatch, useAppSelector } from "@/store/hook";
+import { hydrateAuth, selectAuthStatus } from "@/store/slices/auth.slice";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import CampaignsPage from "@/pages/Sessions";
@@ -20,6 +20,8 @@ import AccountsPage from "./pages/AccountManagement";
 //import UserSearchPage from "@/pages/UserSearch";
 import { AppLayout } from "@/components/layout/AppLayout";
 import QrPage from '@/pages/QRScanner'
+import { BootstrapToastViewport } from "@/components/ui/bootstrap-toast";
+import{OverlayLoader} from "@/components/ui/Loading";
 
 function ProtectedApp() {
   return (
@@ -44,27 +46,29 @@ function NotFound() {
   );
 }
 
-function FullPageLoader() {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <h2>Loading Application...</h2>
-    </div>
-  );
-}
+// function FullPageLoader() {
+//   return (
+//     <div className="page-loader flex-column bg-dark bg-opacity-25">
+//       <span className="spinner-border text-primary" role="status"></span>
+//       <span className="text-gray-800 fs-6 fw-semibold mt-5">Loading...</span>
+//     </div>
+//   );
+// }
 
 function AppContent() {
   const dispatch = useAppDispatch();
-  const authStatus = useAppSelector(selectAuthStatus); 
+  const authStatus = useAppSelector(selectAuthStatus);
   useEffect(() => {
     if (authStatus === 'idle') {
       dispatch(hydrateAuth());
     }
   }, [dispatch, authStatus]); // เพิ่ม authStatus ใน dependencies
   if (authStatus === 'idle' || authStatus === 'loading') {
-    return <FullPageLoader />;
+    return <OverlayLoader open={authStatus === 'loading'} label="กำลังโหลด..." />;
   }
   return (
     <BrowserRouter>
+      <BootstrapToastViewport />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route element={<ProtectedApp />}>

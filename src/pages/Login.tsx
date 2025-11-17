@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
+import {showLoginSuccessAlert , showLoginSuccessAlertWithData} from "@/components/ui/successAlert";
 import {
   login,
   selectAuthError,
-  selectAuthStatus,
+  selectAuthStatus,   
   selectCurrentUser,
   setAuthenticated
 } from "@/store/slices/auth.slice";
@@ -19,6 +20,7 @@ import { AuthUser, Role } from "@/store/slices/auth.slice";
 
 
 export default function Login() {
+  
   const dispatch = useAppDispatch();
   const status = useAppSelector(selectAuthStatus);
   const error = useAppSelector(selectAuthError);
@@ -30,19 +32,21 @@ export default function Login() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { toast } = useToast();
+  //const { toast } = useToast();
 
   useEffect(() => {
     if (status === "authenticated" && user) {
-      toast({
-        title: "เข้าสู่ระบบสำเร็จ",
-        description: `ยินดีต้อนรับกลับ ${user.name}`,
-      });
+      // toast({
+      //   title: "เข้าสู่ระบบสำเร็จ",
+      //   description: `ยินดีต้อนรับกลับ ${user.name}`,
+      // });
+      showLoginSuccessAlert(user.name);
       const redirect = (location.state as { from?: { pathname?: string } } | undefined)?.from
         ?.pathname;
       navigate(redirect ?? "/dashboard", { replace: true });
+
     }
-  }, [status, user, navigate, toast, location.state]);
+  }, [status, user, navigate, location.state]);
 
   const onSubmit = (values: LoginFormValues) => {
     dispatch(login(values));
@@ -50,11 +54,6 @@ export default function Login() {
 
 
 const handleBypass = () => {
-    toast({
-      title: "Bypass ถูกปิด",
-      description: "ใช้ได้เฉพาะโหมด development เท่านั้น",
-      variant: "destructive",
-    });
 
  const mockUser: AuthUser = {
   id: "u-1",
@@ -66,11 +65,7 @@ const handleBypass = () => {
 
   // อัปเดต Redux ให้เป็นสถานะล็อกอิน
   dispatch(setAuthenticated(mockUser));
-
-  toast({
-    title: "เข้าสู่ระบบแบบ Bypass (Dev)",
-    description: `ยินดีต้อนรับ ${mockUser.name}`,
-  });
+  showLoginSuccessAlertWithData(mockUser.name, "โหมด bypass");
 
   navigate("/dashboard", { replace: true });
 };

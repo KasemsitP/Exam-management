@@ -1,129 +1,170 @@
-import { createSlice, nanoid, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, PayloadAction, createSelector } from "@reduxjs/toolkit";
+import axios from "axios";
+import { RootState } from "../index"
+import { DeleteCamp } from "../../utils/camp"
 
-export interface Grader {
-  id: string;
-  campaignId: string;
-  code: string;
-  firstName: string;
-  lastName: string;
-  username: string;
-  password: string;
-  subjects: {
-    sessionId: string;
-    sessionLabel: string;
-    subjectId: string;
-    subjectName: string;
-    questionRange: string;
-  }[];
-  notes?: string;
+
+export interface CrmGrader {
+  grader_id: number;
+  account_id: number;
+  campaign_id: number;
+
+  session_id: number;
+  session_code: string;
+  exam_date: string;
+
+  subject_id: number;
+  subject_code: string;
+  subject_name: string;
+
+  question_no: number;
 }
 
+// export interface AssignedSubject {
+//   sessionId: number;
+//   sessionLabel: string;
+//   subjectId: number;
+//   subjectName: string;
+//   questionNo: number;
+//   seatNo: number; 
+// }
+
 interface GradersState {
-  byCampaign: Record<string, Grader[]>;
+  byCampaign: { [campaignId: number]: CrmGrader[] };
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
+  assignmentStatus: "idle" | "loading" | "succeeded" | "failed";
+  assignmentError: string | null;
 }
 
 const initialState: GradersState = {
-  byCampaign: {
-    "camp-y68-t2": [
-      {
-        id: "grad-001",
-        campaignId: "camp-y68-t2",
-        code: "TCH001",
-        firstName: "Anuwat",
-        lastName: "Chairat",
-        username: "grader01",
-        password: "pass1234",
-        subjects: [
-          {
-            sessionId: "sess-y68-t2-d1",
-            sessionLabel: "Y68-T2-D1 - Main Site",
-            subjectId: "sub-law101-d1",
-            subjectName: "Civil Law I",
-            questionRange: "1-120",
-          },
-        ],
-      },
-      {
-        id: "grad-002",
-        campaignId: "camp-y68-t2",
-        code: "TCH002",
-        firstName: "Benjarong",
-        lastName: "Kiatkarn",
-        username: "grader02",
-        password: "pass1234",
-        subjects: [
-          {
-            sessionId: "sess-y68-t2-d1",
-            sessionLabel: "Y68-T2-D1 - Main Site",
-            subjectId: "sub-law215-d1",
-            subjectName: "Civil Procedure",
-            questionRange: "121-240",
-          },
-        ],
-      },
-      {
-        id: "grad-003",
-        campaignId: "camp-y68-t2",
-        code: "TCH003",
-        firstName: "Chalerm",
-        lastName: "Sutthipong",
-        username: "grader03",
-        password: "pass1234",
-        subjects: [
-          {
-            sessionId: "sess-y68-t2-d2",
-            sessionLabel: "Y68-T2-D2 - Main Site",
-            subjectId: "sub-law205-d2",
-            subjectName: "Criminal Procedure",
-            questionRange: "1-120",
-          },
-          {
-            sessionId: "sess-y68-t2-d2",
-            sessionLabel: "Y68-T2-D2 - Main Site",
-            subjectId: "sub-law320-d2",
-            subjectName: "International Law",
-            questionRange: "121-220",
-          },
-        ],
-        notes: "Handles afternoon dispute resolution queue.",
-      },
-    ],
-  },
+  byCampaign: {},
+  status: "idle",
+  error: null,
+  assignmentStatus: "idle",
+  assignmentError: null,
 };
 
+export const fetchGradersForCampaignThunk = createAsyncThunk<
+  CrmGrader[],
+  number,
+  { rejectValue: string }
+>(
+  "graders/fetchForCampaign",
+  async (campaignId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/api/graders/campaign/${DeleteCamp(campaignId.toString())}`);
+      const mappedAssignments: CrmGrader[] = response.data.map((g: any) => ({
+        grader_id: g.grader_id,
+        account_id: g.account_id,
+        campaign_id: g.campaign_id,
+
+        session_id: g.session_id,
+        session_code: g.session_code,
+        exam_date: g.exam_date,
+
+        subject_id: g.subject_id,
+        subject_code: g.subject_code,
+        subject_name: g.subject_name,
+
+        question_no: g.question_no,
+      }));
+
+      return mappedAssignments;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch graders");
+    }
+  }
+);
+
+
+// export const fetchActiveAssignmentThunk = createAsyncThunk<
+//   AssignedSubject,
+//   number,
+//   { rejectValue: string }
+// >(
+//   "graders/fetchActiveAssignment",
+//   async (campaignId, { rejectWithValue }) => {
+//     try {
+//       // (API นี้ถูกต้อง - Controller ใช้ accountId จาก Auth)
+//       const response = await axios.get(`/grading/my-assignment`, {
+//         params: { campaignId }
+//       });
+//       return response.data;
+//     } catch (error: any) {
+//       return rejectWithValue(error.response?.data?.message || "Failed to fetch assignment");
+//     }
+//   }
+// );
+
+// (Slice - เติมเต็ม)
 const gradersSlice = createSlice({
   name: "graders",
   initialState,
   reducers: {
-    graderAdded: (state, action: PayloadAction<Omit<Grader, "id">>) => {
-      const grader: Grader = { ...action.payload, id: nanoid(8) };
-      const list = state.byCampaign[grader.campaignId] ?? [];
-      list.push(grader);
-      state.byCampaign[grader.campaignId] = list;
+    clearActiveAssignment: (state) => {
+      state.assignmentStatus = "idle";
+      state.assignmentError = null;
     },
-    graderUpdated: (state, action: PayloadAction<Grader>) => {
-      const list = state.byCampaign[action.payload.campaignId];
-      if (!list) return;
-      const index = list.findIndex((grader) => grader.id === action.payload.id);
-      if (index >= 0) list[index] = action.payload;
-    },
-    graderRemoved: (
-      state,
-      action: PayloadAction<{ campaignId: string; graderId: string }>
-    ) => {
-      const list = state.byCampaign[action.payload.campaignId];
-      if (!list) return;
-      state.byCampaign[action.payload.campaignId] = list.filter(
-        (grader) => grader.id !== action.payload.graderId
-      );
-    },
+  },
+  extraReducers: (builder) => {
+    builder
+      // (Thunk 1: Fetch Graders)
+      .addCase(fetchGradersForCampaignThunk.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(fetchGradersForCampaignThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        const campaignId = action.meta.arg;
+        state.byCampaign[campaignId] = action.payload;
+      })
+      .addCase(fetchGradersForCampaignThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload as string;
+      })
+
+    // (Thunk 2: Fetch Assignment)
+    // .addCase(fetchActiveAssignmentThunk.pending, (state) => {
+    //   state.assignmentStatus = "loading";
+    // })
+    // .addCase(fetchActiveAssignmentThunk.fulfilled, (state, action: PayloadAction<AssignedSubject>) => {
+    //   state.assignmentStatus = "succeeded";
+    //   state.activeAssignment = action.payload;
+    //   state.assignmentError = null;
+    // })
+    // .addCase(fetchActiveAssignmentThunk.rejected, (state, action) => {
+    //   state.assignmentStatus = "failed";
+    //   state.assignmentError = action.payload as string;
+    // });
   },
 });
 
-export const { graderAdded, graderRemoved, graderUpdated } = gradersSlice.actions;
-export { gradersSlice };
+export const { clearActiveAssignment } = gradersSlice.actions;
+export const selectGradersState = (state: RootState) => state.graders;
 
-export const selectGradersForCampaign =
-  (campaignId: string | null) =>
-  (state: { graders: GradersState }): Grader[] =>
-    campaignId ? state.graders.byCampaign[campaignId] ?? [] : [];
+export const selectGradersForCampaign = (campaignId: number | null) =>
+  createSelector(
+    [selectGradersState], // (Input selector)
+    (gradersState) => {   // (Combiner)
+      if (!campaignId) return [];
+      return gradersState.byCampaign[campaignId] || [];
+    }
+  );
+
+export const selectGradersStatus = createSelector(
+  [selectGradersState],
+  (gradersState) => gradersState.status
+);
+
+
+export const selectAssignmentStatus = createSelector(
+  [selectGradersState],
+  (gradersState) => gradersState.assignmentStatus
+);
+
+export const selectAssignmentError = createSelector(
+  [selectGradersState],
+  (gradersState) => gradersState.assignmentError
+);
+
+export { gradersSlice };

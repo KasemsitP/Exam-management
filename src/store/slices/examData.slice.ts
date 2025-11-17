@@ -16,7 +16,7 @@ export interface CampaignSession {
   label: string;
   examDate: string;
   note?: string;
-  site_id? : number;
+  site_id?: number;
   subjects: CampaignSubject[];
 }
 
@@ -232,6 +232,49 @@ export const deleteCampaignThunk = createAsyncThunk<
   }
 });
 
+export const updateCampaignThunk = createAsyncThunk<
+  ExamCampaign, // type ของค่าที่ return
+  ExamCampaign, // type ของ payload
+  { rejectValue: string } // type ของ error
+>(
+  "examData/updateCampaign",
+  async (campaign: ExamCampaign, { rejectWithValue }) => {
+    try {
+      const response = await axios.put<ApiCampaign>(
+        `/api/campaigns`,
+        {
+          id: parseCampaignId(campaign.id),
+          code: campaign.code,
+          name: campaign.name,
+          start_date: campaign.startDate,
+          end_date: campaign.endDate,
+          is_active: campaign.isActive,
+          note: campaign.description,
+        }
+      );
+
+      return {
+        id: buildCampaignId(response.data.id),
+        code: response.data.code,
+        name: response.data.name,
+        startDate: response.data.start_date,
+        endDate: response.data.end_date,
+        isActive: toBool(response.data.is_active),
+        description: response.data.note,
+        note: response.data.note,
+        sessions: campaign.sessions,
+      };
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(
+          error.response?.data?.message ?? "Failed to update campaign"
+        );
+      }
+      return rejectWithValue("Failed to update campaign");
+    }
+  }
+);
+
 interface CreateSessionInput {
   campaignId: string;
   label: string;
@@ -387,12 +430,12 @@ const examDataSlice = createSlice({
         state.list[index] = action.payload;
       }
     },
-    campaignRemoved: (state, action: PayloadAction<string>) => {
-      state.list = state.list.filter((campaign) => campaign.id !== action.payload);
-      if (state.activeCampaignId === action.payload) {
-        state.activeCampaignId = state.list[0]?.id ?? null;
-      }
-    },
+    // campaignRemoved: (state, action: PayloadAction<string>) => {
+    //   state.list = state.list.filter((campaign) => campaign.id !== action.payload);
+    //   if (state.activeCampaignId === action.payload) {
+    //     state.activeCampaignId = state.list[0]?.id ?? null;
+    //   }
+    // },
     campaignSelected: (state, action: PayloadAction<string | null>) => {
       state.activeCampaignId = action.payload;
     },
@@ -527,66 +570,81 @@ const examDataSlice = createSlice({
           state.activeCampaignId = state.list[0]?.id ?? null;
         }
       })
+      .addCase(updateCampaignThunk.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(updateCampaignThunk.fulfilled, (state, action: PayloadAction<ExamCampaign>) => {
+        const index = state.list.findIndex(c => c.id === action.payload.id);
+        if (index >= 0) {
+          state.list[index] = action.payload;
+        }
+        state.status = "succeeded";
+      })
+      .addCase(updateCampaignThunk.rejected, (state, action) => {
+        state.error = action.payload ?? "Update failed";
+        state.status = "failed";
+      })
       .addCase(deleteCampaignThunk.rejected, (state, action) => {
         state.error = action.payload ?? "Failed to delete campaign";
       })
-      .addCase(createSessionThunk.pending, (state) => {
-        state.error = null;
-      })
-      .addCase(createSessionThunk.fulfilled, (state, action) => {
-        const campaign = state.list.find((item) => item.id === action.payload.campaignId);
-        if (campaign) {
-          campaign.sessions.push(action.payload.session);
-        }
-      })
-      .addCase(createSessionThunk.rejected, (state, action) => {
-        state.error = action.payload ?? "Failed to create session";
-      })
-      .addCase(deleteSessionThunk.pending, (state) => {
-        state.error = null;
-      })
-      .addCase(deleteSessionThunk.fulfilled, (state, action) => {
-        const campaign = state.list.find((item) => item.id === action.payload.campaignId);
-        if (!campaign) return;
-        campaign.sessions = campaign.sessions.filter(
-          (session) => session.id !== action.payload.sessionId
-        );
-      })
-      .addCase(deleteSessionThunk.rejected, (state, action) => {
-        state.error = action.payload ?? "Failed to delete session";
-      })
-      .addCase(createSubjectThunk.pending, (state) => {
-        state.error = null;
-      })
-      .addCase(createSubjectThunk.fulfilled, (state, action) => {
-        const campaign = state.list.find((item) => item.id === action.payload.campaignId);
-        const session = campaign?.sessions.find((item) => item.id === action.payload.sessionId);
-        if (session) {
-          session.subjects.push(action.payload.subject);
-          session.subjects.sort((a, b) => a.startTime.localeCompare(b.startTime));
-        }
-      })
-      .addCase(createSubjectThunk.rejected, (state, action) => {
-        state.error = action.payload ?? "Failed to create subject";
-      })
-      .addCase(deleteSubjectThunk.pending, (state) => {
-        state.error = null;
-      })
-      .addCase(deleteSubjectThunk.fulfilled, (state, action) => {
-        const campaign = state.list.find((item) => item.id === action.payload.campaignId);
-        const session = campaign?.sessions.find((item) => item.id === action.payload.sessionId);
-        if (!session) return;
-        session.subjects = session.subjects.filter((subject) => subject.id !== action.payload.subjectId);
-      })
-      .addCase(deleteSubjectThunk.rejected, (state, action) => {
-        state.error = action.payload ?? "Failed to delete subject";
-      });
-  },
+    .addCase(createSessionThunk.pending, (state) => {
+      state.error = null;
+    })
+    .addCase(createSessionThunk.fulfilled, (state, action) => {
+      const campaign = state.list.find((item) => item.id === action.payload.campaignId);
+      if (campaign) {
+        campaign.sessions.push(action.payload.session);
+      }
+    })
+    .addCase(createSessionThunk.rejected, (state, action) => {
+      state.error = action.payload ?? "Failed to create session";
+    })
+    .addCase(deleteSessionThunk.pending, (state) => {
+      state.error = null;
+    })
+    .addCase(deleteSessionThunk.fulfilled, (state, action) => {
+      const campaign = state.list.find((item) => item.id === action.payload.campaignId);
+      if (!campaign) return;
+      campaign.sessions = campaign.sessions.filter(
+        (session) => session.id !== action.payload.sessionId
+      );
+    })
+    .addCase(deleteSessionThunk.rejected, (state, action) => {
+      state.error = action.payload ?? "Failed to delete session";
+    })
+    .addCase(createSubjectThunk.pending, (state) => {
+      state.error = null;
+    })
+    .addCase(createSubjectThunk.fulfilled, (state, action) => {
+      const campaign = state.list.find((item) => item.id === action.payload.campaignId);
+      const session = campaign?.sessions.find((item) => item.id === action.payload.sessionId);
+      if (session) {
+        session.subjects.push(action.payload.subject);
+        session.subjects.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      }
+    })
+    .addCase(createSubjectThunk.rejected, (state, action) => {
+      state.error = action.payload ?? "Failed to create subject";
+    })
+    .addCase(deleteSubjectThunk.pending, (state) => {
+      state.error = null;
+    })
+    .addCase(deleteSubjectThunk.fulfilled, (state, action) => {
+      const campaign = state.list.find((item) => item.id === action.payload.campaignId);
+      const session = campaign?.sessions.find((item) => item.id === action.payload.sessionId);
+      if (!session) return;
+      session.subjects = session.subjects.filter((subject) => subject.id !== action.payload.subjectId);
+    })
+    .addCase(deleteSubjectThunk.rejected, (state, action) => {
+      state.error = action.payload ?? "Failed to delete subject";
+    });
+},
 });
 
 export const {
   campaignAdded,
-  campaignRemoved,
+  // campaignRemoved,
   campaignSelected,
   campaignUpdated,
   sessionAdded,
@@ -606,27 +664,30 @@ export const selectActiveCampaign = (state: { examData: ExamDataState }) =>
 
 export const selectSessionsForCampaign =
   (campaignId: string | null) =>
-  (state: { examData: ExamDataState }) =>
-    campaignId
-      ? state.examData.list.find((campaign) => campaign.id === campaignId)?.sessions ?? []
-      : [];
+    (state: { examData: ExamDataState }) =>
+      campaignId
+        ? state.examData.list.find((campaign) => campaign.id === campaignId)?.sessions ?? []
+        : [];
 
 export const selectActiveCampaignSessions = (state: { examData: ExamDataState }) =>
   selectActiveCampaign(state)?.sessions ?? [];
 
 export const selectSessionById =
   (campaignId: string, sessionId: string) =>
-  (state: { examData: ExamDataState }) =>
-    state.examData.list
-      .find((campaign) => campaign.id === campaignId)
-      ?.sessions.find((session) => session.id === sessionId) ?? null;
+    (state: { examData: ExamDataState }) =>
+      state.examData.list
+        .find((campaign) => campaign.id === campaignId)
+        ?.sessions.find((session) => session.id === sessionId) ?? null;
 
 export const selectSubjectsForSession =
   (campaignId: string, sessionId: string) =>
-  (state: { examData: ExamDataState }) =>
-    state.examData.list
-      .find((campaign) => campaign.id === campaignId)
-      ?.sessions.find((session) => session.id === sessionId)?.subjects ?? [];
+    (state: { examData: ExamDataState }) =>
+      state.examData.list
+        .find((campaign) => campaign.id === campaignId)
+        ?.sessions.find((session) => session.id === sessionId)?.subjects ?? [];
 
 export const selectExamDataStatus = (state: { examData: ExamDataState }) => state.examData.status;
 export const selectExamDataError = (state: { examData: ExamDataState }) => state.examData.error ?? null;
+
+
+

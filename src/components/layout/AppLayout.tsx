@@ -24,6 +24,7 @@ import {
   campaignSelected,
   fetchInitialExamData,
   selectActiveCampaign,
+  
   selectCampaigns,
   selectExamDataStatus,
 } from "@/store/slices/examData.slice";
@@ -94,7 +95,7 @@ export function AppLayout() {
     if (!selectedId) return;
     dispatch(campaignSelected(selectedId));
     setModalOpen(false);
-    window.location.reload();
+   /// window.location.reload();
   };
 
   // Reusable Sidebar content

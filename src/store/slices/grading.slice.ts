@@ -1,163 +1,149 @@
-import { createAsyncThunk, createSlice, nanoid, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
+import axios from "axios";
+import { RootState } from "../index";
 
-export type GradingStatus = "queued" | "grading" | "graded";
-
-export interface GradingQueueItem {
-  id: string;
-  bagId: string;
-  bookletSerial: string;
-  candidateName: string;
-  status: GradingStatus;
-  score?: number;
-  graderId?: string;
+export interface Payload {
+  qrPayload: string;
+  campaignId: number;
+  subjectId: number;
+  sessionId: number;
+  graderId: number;
+  questionNo: number;
+  score: number;
 }
-
-export interface GradingMetrics {
-  gradedCount: number;
-  queuedCount: number;
-  averageScore: number;
-  turnaroundMinutes: number;
+export interface PayloadSlot {
+  qrPayload: string;
+  campaignId: number;
+  subjectId: number;
+  sessionId: number;
+  graderId: number;
+  questionNo: number;
+}
+interface GradingState {
+  loading: boolean;
+  error: string | null;
+  lastScore: {
+    slotId: string;
+    score: number;
+  } | null;
 }
 
 interface GradingState {
-  queue: GradingQueueItem[];
-  activeEntryId: string | null;
-  metrics: GradingMetrics;
-  claiming: boolean;
-  submitting: boolean;
+  loading: boolean;
+  error: string | null;
+  lastScore: { slotId: string; score: number } | null;
+
+  verifying: boolean;
+  lastSlotId: string | null;
 }
 
-const initialQueue: GradingQueueItem[] = [
-  {
-    id: "grade-001",
-    bagId: "BAG-Y68-D1-01",
-    bookletSerial: "LAW101-0002",
-    candidateName: "Busaba L.",
-    status: "queued",
-  },
-  {
-    id: "grade-002",
-    bagId: "BAG-Y68-D1-01",
-    bookletSerial: "LAW101-0003",
-    candidateName: "Ekachai T.",
-    status: "queued",
-  },
-  {
-    id: "grade-003",
-    bagId: "BAG-Y68-D1-01",
-    bookletSerial: "LAW101-0004",
-    candidateName: "Fahkrada U.",
-    status: "queued",
-  },
-];
-
 const initialState: GradingState = {
-  queue: initialQueue,
-  activeEntryId: null,
-  metrics: {
-    gradedCount: 12,
-    queuedCount: initialQueue.length,
-    averageScore: 72,
-    turnaroundMinutes: 18,
-  },
-  claiming: false,
-  submitting: false,
+  loading: false,
+  error: null,
+  lastScore: null,
+  verifying: false,
+  lastSlotId: null,
 };
 
-export const submitGradingScore = createAsyncThunk<
-  { entryId: string; score: number; graderId: string },
-  { entryId: string; score: number; graderId: string }
->("grading/submitScore", async ({ entryId, score, graderId }) => {
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  return { entryId, score, graderId };
-});
+export const verifyAndAllocateThunk = createAsyncThunk<
+  { slotId: string },
+  PayloadSlot,
+  { rejectValue: string }
+>(
+  "grading/verifyAndAllocatepayload",
+  async (payload, { rejectWithValue }) => {
+    console.log("Payload in Thunk:", payload);
+    try {
+      const res = await axios.post("/api/gradingslots/verify", payload);
+      console.log("Response from verify API:", res.data);
+      return res.data; 
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "ไม่สามารถสร้าง Slot การตรวจได้"
+      );
+    }
+  }
+);
+export const submitScoreThunk = createAsyncThunk<
+  { slotId: string; score: number }, // <-- ประเภทค่าที่คืนมา (Fulfilled)
+  Payload,                 // <-- ประเภทค่าที่ส่งไป (Payload)
+  { rejectValue: string }            // <-- ประเภทค่าที่ Reject
+>(
+  "grading/submitScore",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await axios.post("/grading/submit-score", payload);
+      return response.data; // (Backend ควรคืน { slotId: ..., score: ... })
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "ไม่สามารถบันทึกคะแนนได้"
+      );
+    }
+  }
+);
 
+// 4. Slice (เหมือนเดิม)
 const gradingSlice = createSlice({
   name: "grading",
   initialState,
   reducers: {
-    gradingQueueEnqueued: {
-      prepare: (payload: Omit<GradingQueueItem, "id" | "status">) => ({
-        payload: {
-          ...payload,
-          id: nanoid(8),
-          status: "queued" as GradingStatus,
-        },
-      }),
-      reducer: (state, action: PayloadAction<GradingQueueItem>) => {
-        state.queue.push(action.payload);
-        state.metrics.queuedCount = state.queue.filter((item) => item.status === "queued").length;
-      },
-    },
-    gradingSlotClaimed: (state, action: PayloadAction<{ entryId?: string }>) => {
-      const targetId = action.payload.entryId;
-      const entry =
-        state.queue.find((item) => item.id === targetId && item.status === "queued") ??
-        state.queue.find((item) => item.status === "queued");
-      if (!entry) return;
-      entry.status = "grading";
-      state.activeEntryId = entry.id;
-    },
-    gradingSlotReleased: (state) => {
-      if (!state.activeEntryId) return;
-      const entry = state.queue.find((item) => item.id === state.activeEntryId);
-      if (entry && entry.status === "grading") {
-        entry.status = "queued";
-      }
-      state.activeEntryId = null;
-    },
-    gradingScoreCleared: (state) => {
-      if (!state.activeEntryId) return;
-      const entry = state.queue.find((item) => item.id === state.activeEntryId);
-      if (entry) {
-        entry.score = undefined;
-      }
+    clearGradingError: (state) => {
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(submitGradingScore.pending, (state) => {
-        state.submitting = true;
+      .addCase(verifyAndAllocateThunk.pending, (state) => {
+        state.verifying = true;
+        state.error = null;
       })
-      .addCase(submitGradingScore.fulfilled, (state, action) => {
-        state.submitting = false;
-        const entry = state.queue.find((item) => item.id === action.payload.entryId);
-        if (!entry) return;
-        entry.status = "graded";
-        entry.score = action.payload.score;
-        entry.graderId = action.payload.graderId;
-        if (state.activeEntryId === entry.id) {
-          state.activeEntryId = null;
-        }
-        const graded = state.queue.filter((item) => item.status === "graded");
-        const average =
-          graded.reduce((total, item) => total + (item.score ?? 0), 0) /
-          (graded.length || 1);
-        state.metrics.gradedCount = graded.length;
-        state.metrics.averageScore = Math.round(average * 10) / 10;
-        state.metrics.queuedCount = state.queue.filter((item) => item.status !== "graded").length;
-        state.metrics.turnaroundMinutes = Math.max(8, 20 - graded.length);
+      .addCase(verifyAndAllocateThunk.fulfilled, (state, action) => {
+        state.verifying = false;
+        state.lastSlotId = action.payload.slotId;
       })
-      .addCase(submitGradingScore.rejected, (state) => {
-        state.submitting = false;
+      .addCase(verifyAndAllocateThunk.rejected, (state, action) => {
+        state.verifying = false;
+        state.error = action.payload as string;
+      })
+      .addCase(submitScoreThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(submitScoreThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.lastScore = action.payload;
+      })
+      .addCase(submitScoreThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
       });
   },
 });
 
-export const {
-  gradingQueueEnqueued,
-  gradingScoreCleared,
-  gradingSlotClaimed,
-  gradingSlotReleased,
-} = gradingSlice.actions;
+export const { clearGradingError } = gradingSlice.actions;
+
+// 5. Selectors (แก้ไขตามที่คุณขอ โดยใช้ createSelector)
+
+// (1) Base Selector: ดึง "LocalState" (GradingState) จาก "RootState"
+export const selectGradingState = (state: RootState) => state.grading;
+
+// (2) Derived Selectors: 
+//     (Selectors พวกนี้จะรับ LocalState (GradingState) จาก Base Selector)
+
+export const selectIsGradingLoading = createSelector(
+  [selectGradingState], // (Input selector)
+  (gradingState) => gradingState.loading // (Combiner)
+);
+
+export const selectGradingError = createSelector(
+  [selectGradingState], // (Input selector)
+  (gradingState) => gradingState.error // (Combiner)
+);
+
+export const selectLastScore = createSelector(
+  [selectGradingState],
+  (gradingState) => gradingState.lastScore
+);
+
 
 export { gradingSlice };
-
-export const selectGradingQueue = (state: { grading: GradingState }) => state.grading.queue;
-export const selectActiveGradingEntry = (state: { grading: GradingState }) =>
-  state.grading.queue.find((item) => item.id === state.grading.activeEntryId) ?? null;
-export const selectGradingMetrics = (state: { grading: GradingState }) => state.grading.metrics;
-export const selectGradingSubmissionState = (state: { grading: GradingState }) => ({
-  submitting: state.grading.submitting,
-  activeEntryId: state.grading.activeEntryId,
-});
