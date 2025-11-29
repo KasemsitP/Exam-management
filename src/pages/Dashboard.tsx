@@ -248,7 +248,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Pie + KPIs */}
+
         <div className="col-lg-4 d-flex flex-column gap-3">
           <div className="card shadow-sm">
             <div className="card-header bg-white">
@@ -303,7 +303,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Bottom section */}
+      Bottom section
       <section className="row g-3">
         <div className="col-lg-8">
           <div className="card shadow-sm h-100">
@@ -377,7 +377,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* ⭐️ NEW: กล่อง “ธงคัดกรองคะแนน” */}
+          ⭐️ NEW: กล่อง “ธงคัดกรองคะแนน”
           {discrepancyFlags.length > 0 && (
             <div className="card shadow-sm border-danger-subtle" style={{ background: "rgba(220,53,69,.08)" }}>
               <div className="card-header bg-white d-flex align-items-center gap-2">

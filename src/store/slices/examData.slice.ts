@@ -12,7 +12,7 @@ export interface CampaignSubject {
 }
 
 export interface CampaignSession {
-  id: string;
+  id: string; // now plain string id from backend (e.g. "1")
   label: string;
   examDate: string;
   note?: string;
@@ -21,7 +21,7 @@ export interface CampaignSession {
 }
 
 export interface ExamCampaign {
-  id: string;
+  id: string; // now plain string id from backend (e.g. "1")
   code: string;
   name: string;
   startDate: string;
@@ -90,16 +90,21 @@ const toTime = (timestamp: string): string => {
   return date.toISOString().slice(11, 16);
 };
 
-const buildCampaignId = (id: number) => `camp-${id}`;
-const buildSessionId = (id: number) => `sess-${id}`;
+// ----------------------
+// ID helpers (no camp-/sess- prefix)
+// ----------------------
+const buildCampaignId = (id: number) => String(id);
+const buildSessionId = (id: number) => String(id);
+// subject id keeps composite but without "sess-"
 const buildSubjectId = (sessionId: number, subjectId: number) =>
-  `sess-${sessionId}-sub-${subjectId}`;
-const parseCampaignId = (id: string): number => Number(id.replace("camp-", ""));
-const parseSessionId = (id: string): number => Number(id.replace("sess-", ""));
+  `${sessionId}-sub-${subjectId}`;
+
+const parseCampaignId = (id: string): number => Number(id);
+const parseSessionId = (id: string): number => Number(id);
 const parseSubjectCompositeId = (id: string) => {
-  const [sessionPart, subjectPart] = id.split("-sub-");
-  const sessionId = parseSessionId(sessionPart);
-  const subjectId = Number(subjectPart);
+  const [sessionIdStr, subjectIdStr] = id.split("-sub-");
+  const sessionId = Number(sessionIdStr);
+  const subjectId = Number(subjectIdStr);
   return { sessionId, subjectId };
 };
 
@@ -118,6 +123,7 @@ const mapApiSessionToCampaignSession = (session: ApiSession): CampaignSession =>
   label: session.title ?? session.session_code,
   examDate: session.exam_date,
   note: session.note,
+  site_id: session.site_id,
   subjects: [],
 });
 
@@ -145,7 +151,7 @@ const mapApiPayloadToCampaigns = (payload: ExamDataApiPayload): ExamCampaign[] =
       a.label.localeCompare(b.label)
     );
     return {
-      id: buildCampaignId(campaign.id),
+      id: buildCampaignId(campaign.id), // now "1" instead of "camp-1"
       code: campaign.code,
       name: campaign.name,
       startDate: campaign.start_date,
@@ -198,7 +204,7 @@ export const createCampaignThunk = createAsyncThunk<
       note: payload.description,
     });
     return {
-      id: buildCampaignId(response.data.id),
+      id: buildCampaignId(response.data.id), // "1"
       code: response.data.code,
       name: response.data.name,
       startDate: response.data.start_date,
@@ -233,9 +239,9 @@ export const deleteCampaignThunk = createAsyncThunk<
 });
 
 export const updateCampaignThunk = createAsyncThunk<
-  ExamCampaign, // type ของค่าที่ return
-  ExamCampaign, // type ของ payload
-  { rejectValue: string } // type ของ error
+  ExamCampaign,
+  ExamCampaign,
+  { rejectValue: string }
 >(
   "examData/updateCampaign",
   async (campaign: ExamCampaign, { rejectWithValue }) => {
@@ -276,7 +282,7 @@ export const updateCampaignThunk = createAsyncThunk<
 );
 
 interface CreateSessionInput {
-  campaignId: string;
+  campaignId: string; // now plain "1"
   label: string;
   examDate: string;
   note?: string;
@@ -414,7 +420,8 @@ const examDataSlice = createSlice({
       ) => ({
         payload: {
           ...payload,
-          id: `camp-${nanoid(6)}`,
+          // no "camp-" prefix, just local random id
+          id: nanoid(6),
           isActive: payload.isActive ?? true,
           sessions: payload.sessions ?? [],
         },
@@ -430,12 +437,6 @@ const examDataSlice = createSlice({
         state.list[index] = action.payload;
       }
     },
-    // campaignRemoved: (state, action: PayloadAction<string>) => {
-    //   state.list = state.list.filter((campaign) => campaign.id !== action.payload);
-    //   if (state.activeCampaignId === action.payload) {
-    //     state.activeCampaignId = state.list[0]?.id ?? null;
-    //   }
-    // },
     campaignSelected: (state, action: PayloadAction<string | null>) => {
       state.activeCampaignId = action.payload;
     },
@@ -445,7 +446,8 @@ const examDataSlice = createSlice({
       ) => ({
         payload: {
           ...payload,
-          id: `sess-${nanoid(6)}`,
+          // no "sess-" prefix
+          id: nanoid(6),
           subjects: [],
         },
       }),
@@ -489,7 +491,8 @@ const examDataSlice = createSlice({
       prepare: (
         payload: { campaignId: string; sessionId: string } & Omit<CampaignSubject, "id">
       ) => ({
-        payload: { ...payload, id: `sub-${nanoid(6)}` },
+        // local-only id, no prefix
+        payload: { ...payload, id: nanoid(6) },
       }),
       reducer: (
         state,
@@ -588,63 +591,62 @@ const examDataSlice = createSlice({
       .addCase(deleteCampaignThunk.rejected, (state, action) => {
         state.error = action.payload ?? "Failed to delete campaign";
       })
-    .addCase(createSessionThunk.pending, (state) => {
-      state.error = null;
-    })
-    .addCase(createSessionThunk.fulfilled, (state, action) => {
-      const campaign = state.list.find((item) => item.id === action.payload.campaignId);
-      if (campaign) {
-        campaign.sessions.push(action.payload.session);
-      }
-    })
-    .addCase(createSessionThunk.rejected, (state, action) => {
-      state.error = action.payload ?? "Failed to create session";
-    })
-    .addCase(deleteSessionThunk.pending, (state) => {
-      state.error = null;
-    })
-    .addCase(deleteSessionThunk.fulfilled, (state, action) => {
-      const campaign = state.list.find((item) => item.id === action.payload.campaignId);
-      if (!campaign) return;
-      campaign.sessions = campaign.sessions.filter(
-        (session) => session.id !== action.payload.sessionId
-      );
-    })
-    .addCase(deleteSessionThunk.rejected, (state, action) => {
-      state.error = action.payload ?? "Failed to delete session";
-    })
-    .addCase(createSubjectThunk.pending, (state) => {
-      state.error = null;
-    })
-    .addCase(createSubjectThunk.fulfilled, (state, action) => {
-      const campaign = state.list.find((item) => item.id === action.payload.campaignId);
-      const session = campaign?.sessions.find((item) => item.id === action.payload.sessionId);
-      if (session) {
-        session.subjects.push(action.payload.subject);
-        session.subjects.sort((a, b) => a.startTime.localeCompare(b.startTime));
-      }
-    })
-    .addCase(createSubjectThunk.rejected, (state, action) => {
-      state.error = action.payload ?? "Failed to create subject";
-    })
-    .addCase(deleteSubjectThunk.pending, (state) => {
-      state.error = null;
-    })
-    .addCase(deleteSubjectThunk.fulfilled, (state, action) => {
-      const campaign = state.list.find((item) => item.id === action.payload.campaignId);
-      const session = campaign?.sessions.find((item) => item.id === action.payload.sessionId);
-      if (!session) return;
-      session.subjects = session.subjects.filter((subject) => subject.id !== action.payload.subjectId);
-    })
-    .addCase(deleteSubjectThunk.rejected, (state, action) => {
-      state.error = action.payload ?? "Failed to delete subject";
-    });
-},
+      .addCase(createSessionThunk.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(createSessionThunk.fulfilled, (state, action) => {
+        const campaign = state.list.find((item) => item.id === action.payload.campaignId);
+        if (campaign) {
+          campaign.sessions.push(action.payload.session);
+        }
+      })
+      .addCase(createSessionThunk.rejected, (state, action) => {
+        state.error = action.payload ?? "Failed to create session";
+      })
+      .addCase(deleteSessionThunk.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(deleteSessionThunk.fulfilled, (state, action) => {
+        const campaign = state.list.find((item) => item.id === action.payload.campaignId);
+        if (!campaign) return;
+        campaign.sessions = campaign.sessions.filter(
+          (session) => session.id !== action.payload.sessionId
+        );
+      })
+      .addCase(deleteSessionThunk.rejected, (state, action) => {
+        state.error = action.payload ?? "Failed to delete session";
+      })
+      .addCase(createSubjectThunk.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(createSubjectThunk.fulfilled, (state, action) => {
+        const campaign = state.list.find((item) => item.id === action.payload.campaignId);
+        const session = campaign?.sessions.find((item) => item.id === action.payload.sessionId);
+        if (session) {
+          session.subjects.push(action.payload.subject);
+          session.subjects.sort((a, b) => a.startTime.localeCompare(b.startTime));
+        }
+      })
+      .addCase(createSubjectThunk.rejected, (state, action) => {
+        state.error = action.payload ?? "Failed to create subject";
+      })
+      .addCase(deleteSubjectThunk.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(deleteSubjectThunk.fulfilled, (state, action) => {
+        const campaign = state.list.find((item) => item.id === action.payload.campaignId);
+        const session = campaign?.sessions.find((item) => item.id === action.payload.sessionId);
+        if (!session) return;
+        session.subjects = session.subjects.filter((subject) => subject.id !== action.payload.subjectId);
+      })
+      .addCase(deleteSubjectThunk.rejected, (state, action) => {
+        state.error = action.payload ?? "Failed to delete subject";
+      });
+  },
 });
 
 export const {
   campaignAdded,
-  // campaignRemoved,
   campaignSelected,
   campaignUpdated,
   sessionAdded,
@@ -688,6 +690,3 @@ export const selectSubjectsForSession =
 
 export const selectExamDataStatus = (state: { examData: ExamDataState }) => state.examData.status;
 export const selectExamDataError = (state: { examData: ExamDataState }) => state.examData.error ?? null;
-
-
-

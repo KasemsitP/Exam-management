@@ -1,26 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import {showLoginSuccessAlert , showLoginSuccessAlertWithData} from "@/components/ui/successAlert";
+import { showLoginSuccessAlert, showLoginSuccessAlertWithData } from "@/components/ui/successAlert";
 import {
   login,
   selectAuthError,
-  selectAuthStatus,   
+  selectAuthStatus,
   selectCurrentUser,
-  setAuthenticated
+  setAuthenticated,
+  AuthUser,
+  Role
 } from "@/store/slices/auth.slice";
+import { User, Lock, Loader2, GraduationCap, BookOpen } from "lucide-react"; // ใช้ไอคอนการศึกษา
 
 interface LoginFormValues {
   username: string;
   password: string;
 }
-import { AuthUser, Role } from "@/store/slices/auth.slice";
-
 
 export default function Login() {
-  
   const dispatch = useAppDispatch();
   const status = useAppSelector(selectAuthStatus);
   const error = useAppSelector(selectAuthError);
@@ -32,19 +31,15 @@ export default function Login() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  //const { toast } = useToast();
+
+  // State สำหรับลูกเล่นตอนกดช่องกรอกข้อมูล
+  const [activeField, setActiveField] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "authenticated" && user) {
-      // toast({
-      //   title: "เข้าสู่ระบบสำเร็จ",
-      //   description: `ยินดีต้อนรับกลับ ${user.name}`,
-      // });
       showLoginSuccessAlert(user.name);
-      const redirect = (location.state as { from?: { pathname?: string } } | undefined)?.from
-        ?.pathname;
+      const redirect = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
       navigate(redirect ?? "/dashboard", { replace: true });
-
     }
   }, [status, user, navigate, location.state]);
 
@@ -52,123 +47,198 @@ export default function Login() {
     dispatch(login(values));
   };
 
-
-const handleBypass = () => {
-
- const mockUser: AuthUser = {
-  id: "u-1",
-  name: "Dev Admin",
-  username: "admin",
-  roles: ["admin"] as Role[],   
-  avatar: "DA",
-};
-
-  // อัปเดต Redux ให้เป็นสถานะล็อกอิน
-  dispatch(setAuthenticated(mockUser));
-  showLoginSuccessAlertWithData(mockUser.name, "โหมด bypass");
-
-  navigate("/dashboard", { replace: true });
-};
+  const handleBypass = () => {
+    const mockUser: AuthUser = {
+      id: "u-1",
+      name: "Admin User",
+      username: "admin",
+      roles: ["admin"] as Role[],
+      avatar: "AU",
+    };
+    dispatch(setAuthenticated(mockUser));
+    showLoginSuccessAlertWithData(mockUser.name, "โหมด bypass");
+    navigate("/dashboard", { replace: true });
+  };
 
   return (
-    <div className="min-vh-100 w-100 d-flex align-items-center justify-content-center position-relative overflow-hidden px-3 px-md-5 py-5">
-      <div className="position-absolute top-0 start-0 w-100 h-100 opacity-50 pointer-events-none">
-          <div
-            className="position-absolute rounded-circle border"
-            style={{
-              right: "5rem",
-              bottom: "3rem",
-              width: "10rem",
-              height: "10rem",
-              borderColor: "rgba(14,165,233,0.2)",
-            }}
-          />
-          <div
-            className="position-absolute rounded-circle"
-            style={{
-              left: "25%",
-              bottom: "-10rem",
-              width: "22rem",
-              height: "22rem",
-              background: "rgba(14,165,233,0.15)",
-              filter: "blur(32px)",
-            }}
-          />
-          <div
-            className="position-absolute rounded-circle"
-            style={{
-              right: "33%",
-              top: "-12rem",
-              width: "18rem",
-              height: "18rem",
-              background: "rgba(16,185,129,0.2)",
-              filter: "blur(32px)",
-            }}
-          />
+    <div 
+      className="min-vh-100 w-100 d-flex flex-column align-items-center justify-content-center position-relative overflow-hidden"
+      style={{ 
+        backgroundColor: "#f8faff", // พื้นหลังโทนสว่างสบายตา
+        fontFamily: "'Sarabun', 'Inter', sans-serif" 
+      }}
+    >
+      {/* --- Background Decorations --- */}
+      <div className="position-absolute top-0 start-0 w-100 h-100 pointer-events-none" style={{ zIndex: 0 }}>
+        <div 
+          className="position-absolute rounded-circle"
+          style={{
+            top: "-10%",
+            left: "-5%",
+            width: "40vw",
+            height: "40vw",
+            background: "radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(255,255,255,0) 70%)", // สีม่วงจางๆ
+            filter: "blur(50px)",
+          }}
+        />
+        <div 
+          className="position-absolute rounded-circle"
+          style={{
+            bottom: "-15%",
+            right: "-10%",
+            width: "45vw",
+            height: "45vw",
+            background: "radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(255,255,255,0) 70%)", // สีม่วงชมพูจางๆ
+            filter: "blur(60px)",
+          }}
+        />
       </div>
 
-      <div
-          className="card border-0 shadow-lg position-relative w-100"
-          style={{ backdropFilter: "blur(8px)", maxWidth: 540 }}
+      {/* --- Main Content --- */}
+      <div className="position-relative d-flex flex-column align-items-center w-100 px-3" style={{ zIndex: 10, maxWidth: "420px" }}>
+        
+        {/* 1. Logo Section */}
+        <div className="mb-4 text-center">
+            <div 
+              className="bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center mx-auto mb-3"
+              style={{ width: '80px', height: '80px', border: '1px solid #f0f0f0' }}
+            >
+              {/* เปลี่ยนเป็นไอคอนการศึกษา สีม่วง */}
+              <GraduationCap size={40} color="#4f46e5" />
+            </div>
+        </div>
+
+        {/* 2. Login Card */}
+        <div 
+          className="card border-0 w-100 shadow-lg"
+          style={{ 
+            borderRadius: "20px",
+            backgroundColor: "#ffffff",
+            boxShadow: "0 20px 60px rgba(60, 60, 100, 0.05)" 
+          }}
         >
-          <div className="card-body p-4 p-md-5">
+          <div className="card-body p-4 pt-5 pb-5">
+            
             <div className="text-center mb-4">
-              <h1 className="h4 fw-semibold mb-1 text-body">ระบบจัดการข้อสอบ</h1>
+              <h4 className="fw-bold text-dark mb-1">
+                ระบบจัดการข้อสอบ
+              </h4>
+              <p className="text-muted small">
+                ระบบจัดการข้อสอบและคลังข้อสอบออนไลน์
+              </p>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="d-grid gap-3">
+              
+              {/* Username */}
               <div>
-                <label htmlFor="username" className="form-label">
-                  ชื่อผู้ใช้
-                </label>
-                <input
-                  id="username"
-                  className="form-control form-control-lg"
-                  placeholder="ระบุชื่อผู้ใช้"
-                  {...register("username", { required: true })}
-                />
+                <div 
+                  className="d-flex align-items-center px-3 rounded-3 transition-all"
+                  style={{ 
+                    backgroundColor: "#f4f6fa", // พื้นหลัง Input สีเทาอ่อน
+                    border: activeField === 'username' ? '1px solid #6366f1' : '1px solid transparent',
+                    height: '50px',
+                    transition: 'border 0.2s ease'
+                  }}
+                >
+                   <User size={18} className="text-secondary opacity-50 me-2" />
+                   <input
+                    id="username"
+                    className="form-control bg-transparent border-0 p-0 shadow-none text-dark"
+                    placeholder="ชื่อผู้ใช้งาน / Username"
+                    style={{ fontSize: '0.95rem' }}
+                    onFocus={() => setActiveField('username')}
+                    onBlur={() => setActiveField(null)}
+                    {...register("username", { required: true })}
+                   />
+                </div>
               </div>
 
+              {/* Password */}
               <div>
-                <label htmlFor="password" className="form-label">
-                  รหัสผ่าน
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  className="form-control form-control-lg"
-                  placeholder="ระบุรหัสผ่าน"
-                  {...register("password", { required: true })}
-                />
+                <div 
+                  className="d-flex align-items-center px-3 rounded-3 transition-all"
+                  style={{ 
+                    backgroundColor: "#f4f6fa",
+                    border: activeField === 'password' ? '1px solid #6366f1' : '1px solid transparent',
+                    height: '50px',
+                    transition: 'border 0.2s ease'
+                  }}
+                >
+                   <Lock size={18} className="text-secondary opacity-50 me-2" />
+                   <input
+                    id="password"
+                    type="password"
+                    className="form-control bg-transparent border-0 p-0 shadow-none text-dark"
+                    placeholder="รหัสผ่าน / Password"
+                    style={{ fontSize: '0.95rem' }}
+                    onFocus={() => setActiveField('password')}
+                    onBlur={() => setActiveField(null)}
+                    {...register("password", { required: true })}
+                   />
+                </div>
               </div>
 
+              {/* Error Message */}
               {error && (
-                <div className="alert alert-danger mb-0" role="alert">
-                  {error}
+                <div className="alert alert-danger py-2 px-3 small rounded-3 border-0 bg-danger bg-opacity-10 text-danger mb-0 d-flex align-items-center">
+                  <span className="me-2">⚠️</span> {error}
                 </div>
               )}
 
-
-
-
+              {/* Button */}
               <button
                 type="submit"
-                className="btn btn-success btn-lg w-100 shadow"
+                className="btn btn-primary btn-lg w-100 rounded-3 mt-3 fw-semibold border-0"
                 disabled={status === "loading"}
-                style={{ boxShadow: "0 10px 24px rgba(215, 186, 38, 0.3)" }}
+                style={{ 
+                  backgroundColor: "#6366f1", // Indigo Color
+                  backgroundImage: "linear-gradient(to right, #6366f1, #8b5cf6)", // Gradient ม่วง-คราม
+                  height: '50px',
+                  boxShadow: "0 4px 15px rgba(99, 102, 241, 0.35)",
+                  fontSize: '1rem'
+                }}
               >
-                {status === "loading" ? "กำลังตรวจสอบข้อมูล..." : "เข้าสู่ระบบ"}
+                {status === "loading" ? (
+                  <>
+                    <Loader2 className="animate-spin me-2 inline" size={18} />
+                    กำลังตรวจสอบ...
+                  </>
+                ) : (
+                  "เข้าสู่ระบบ"
+                )}
               </button>
 
-              <p className="text-center small text-muted mb-0">
-                &copy; {new Date().getFullYear()} ระบบจัดการข้อสอบ
-              </p>
             </form>
-            <button onClick={handleBypass}>bypass</button>
+
+            {/* Links */}
+            <div className="mt-4 pt-2 text-center border-top">
+                <div className="d-flex justify-content-center gap-3 mt-3">
+                  <a href="#" className="text-decoration-none small text-secondary hover-primary">
+                    <BookOpen size={14} className="me-1 mb-1" />
+                    คู่มือการใช้งาน
+                  </a>
+                  <span className="text-muted opacity-25">|</span>
+                  <a href="#" className="text-decoration-none small text-secondary hover-primary">
+                    ลืมรหัสผ่าน?
+                  </a>
+                </div>
+            </div>
+
           </div>
+        </div>
+
+        {/* Footer Text */}
+        <div className="mt-4 text-center">
+             <button 
+                onClick={handleBypass} 
+                className="btn btn-sm text-secondary opacity-25 hover-opacity-100"
+                style={{ fontSize: '0.7rem' }}
+             >
+                Developer Mode
+             </button>
+        </div>
       </div>
     </div>
   );
 }
-
-

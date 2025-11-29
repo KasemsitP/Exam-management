@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-
+import { RootState } from "../index";
 // ⭐️ (1) Interfaces
 // (อ้างอิงจาก Schema 'accounts' และ 'roles' ของคุณ)
 export interface Role {
@@ -190,14 +190,11 @@ const accountsSlice = createSlice({
   },
 });
 
-// ⭐️ (4) Selectors
-type LocalRootState = {
-  accounts: AccountsState;
-};
 
-export const selectAccountsSlice = (state: LocalRootState) => state.accounts;
-export const selectAllAccounts = (state: LocalRootState) =>
-  Object.values(state.accounts.accounts).sort((a, b) => a.id - b.id);
-export const selectAllRoles = (state: LocalRootState) => state.accounts.roles;
+export const selectAccountsSlice = (state: RootState) => state.accounts;
 
+export const selectAllAccounts = (state: RootState) =>
+  Object.values(state.accounts.accounts).sort((a, b) => a.id - b.id);
+
+export const selectAllRoles = (state: RootState) => state.accounts.roles;
 export { accountsSlice };

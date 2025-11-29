@@ -23,9 +23,13 @@ import {
   selectIsGradingLoading,
   selectGradingError,
   clearGradingError,
-  Payload,
-  verifyAndAllocateThunk, // (Import Type)
+  PayloadScore,
+  verifyAndAllocateThunk,
+  selectLastSlotId,
+  selectGradingRecords
+  // (Import Type)
 } from "@/store/slices/grading.slice"; // (Slice สำหรับ Submit)
+import { fetchRecordThunk } from "@/store/slices/grading.slice";
 
 import { selectCurrentUser } from "@/store/slices/auth.slice"; // (Slice Auth)
 import { selectActiveCampaign } from "@/store/slices/examData.slice"; // (Slice Data)
@@ -40,17 +44,14 @@ import {
 
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import { DeleteCamp } from "@/utils/camp";
+import { GradingRecord } from "@/store/slices/grading.slice";
 // --- (Interfaces) ---
 
-// (สำหรับแสดงผลใน "รายการล่าสุด")
 interface RecordedScore {
-  time: string;
-  userId: string;
-  grader: string;
+  slotId: number;
   score: number;
+  enteredAt: string;
 }
-
-
 
 export default function GradingStationPage() {
   const { toast } = useToast();
@@ -59,6 +60,9 @@ export default function GradingStationPage() {
   // --- 1. ดึงข้อมูลจาก Slices ---
   const user = useAppSelector(selectCurrentUser);
   const activeCampaign = useAppSelector(selectActiveCampaign);
+  const lastSlotId = useAppSelector(selectLastSlotId);
+  const records = useAppSelector(selectGradingRecords)
+
 
   // (จาก graders.slice.ts - ส่วน Grader Profile)
   const graders = useAppSelector(
@@ -128,6 +132,7 @@ export default function GradingStationPage() {
   }, [myAssignments]);
 
 
+  
   /* ---------------------- สถานะ/ฟังก์ชันควบคุมสแกนเนอร์ ---------------------- */
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const [pauseAfterSuccess, setPauseAfterSuccess] = useState(true);
@@ -161,6 +166,23 @@ export default function GradingStationPage() {
     }
   }, [gradingError, dispatch, toast]);
 
+
+  useEffect(() => {
+  if (activeAssignment?.grader_id) {
+    dispatch(fetchRecordThunk(activeAssignment.grader_id));
+    
+  }
+}, [dispatch, activeAssignment?.grader_id]);
+
+
+useEffect(() => {
+  if (records.length > 0) {
+    setRecent(records.slice(0, 5));
+  } else {
+    setRecent([]);
+  }
+}, [records]);
+  
   /* -------------------------- ฟังก์ชัน Handler ทั้งหมด ------------------------- */
 
   const handleScan = async (value: string) => {
@@ -173,20 +195,20 @@ export default function GradingStationPage() {
     setPause(true);
 
     const result = await dispatch(
-    verifyAndAllocateThunk({
-      qrPayload: value,
-      campaignId: activeAssignment!.campaign_id,
-      sessionId: activeAssignment.session_id,
-      subjectId: activeAssignment.subject_id,
-      questionNo: activeAssignment.question_no,
-      graderId: graderProfile.grader_id,
-    })
-  );
+      verifyAndAllocateThunk({
+        qrPayload: value,
+        campaignId: activeAssignment!.campaign_id,
+        sessionId: activeAssignment.session_id,
+        subjectId: activeAssignment.subject_id,
+        questionNo: activeAssignment.question_no,
+        graderId: graderProfile.grader_id,
+      })
+    );
 
-  if (verifyAndAllocateThunk.rejected.match(result)) {
-    // error ถูกเก็บใน gradingState.error แล้ว
-    return;
-  }
+    if (verifyAndAllocateThunk.rejected.match(result)) {
+      // error ถูกเก็บใน gradingState.error แล้ว
+      return;
+    }
 
     setScanData(value ?? null);
     toast({
@@ -244,7 +266,8 @@ export default function GradingStationPage() {
       return;
     }
     console.log(activeAssignment)
-    const payload: Payload = {
+    const payload: PayloadScore = {
+      slotId: lastSlotId,
       qrPayload: scanData,
       campaignId: activeAssignment.campaign_id,
       subjectId: activeAssignment.subject_id,
@@ -254,6 +277,7 @@ export default function GradingStationPage() {
       score: Number(score),
     };
 
+
     try {
       const resultAction = await dispatch(submitScoreThunk(payload));
 
@@ -262,16 +286,12 @@ export default function GradingStationPage() {
         throw new Error(errorPayload);
       }
 
-      const result = resultAction.payload as { slotId: string; score: number };
+      const result = resultAction.payload as { slotId: number; score: number };
 
       const record: RecordedScore = {
-        time: new Date().toLocaleTimeString("th-TH"),
-        userId: scanData ?? "-",
-        grader:
-          (user as any)?.full_name ??
-          user?.username ??
-          `Grader #${activeAssignment.grader_id}`,
-        score: Number(score),
+        slotId: lastSlotId ,
+        score: Number(score),                  
+        enteredAt: new Date().toLocaleTimeString("th-TH"), 
       };
 
       setRecent((prev) => [record, ...prev].slice(0, 6));
@@ -317,23 +337,23 @@ export default function GradingStationPage() {
   );
 
   // (Render บัตรใหม่สำหรับ "กำลังโหลด Assignment")
-const renderNoAssignment = () => (
-  <div className="card border-dashed">
-    <div className="card-header bg-white">
-      <h6 className="mb-0 d-flex align-items-center gap-2">
-        <AlertCircle className="text-primary" size={18} />
+  const renderNoAssignment = () => (
+    <div className="card border-dashed">
+      <div className="card-header bg-white">
+        <h6 className="mb-0 d-flex align-items-center gap-2">
+          <AlertCircle className="text-primary" size={18} />
+          {gradersStatus === "loading"
+            ? "กำลังค้นหางานที่ได้รับมอบหมาย..."
+            : "ไม่พบงานที่ได้รับมอบหมาย"}
+        </h6>
+      </div>
+      <div className="card-body text-muted small">
         {gradersStatus === "loading"
-          ? "กำลังค้นหางานที่ได้รับมอบหมาย..."
-          : "ไม่พบงานที่ได้รับมอบหมาย"}
-      </h6>
+          ? "กำลังดึงข้อมูลวิชาและข้อที่ต้องตรวจจากเซิร์ฟเวอร์..."
+          : "ไม่พบข้อมูลการมอบหมายงานสำหรับผู้ตรวจนี้ในแคมเปญนี้"}
+      </div>
     </div>
-    <div className="card-body text-muted small">
-      {gradersStatus === "loading"
-        ? "กำลังดึงข้อมูลวิชาและข้อที่ต้องตรวจจากเซิร์ฟเวอร์..."
-        : "ไม่พบข้อมูลการมอบหมายงานสำหรับผู้ตรวจนี้ในแคมเปญนี้"}
-    </div>
-  </div>
-);
+  );
 
 
   /* --------------------------------- JSX -------------------------------- */
@@ -653,9 +673,9 @@ const renderNoAssignment = () => (
                         </thead>
                         <tbody>
                           {recent.map((r, idx) => (
-                            <tr key={`${r.userId}-${idx}`}>
-                              <td>{r.time}</td>
-                              <td>{r.userId}</td>
+                            <tr key={`${r.slotId}-${idx}`}>
+                              <td>{r.enteredAt}</td>
+                              <td>{r.slotId}</td>
                               <td className="text-end fw-semibold">
                                 {r.score}
                               </td>

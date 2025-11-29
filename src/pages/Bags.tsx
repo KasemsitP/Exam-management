@@ -102,12 +102,11 @@ export default function BagsPage() {
     createForm.reset({
       prefix: "BAG-",
       count: 120,
-      sessionId: defaultSessionId,
+      sessionId: defaultSessionId != null ? String(defaultSessionId) : "",
       capacity: defaultCapacity,
     });
   }, [createDialogOpen, sessions, createForm, defaultCapacity]);
 
-  // ดึงข้อมูลถุงเมื่อมี campaign
   useEffect(() => {
     if (activeCampaign) {
       dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
@@ -131,23 +130,31 @@ export default function BagsPage() {
     scannedSetRef.current = new Set((composeBag?.scanned ?? []).map(normalizePayload));
   }, [composeBag?.scanned]);
 
+  // useEffect(()=>{
+  //   console.log(bags.map((bag)=>console.log(bag.sessionId)))
+  //   console.log(bags)
+  // })
   // ฟิลเตอร์ + ค้นหา
-  const filteredBags = useMemo(() => {
-    const term = searchText.trim().toLowerCase();
-    const sessionFiltered =
-      filterSessionId === "all"
-        ? bags
-        : bags.filter((bag) => bag.sessionId === filterSessionId);
-    if (!term) return sessionFiltered;
-    return sessionFiltered.filter((bag) => {
-      const subjectText = `${bag.subjectCode ?? ""} ${bag.subjectName ?? ""}`.toLowerCase();
-      return (
-        bag.id.toLowerCase().includes(term) ||
-        bag.sessionLabel.toLowerCase().includes(term) ||
-        subjectText.includes(term)
-      );
-    });
-  }, [bags, searchText, filterSessionId]);
+const filteredBags = useMemo(() => {
+  const term = searchText.trim().toLowerCase();
+
+  // แปลง filterSessionId ให้ match กับ bag.sessionId
+  const sessionFiltered =
+    filterSessionId === "all"
+      ? bags
+      : bags.filter((bag) => String(bag.sessionId) === filterSessionId);
+
+  if (!term) return sessionFiltered;
+
+  return sessionFiltered.filter((bag) => {
+    const subjectText = `${bag.subjectCode ?? ""} ${bag.subjectName ?? ""}`.toLowerCase();
+    return (
+      bag.id.toString().toLowerCase().includes(term) ||
+      bag.sessionLabel.toLowerCase().includes(term) ||
+      subjectText.includes(term)
+    );
+  });
+}, [bags, searchText, filterSessionId]);
 
   // ------------------------------
   // Bulk Create
@@ -225,10 +232,10 @@ export default function BagsPage() {
   const handleFinalizeAndLink = async () => {
     if (!composeBag || !activeCampaign) return;
     const isComplete = composeBag.scanned.length >= composeBag.capacity;
-    if (!isComplete) {
-      toast({ title: "ถุงยังไม่ครบ", description: `สแกน ${composeBag.scanned.length}/${composeBag.capacity} เล่ม`, variant: "destructive" });
-      return;
-    }
+    // if (!isComplete) {
+    //   toast({ title: "ถุงยังไม่ครบ", description: `สแกน ${composeBag.scanned.length}/${composeBag.capacity} เล่ม`, variant: "destructive" });
+    //   return;
+    // }
     try {
       const result = await dispatch(
         finalizeAndLinkBagThunk({
@@ -581,7 +588,7 @@ export default function BagsPage() {
                 </div>
                 <div className="modal-footer">
                   <button className="btn btn-outline-secondary" onClick={() => setComposeBagId(null)}>ยกเลิก</button>
-                  <button className="btn btn-primary d-inline-flex align-items-center gap-2" onClick={handleFinalizeAndLink} disabled={bagStatus === "loading" || composeBag.scanned.length < composeBag.capacity}>
+                   <button className="btn btn-primary d-inline-flex align-items-center gap-2" onClick={handleFinalizeAndLink} > {/*disabled={bagStatus === "loading" || composeBag.scanned.length < composeBag.capacity */}
                     {bagStatus === "loading" ? <Loader2 size={16} className="spin-animation" /> : <DatabaseZap size={16} />}
                     บันทึกข้อมูล
                   </button>
