@@ -16,7 +16,7 @@ export interface CrmGrader {
   subject_id: number;
   subject_code: string;
   subject_name: string;
-
+  grader_name:string;
   question_no: number;
 }
 
@@ -62,7 +62,7 @@ export const fetchGradersForCampaignThunk = createAsyncThunk<
         session_id: g.session_id,
         session_code: g.session_code,
         exam_date: g.exam_date,
-
+        grader_name: g.grader_name,
         subject_id: g.subject_id,
         subject_code: g.subject_code,
         subject_name: g.subject_name,

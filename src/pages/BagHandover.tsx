@@ -15,6 +15,7 @@ import { selectCurrentUser } from "@/store/slices/auth.slice";
 // ถุง + ผู้ตรวจ
 import { selectBagsForCampaign } from "@/store/slices/bags.slice";
 import { selectGradersForCampaign } from "@/store/slices/graders.slice";
+import { fetchBagsForCampaignThunk } from "@/store/slices/bags.slice";
 
 // สถานะส่งมอบถุง
 import {
@@ -22,13 +23,22 @@ import {
   selectBagLocksForCampaign,
   selectBagLogsForCampaign,
   BagLock,
-  registerBagToGraderThunk,
   returnBagThunk,
+  registerBagToGraderThunk,
 } from "@/store/slices/bagHandover.slice";
+
+// 🎯 grading history
+import {
+  fetchRecordThunk,
+  selectGradingRecords,
+  selectIsGradingLoading,
+  selectGradingError,
+} from "@/store/slices/grading.slice";
+import { fetchGradersForCampaignThunk } from "@/store/slices/graders.slice";
 
 interface CheckoutFormValues {
   sessionId: string;
-  bagId: string;
+  bagId: string; // 👉 ใช้เก็บ bag_id (PK)
   graderId: string;
   note?: string;
 }
@@ -38,15 +48,19 @@ export default function BagHandoverPage() {
   const { toast } = useToast();
 
   // ---------- Redux selectors ----------
-
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const sessions = useAppSelector(selectActiveCampaignSessions);
+
   const bags = useAppSelector(
     selectBagsForCampaign(activeCampaign?.id ?? null)
   );
+
   const graders = useAppSelector(
-    selectGradersForCampaign(activeCampaign?.id ?? null)
+    selectGradersForCampaign(
+      activeCampaign ? Number(activeCampaign.id) : null
+    )
   );
+
   const locks = useAppSelector(
     selectBagLocksForCampaign(activeCampaign?.id ?? null)
   );
@@ -55,10 +69,16 @@ export default function BagHandoverPage() {
   );
   const operator = useAppSelector(selectCurrentUser);
 
-  // ---------- Local state / form ----------
+  // grading history
+  const gradingRecords = useAppSelector(selectGradingRecords);
+  const gradingLoading = useAppSelector(selectIsGradingLoading);
+  const gradingError = useAppSelector(selectGradingError);
 
+  // ---------- Local state / form ----------
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSessionId, setFilterSessionId] = useState<string>("all");
+
+  // 👉 ใช้เก็บ bag_id (string) ของถุงที่เลือกอยู่
   const [selectedBagId, setSelectedBagId] = useState<string>("");
 
   const form = useForm<CheckoutFormValues>({
@@ -66,6 +86,13 @@ export default function BagHandoverPage() {
   });
 
   // ---------- Effects ----------
+  
+    // --- 2. Fetch Graders (ถ้ายังไม่มี) ---
+    useEffect(() => {
+      if (activeCampaign) {
+        dispatch(fetchGradersForCampaignThunk(activeCampaign.id ? Number(activeCampaign.id) : null));
+      }
+    }, [activeCampaign, dispatch]);
 
   // โหลด handover เมื่อมี campaign
   useEffect(() => {
@@ -85,8 +112,15 @@ export default function BagHandoverPage() {
     setFilterSessionId(defaultSessionId || "all");
   }, [sessions, form]);
 
+
+    useEffect(() => {
+      if (activeCampaign) {
+        dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
+      }
+    }, [dispatch, activeCampaign]);
   // ---------- Memoized helpers ----------
 
+  // map ด้วย bag_id (id) เป็น key
   const bagMap = useMemo(() => {
     return bags.reduce<Record<string, (typeof bags)[number]>>((map, bag) => {
       map[String(bag.id)] = bag;
@@ -94,16 +128,7 @@ export default function BagHandoverPage() {
     }, {});
   }, [bags]);
 
-  const graderMap = useMemo(() => {
-    return graders.reduce<Record<string, (typeof graders)[number]>>(
-      (map, grader) => {
-        map[String(grader.id)] = grader;
-        return map;
-      },
-      {}
-    );
-  }, [graders]);
-
+  // filter ตาม session + search
   const filteredBags = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     const sessionFiltered =
@@ -125,10 +150,21 @@ export default function BagHandoverPage() {
     });
   }, [bags, searchTerm, filterSessionId]);
 
+  // lock ปัจจุบันของถุง (match ด้วย bag_id)
   const currentLock: BagLock | null = useMemo(() => {
     if (!selectedBagId || !activeCampaign) return null;
-    return locks.find((lock) => String(lock.bagId) === selectedBagId) ?? null;
+    return (
+      locks.find(
+        (lock) => String(lock.bagId) === String(selectedBagId)
+      ) ?? null
+    );
   }, [locks, selectedBagId, activeCampaign]);
+
+  // ถุงที่เลือก (จาก bag_id)
+  const currentBag = useMemo(() => {
+    if (!selectedBagId) return undefined;
+    return bagMap[String(selectedBagId)];
+  }, [selectedBagId, bagMap]);
 
   const sessionIdInForm = form.watch("sessionId");
   const bagsForSelectedSession = useMemo(() => {
@@ -138,9 +174,23 @@ export default function BagHandoverPage() {
     );
   }, [bags, sessionIdInForm]);
 
+  // 🎯 เลือก grader id (สำหรับดึงประวัติคะแนน)
+  const graderIdInForm = form.watch("graderId");
+  const graderIdForHistory = useMemo(() => {
+    if (graderIdInForm) return graderIdInForm;
+    if (currentLock?.graderId) return String(currentLock.graderId);
+    return null;
+  }, [graderIdInForm, currentLock]);
+
+  // 🎯 ดึงประวัติคะแนนเมื่อ graderIdForHistory เปลี่ยน
+  useEffect(() => {
+    if (!graderIdForHistory) return;
+    dispatch(fetchRecordThunk(Number(graderIdForHistory)));
+  }, [graderIdForHistory, dispatch]);
+
   // ---------- Handlers ----------
 
-  // **ลงทะเบียนส่งมอบถุงให้ผู้ตรวจ**  (ใช้ API /check-in)
+  // **ลงทะเบียนส่งมอบถุงให้ผู้ตรวจ**  (Check-in)
   const handleRegisterBag = (values: CheckoutFormValues) => {
     if (!activeCampaign || !operator) {
       toast({
@@ -157,7 +207,12 @@ export default function BagHandoverPage() {
       return;
     }
 
-    if (locks.some((lock) => String(lock.bagId) === values.bagId)) {
+    // ถุงนี้มี lock อยู่แล้วหรือยัง (ใช้ bag_id)
+    if (
+      locks.some(
+        (lock) => String(lock.bagId) === String(values.bagId)
+      )
+    ) {
       toast({
         title: "ถุงนี้อยู่ระหว่างการตรวจ",
         description: "กรุณารับคืนก่อนส่งมอบให้ผู้อื่น",
@@ -166,8 +221,9 @@ export default function BagHandoverPage() {
       return;
     }
 
+    // หา grader จากรายการ (ใช้ account_id หรือ id ตามโครงสร้างคุณ)
     const grader = graders.find(
-      (item) => String(item.id) === values.graderId
+      (item: any) => String(item.account_id) === values.graderId
     );
     if (!grader) {
       toast({ title: "ไม่พบข้อมูลผู้ตรวจ", variant: "destructive" });
@@ -175,13 +231,14 @@ export default function BagHandoverPage() {
     }
 
     const graderName =
-      grader.name ?? `${grader.firstName ?? ""} ${grader.lastName ?? ""}`.trim();
+      grader.grader_name?? 
+      `Grader #${grader.account_id}`;
 
     dispatch(
       registerBagToGraderThunk({
-        campaignId: activeCampaign.id,       // camp-1
-        bagId: values.bagId,                 // string → thunk แปลงเป็น number เอง
-        graderId: values.graderId,           // string → number
+        campaignId: activeCampaign.id, // camp-1 หรือ "1"
+        bagId: values.bagId, // 👈 ส่ง bag_id ไป backend
+        graderId: values.graderId,
         graderName,
         operatorId: Number(operator.id),
         operatorName: operator.name,
@@ -190,9 +247,15 @@ export default function BagHandoverPage() {
     )
       .unwrap()
       .then(() => {
+        const bag = bagMap[values.bagId];
+        const bagNo = bag?.bag_no ?? values.bagId;
+
         toast({
           title: "ลงทะเบียนส่งมอบเรียบร้อย",
-          description: `${graderName} ได้รับถุง ${values.bagId}`,
+          description: `${graderName} ได้รับถุง ${String(bagNo).padStart(
+            3,
+            "0"
+          )}`,
         });
 
         setSelectedBagId(values.bagId);
@@ -212,7 +275,7 @@ export default function BagHandoverPage() {
       });
   };
 
-  // **รับคืนถุง** (ใช้ API /check-out)
+  // **รับคืนถุง** (Check-out)
   const handleReturnBag = () => {
     if (!activeCampaign || !operator) {
       toast({
@@ -233,15 +296,21 @@ export default function BagHandoverPage() {
     dispatch(
       returnBagThunk({
         campaignId: activeCampaign.id,
-        bagId: Number(currentLock.bagId),
+        bagId: Number(currentLock.bagId), // 👈 ใช้ bag_id
         operatorId: Number(operator.id),
       })
     )
       .unwrap()
       .then(() => {
+        const bag = bagMap[String(currentLock.bagId)];
+        const bagNo = bag?.bag_no ?? currentLock.bagId;
+
         toast({
           title: "รับคืนถุงเรียบร้อย",
-          description: `ถุง ${currentLock.bagId} กลับสู่สถานะว่าง`,
+          description: `ถุง ${String(bagNo).padStart(
+            3,
+            "0"
+          )} กลับสู่สถานะว่าง`,
         });
       })
       .catch((err) => {
@@ -287,29 +356,6 @@ export default function BagHandoverPage() {
                       className="form-control"
                       style={{ width: 260 }}
                     />
-                  </div>
-
-                  <div className="d-flex align-items-center gap-2">
-                    <span className="small text-muted">
-                      ฟิลเตอร์ตามรอบสอบ
-                    </span>
-                    <select
-                      className="form-select form-select-sm"
-                      value={filterSessionId}
-                      onChange={(e) => setFilterSessionId(e.target.value)}
-                      style={{ minWidth: 220 }}
-                    >
-                      <option value="all">แสดงทุกรอบสอบ</option>
-                      {sessions.map((session: any) => (
-                        <option key={session.id} value={session.id}>
-                          {session.label ?? session.title} (
-                          {new Date(
-                            session.examDate
-                          ).toLocaleDateString("th-TH")}
-                          )
-                        </option>
-                      ))}
-                    </select>
                   </div>
                 </div>
               </div>
@@ -375,7 +421,7 @@ export default function BagHandoverPage() {
                     value={form.watch("bagId")}
                     onChange={(e) => {
                       form.setValue("bagId", e.target.value);
-                      setSelectedBagId(e.target.value);
+                      setSelectedBagId(e.target.value); // 👈 เก็บ bag_id
                     }}
                     disabled={!sessionIdInForm}
                   >
@@ -390,8 +436,8 @@ export default function BagHandoverPage() {
                       );
 
                       return (
-                        <option key={bag.id} value={bag.id}>
-                          {String(bag.id).padStart(3, "0")} •{" "}
+                        <option key={bag.id} value={String(bag.id)}>
+                          {String(bag.bag_no).padStart(3, "0")} •{" "}
                           {bag.subjectName ?? "ไม่ระบุ"} ({bag.sessionLabel}){" "}
                           {lock ? `• กำลังตรวจโดย ${lock.graderName}` : ""}
                         </option>
@@ -412,10 +458,18 @@ export default function BagHandoverPage() {
                   >
                     <option value="">เลือกผู้ตรวจ</option>
                     {graders.map((grader: any) => (
-                      <option key={grader.id} value={grader.id}>
-                        {grader.name ??
-                          `${grader.firstName} ${grader.lastName}`}{" "}
-                        • {grader.code ?? `G-${grader.id}`}
+                      <option
+                        key={grader.account_id}
+                        value={String(grader.account_id)}
+                      >
+                        {(
+                          grader.grader_name ??
+                          grader.name ??
+                          `${grader.first_name ?? ""} ${
+                            grader.last_name ?? ""
+                          }`.trim()
+                        ) || `Grader #${grader.account_id}`}{" "}
+                        • {grader.code ?? `G-${grader.account_id}`}
                       </option>
                     ))}
                   </select>
@@ -455,7 +509,12 @@ export default function BagHandoverPage() {
 
               {selectedBagId && currentLock && (
                 <div className="alert alert-success mt-3 mb-0 py-2">
-                  ถุง <strong>{currentLock.bagId}</strong>{" "}
+                  ถุง{" "}
+                  <strong>
+                    {String(
+                      currentBag?.bag_no ?? currentLock.bagId
+                    ).padStart(3, "0")}
+                  </strong>{" "}
                   อยู่ระหว่างตรวจโดย {currentLock.graderName} ตั้งแต่{" "}
                   {new Date(currentLock.at).toLocaleString("th-TH")}
                 </div>
@@ -497,14 +556,18 @@ export default function BagHandoverPage() {
                           (item) => String(item.bagId) === String(bag.id)
                         );
 
+                        const isSelected =
+                          String(bag.id) === String(selectedBagId);
+
                         return (
                           <tr
                             key={bag.id}
                             onClick={() => setSelectedBagId(String(bag.id))}
                             style={{ cursor: "pointer" }}
+                            className={isSelected ? "table-primary" : ""}
                           >
                             <td className="fw-semibold">
-                              {String(bag.id).padStart(3, "0")}
+                              {String(bag.bag_no).padStart(3, "0")}
                             </td>
                             <td>
                               <div className="fw-medium">
@@ -568,9 +631,10 @@ export default function BagHandoverPage() {
               </div>
             </div>
 
-            {/* Right: Recent logs */}
-            <div className="col-lg-5">
-              <div className="card shadow-sm h-100">
+            {/* Right: Recent logs + grading history */}
+            <div className="col-lg-5 d-flex flex-column gap-3">
+              {/* Logs card */}
+              <div className="card shadow-sm">
                 <div className="card-header bg-white d-flex align-items-center justify-content-between">
                   <div>
                     <h6 className="mb-1">บันทึกการส่งมอบล่าสุด</h6>
@@ -581,59 +645,140 @@ export default function BagHandoverPage() {
                   <History size={16} className="text-muted" />
                 </div>
                 <div className="card-body d-flex flex-column gap-2">
-                  {logs.slice(0, 8).map((log) => (
-                    <div
-                      key={log.id}
-                      className="border rounded p-2"
-                      style={{ cursor: "pointer" }}
-                      onClick={() => setSelectedBagId(String(log.bagId))}
-                    >
-                      <div className="d-flex align-items-center justify-content-between">
-                        <p className="fw-semibold mb-0">{log.bagId}</p>
-                        <span
-                          className={`badge ${
-                            log.action === "CHECK_OUT"
-                              ? "text-bg-primary"
-                              : "text-bg-secondary"
-                          }`}
-                        >
-                          {log.action === "CHECK_OUT" ? "ส่งมอบ" : "รับคืน"}
-                        </span>
-                      </div>
-                      <div className="small text-muted">
-                        วิชา:{" "}
-                        {bagMap[String(log.bagId)]?.subjectName ?? "ไม่ระบุ"} (
-                        {bagMap[String(log.bagId)]?.sessionLabel ??
-                          "ไม่ระบุรอบ"}
-                        )
-                      </div>
-                      <div className="small text-muted">
-                        ผู้ตรวจ:{" "}
-                        {log.graderId &&
-                        graderMap[String(log.graderId)]?.first_name
-                          ? graderMap[String(log.graderId)]?.first_name
-                          : log.graderId
-                          ? `ID ${log.graderId}`
-                          : "-"}{" "}
-                        • เจ้าหน้าที่:{" "}
-                        {log.operatorId
-                          ? `ID ${log.operatorId}`
-                          : "ไม่ระบุ/ระบบ"}
-                      </div>
-                      <div className="small text-muted">
-                        {new Date(log.timestamp).toLocaleString("th-TH")}
-                      </div>
-                      {log.note && (
-                        <div className="small text-muted">
-                          หมายเหตุ: {log.note}
+                  {logs.slice(0, 8).map((log) => {
+                    const logBag = bagMap[String(log.bagId)];
+                    const displayBagNo =
+                      logBag?.bag_no ??
+                      (log as any).bagNo ?? // ถ้า backend ส่ง bagNo มา
+                      log.bagId;
+
+                    const logGraderName =
+                      log.graderId ??
+                      (log.graderId ? `ID ${log.graderId}` : "-");
+
+                    const logOperatorName =
+                      log.operatorId ??
+                      (log.operatorId ? `ID ${log.operatorId}` : "ไม่ระบุ/ระบบ");
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="border rounded p-2"
+                        style={{ cursor: "pointer" }}
+                        onClick={() =>
+   
+                          setSelectedBagId(String(log.bagId)) // 👈 เลือกจาก bag_id
+                        }
+                      >
+                        <div className="d-flex align-items-center justify-content-between">
+                          <p className="fw-semibold mb-0">
+                            {String(displayBagNo).padStart(3, "0")}
+                          </p>
+                          <span
+                            className={`badge ${
+                              log.action === "CHECK_OUT"
+                                ? "text-bg-primary"
+                                : "text-bg-secondary"
+                            }`}
+                          >
+                            {log.action === "CHECK_OUT" ? "ส่งมอบ" : "รับคืน"}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  ))}
+
+                        <div className="small text-muted">
+                          วิชา: {logBag?.subjectName ?? "ไม่ระบุ"} (
+                          {logBag?.sessionLabel ?? "ไม่ระบุรอบ"})
+                        </div>
+
+                        <div className="small text-muted">
+                          ผู้ตรวจ: {logGraderName} • เจ้าหน้าที่:{" "}
+                          {logOperatorName}
+                        </div>
+
+                        <div className="small text-muted">
+                          {new Date(log.timestamp).toLocaleString("th-TH")}
+                        </div>
+
+                        {log.note && (
+                          <div className="small text-muted">
+                            หมายเหตุ: {log.note}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {logs.length === 0 && (
                     <p className="text-center text-muted small mb-0">
                       ยังไม่มีประวัติการส่งมอบ
                     </p>
+                  )}
+                </div>
+              </div>
+
+              {/* 🎯 Grading history card */}
+              <div className="card shadow-sm">
+                <div className="card-header bg-white d-flex align-items-center justify-content-between">
+                  <div>
+                    <h6 className="mb-1">ประวัติคะแนนล่าสุดของผู้ตรวจ</h6>
+                    <small className="text-muted">
+                      แสดงจากผู้ตรวจที่เลือกในฟอร์มหรือกำลังถือถุงอยู่
+                    </small>
+                  </div>
+                </div>
+                <div className="card-body">
+                  {!graderIdForHistory && (
+                    <p className="text-muted small mb-0">
+                      เลือกผู้ตรวจในฟอร์มหรือเลือกถุงที่มีผู้ตรวจอยู่
+                      เพื่อดูประวัติคะแนน
+                    </p>
+                  )}
+
+                  {graderIdForHistory && (
+                    <>
+                      {gradingLoading && (
+                        <p className="text-muted small">
+                          กำลังโหลดประวัติคะแนน...
+                        </p>
+                      )}
+                      {gradingError && (
+                        <p className="text-danger small mb-2">
+                          {gradingError}
+                        </p>
+                      )}
+
+                      {!gradingLoading &&
+                        !gradingError &&
+                        gradingRecords.length === 0 && (
+                          <p className="text-muted small mb-0">
+                            ผู้ตรวจคนนี้ยังไม่มีประวัติการให้คะแนน
+                          </p>
+                        )}
+
+                      {gradingRecords.length > 0 && (
+                        <div className="table-responsive">
+                          <table className="table table-sm table-hover align-middle mb-0">
+                            <thead className="table-light text-uppercase small">
+                              <tr>
+                                <th>Slot</th>
+                                <th>คะแนน</th>
+                                <th>เวลา</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {gradingRecords.map((rec, idx) => (
+                                <tr key={`${rec.slotId}-${idx}`}>
+                                  <td>{rec.slotId}</td>
+                                  <td className="fw-semibold">{rec.score}</td>
+                                  <td className="text-muted small">
+                                    {rec.enteredAt}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

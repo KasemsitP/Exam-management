@@ -122,6 +122,7 @@ export const registerBagToGraderThunk = createAsyncThunk<
   try {
     const bagNo = Number(payload.bagId);
     const graderIdNumeric = Number(payload.graderId);
+    console.log(payload)
 
     await axios.post("/api/bag-handover/check-in", {
       campaignId: payload.campaignId,

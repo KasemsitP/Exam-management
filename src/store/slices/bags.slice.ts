@@ -8,6 +8,7 @@ type LocalRootState = {
 // (Interfaces - เหมือนเดิม)
 export interface Bag {
     id: string;
+    bag_no: string;
     campaignId: string;
     sessionId: string;
     sessionLabel: string;
@@ -16,12 +17,14 @@ export interface Bag {
     capacity: number;
     scanned: string[];
     status: "draft" | "ready" | "incomplete";
+    scannedCount?: number;
 }
 
 export interface BagStats {
     total: number;
     completed: number;
     inProgress: number;
+    scanned: number;
 }
 
 interface BulkCreatePayload {
@@ -37,7 +40,7 @@ interface BulkCreatePayload {
 
 interface FinalizeLinkPayload {
     campaignId: string;
-    bagId: string;
+    bag_no: string;
     scannedCodes: string[];
 }
 
@@ -53,7 +56,21 @@ interface BagsState {
     error: string | null;
     defaultCapacity: number;
     stats: Record<string, BagStats>;
+    inBags: Record<string, BagPayloadRecord[]>;
 }
+interface BagPayloadRecord {
+    id: number;
+    sessionId: number;
+    bagNo: number;
+    seqInBag: number | null;
+    status: string;
+    userCode: string;
+    fullName: string;
+    qrPayload: string;
+}
+
+
+
 
 const initialState: BagsState = {
     bags: {},
@@ -61,6 +78,7 @@ const initialState: BagsState = {
     error: null,
     defaultCapacity: 30,
     stats: {},
+    inBags: {},
 };
 
 // ========== (Thunks - API Calls) ==========
@@ -75,8 +93,22 @@ export const fetchBagsForCampaignThunk = createAsyncThunk<
     async (campaignId, { rejectWithValue }) => {
         try {
             const response = await axios.get(`/api/bags/campaign/${campaignId}`);
-            console.log(response.data)
-            return response.data as Bag[];
+            const rows: any[] = response.data;
+
+            const mapped: Bag[] = rows.map((row) => ({
+                id: String(row.id),                         // ใช้ id เป็น string
+                bag_no: String(row.bag_no),
+                campaignId: String(row.campaignId ?? campaignId),
+                sessionId: String(row.sessionId),
+                sessionLabel: row.sessionLabel,
+                capacity: row.capacity,
+                scanned: [],                                // เริ่มต้นว่าง ๆ สำหรับ modal สแกน
+                status: row.status as Bag["status"],
+                scannedCount: row.scannedCount ?? 0,       // ✅ map มาตรง ๆ
+            }));
+            console.log(mapped)
+
+            return mapped;
         } catch (error: unknown) {
             if (axios.isAxiosError(error)) {
                 return rejectWithValue(error.response?.data?.message ?? "Fetch bags failed");
@@ -103,6 +135,35 @@ export const bulkCreateBagsThunk = createAsyncThunk<
     }
 );
 
+
+interface ScannedPayloadParams {
+    campaignId: number;
+    sessionId: number;
+    bagNo: number;
+}
+
+export const ScannedPayloadThunk = createAsyncThunk<
+    BagPayloadRecord[],
+    ScannedPayloadParams,
+    { rejectValue: string }
+>(
+    "bags/ScannedCount",
+    async ({ bagNo, campaignId, sessionId }, { rejectWithValue }) => {
+        try {
+            const response = await axios.get<BagPayloadRecord[]>(
+                `/api/bags/${bagNo}/booklets`,
+                {
+                    params: { campaignId, sessionId } // query params
+                }
+            );
+            console.log(response)
+            return response.data as BagPayloadRecord[];
+        } catch (error: unknown) {
+            return rejectWithValue("ไม่สามารถดึงข้อมูลได้");
+        }
+    }
+);
+
 export const finalizeAndLinkBagThunk = createAsyncThunk<
     FinalizeLinkResponse,
     FinalizeLinkPayload,
@@ -111,10 +172,11 @@ export const finalizeAndLinkBagThunk = createAsyncThunk<
     "bags/finalizeAndLink",
     async (payload, { rejectWithValue }) => {
         try {
+            console.log(payload)
             const response = await axios.post("/api/bags/finalize-and-link", payload);
+            console.log(response)
             return response.data as FinalizeLinkResponse;
         } catch (error: unknown) {
-            // ... (Error handling)
             return rejectWithValue("Finalize failed");
         }
     }
@@ -151,7 +213,7 @@ const bagsSlice = createSlice({
             const bag = action.payload;
             state.bags[bag.id] = bag;
             const campaignId = action.payload.campaignId;
-            if (!state.stats[campaignId]) state.stats[campaignId] = { total: 0, completed: 0, inProgress: 0 };
+            if (!state.stats[campaignId]) state.stats[campaignId] = { total: 0, completed: 0, inProgress: 0, scanned: 0 };
             state.stats[campaignId].total++;
             state.stats[campaignId].inProgress++;
         },
@@ -216,7 +278,7 @@ const bagsSlice = createSlice({
                 });
                 if (action.payload.length > 0) {
                     const campaignId = action.payload[0].campaignId;
-                    if (!state.stats[campaignId]) state.stats[campaignId] = { total: 0, completed: 0, inProgress: 0 };
+                    if (!state.stats[campaignId]) state.stats[campaignId] = { total: 0, completed: 0, inProgress: 0, scanned: 0 };
                     state.stats[campaignId].total += action.payload.length;
                     state.stats[campaignId].inProgress += action.payload.length;
                 }
@@ -256,33 +318,27 @@ const bagsSlice = createSlice({
                 state.status = "loading";
                 state.error = null;
             })
-.addCase(fetchBagsForCampaignThunk.fulfilled, (state, action) => {
-  state.status = "succeeded";
+            .addCase(fetchBagsForCampaignThunk.fulfilled, (state, action) => {
+                state.status = "succeeded";
 
-  // 👈 campaignId ที่ component ส่งมา (คือ activeCampaign.id)
-  const campaignId = String(action.meta.arg);
+                const campaignId = String(action.meta.arg);
 
-  const newBags: Record<string, Bag> = {};
-  let stats: BagStats = { total: 0, completed: 0, inProgress: 0 };
+                const newBags: Record<string, Bag> = {};
+                let stats: BagStats = { total: 0, completed: 0, inProgress: 0, scanned: 0 };
 
-  action.payload.forEach((rawBag) => {
-    const bag: Bag = {
-      ...rawBag,
-      id: String(rawBag.id),
-      // 👈 ใช้ campaignId จาก frontend แทนค่าใน response
-      campaignId,
-    };
+                action.payload.forEach((bag) => {
+                    newBags[bag.id] = bag;
 
-    newBags[bag.id] = bag;
+                    stats.total++;
+                    if (bag.status === "ready") stats.completed++;
+                    if (bag.status === "draft") stats.inProgress++;
+                    stats.scanned += bag.scannedCount ?? 0; // รวมจำนวนสแกนทั้งหมดใน campaign นี้
+                });
 
-    stats.total++;
-    if (bag.status === "ready") stats.completed++;
-    if (bag.status === "draft") stats.inProgress++;
-  });
+                state.bags = newBags;
+                state.stats[campaignId] = stats;
+            })
 
-  state.bags = newBags;
-  state.stats[campaignId] = stats;
-})
             .addCase(fetchBagsForCampaignThunk.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload ?? "Failed to fetch bags";
@@ -299,6 +355,35 @@ const bagsSlice = createSlice({
             .addCase(deleteBagThunk.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload ?? "Failed to delete bag";
+            })
+            .addCase(ScannedPayloadThunk.pending, (state) => {
+                state.status = "loading";
+                state.error = null;
+            })
+            .addCase(ScannedPayloadThunk.fulfilled, (state, action) => {
+                state.status = "succeeded";
+
+
+                //ดึงข้อมูลมาจาก thunk ตอนที่ส่ง argument เข้าไปใน createThunk โดยใช้ action.meta.arg
+                const { bagNo, campaignId, sessionId } = action.meta.arg;
+
+                // ทำ key เพื่อสำหรับกัข้อมูลชนกัน
+                const key = `${campaignId}:${sessionId}:${bagNo}`;
+
+                state.inBags[key] = action.payload.map((row) => ({
+                    id: row.id,
+                    sessionId: row.sessionId,
+                    bagNo: row.bagNo,
+                    seqInBag: row.seqInBag,
+                    status: row.status,
+                    userCode: row.userCode,
+                    fullName: row.fullName,
+                    qrPayload: row.qrPayload,
+                }));
+            })
+            .addCase(ScannedPayloadThunk.rejected, (state, action) => {
+                state.status = "failed";
+                state.error = action.payload as string;
             });
     },
 });
@@ -335,6 +420,12 @@ export const selectBagStatsForCampaign = (campaignId: string | null) => (state: 
     }
     return state.bags.stats[campaignId];
 };
+export const selectBookletsInBag =
+  (campaignId: number, sessionId: number, bagNo: number) =>
+  (state: LocalRootState) => {
+    const key = `${campaignId}:${sessionId}:${bagNo}`;
+    return state.bags.inBags[key] ?? [];
+  };
 
 export { bagsSlice };
 

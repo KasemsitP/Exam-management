@@ -34,6 +34,8 @@ import {
   selectBagsSlice,
   fetchBagsForCampaignThunk,
   deleteBagThunk,
+  selectBookletsInBag,
+  ScannedPayloadThunk
 } from "@/store/slices/bags.slice";
 
 // ------------------------------
@@ -86,6 +88,7 @@ export default function BagsPage() {
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const deviceId: string | undefined = undefined;
 
+
   const createForm = useForm<CreateBagForm>();
 
   // === NEW: ใช้ Set ป้องกันซ้ำในถุง ===
@@ -119,6 +122,29 @@ export default function BagsPage() {
       : null
   );
 
+  useEffect(() => {
+    if (!composeBag || !activeCampaign) return;
+
+    // ✅ ถ้ายังไม่ seal → ไม่ต้องไปดึงจาก API
+    const status = (composeBag as any).status;
+    const isSealed = status === "ready" || status === "SEALED";
+
+    if (!isSealed) return;
+
+    const bagNo = (composeBag as any).bag_no ?? Number(composeBag.id);
+    const sessionId = Number(composeBag.sessionId);
+    const campaignIdNumeric = Number(activeCampaign.id);
+
+    dispatch(
+      ScannedPayloadThunk({
+        bagNo,
+        campaignId: campaignIdNumeric,
+        sessionId,
+      })
+    );
+  }, [composeBag, activeCampaign, dispatch]);
+
+
   // === NEW: sync Set เมื่อเปลี่ยนถุง ===
   useEffect(() => {
     scannedSetRef.current = new Set((composeBag?.scanned ?? []).map(normalizePayload));
@@ -135,26 +161,26 @@ export default function BagsPage() {
   //   console.log(bags)
   // })
   // ฟิลเตอร์ + ค้นหา
-const filteredBags = useMemo(() => {
-  const term = searchText.trim().toLowerCase();
+  const filteredBags = useMemo(() => {
+    const term = searchText.trim().toLowerCase();
 
-  // แปลง filterSessionId ให้ match กับ bag.sessionId
-  const sessionFiltered =
-    filterSessionId === "all"
-      ? bags
-      : bags.filter((bag) => String(bag.sessionId) === filterSessionId);
+    // แปลง filterSessionId ให้ match กับ bag.sessionId
+    const sessionFiltered =
+      filterSessionId === "all"
+        ? bags
+        : bags.filter((bag) => String(bag.sessionId) === filterSessionId);
 
-  if (!term) return sessionFiltered;
+    if (!term) return sessionFiltered;
 
-  return sessionFiltered.filter((bag) => {
-    const subjectText = `${bag.subjectCode ?? ""} ${bag.subjectName ?? ""}`.toLowerCase();
-    return (
-      bag.id.toString().toLowerCase().includes(term) ||
-      bag.sessionLabel.toLowerCase().includes(term) ||
-      subjectText.includes(term)
-    );
-  });
-}, [bags, searchText, filterSessionId]);
+    return sessionFiltered.filter((bag) => {
+      const subjectText = `${bag.subjectCode ?? ""} ${bag.subjectName ?? ""}`.toLowerCase();
+      return (
+        bag.id.toString().toLowerCase().includes(term) ||
+        bag.sessionLabel.toLowerCase().includes(term) ||
+        subjectText.includes(term)
+      );
+    });
+  }, [bags, searchText, filterSessionId]);
 
   // ------------------------------
   // Bulk Create
@@ -240,11 +266,11 @@ const filteredBags = useMemo(() => {
       const result = await dispatch(
         finalizeAndLinkBagThunk({
           campaignId: activeCampaign.id,
-          bagId: composeBag.id,
+          bag_no: composeBag.bag_no,
           scannedCodes: composeBag.scanned,
         })
       ).unwrap();
-      toast({ title: "บันทึกข้อมูล", description: `ถุง ${composeBag.id} บันทึกสมุด ${result.bookletsCreated} เล่ม` });
+      toast({ title: "บันทึกข้อมูล", description: `ถุง ${composeBag.id} บันทึกสมุด ${composeBagId.length} เล่ม` });
       setComposeBagId(null);
     } catch (error: any) {
       console.error("Finalize Error:", error);
@@ -289,9 +315,23 @@ const filteredBags = useMemo(() => {
       bagCapacityUpdated({ campaignId: activeCampaign.id, bagId: composeBag.id, capacity: value })
     );
   };
+  const bookletsInBag = useAppSelector((state) => {
+    if (!composeBag || !activeCampaign) return [];
+
+    const campaignNumeric = Number((activeCampaign.id));
+    const sessionNumeric = Number(composeBag.sessionId);
+    const bagNo = Number((composeBag as any).bag_no ?? composeBag.id); // แล้วแต่คุณ map
+
+    return selectBookletsInBag(campaignNumeric, sessionNumeric, bagNo)(state);
+  });
 
   const renderBackdrop = (open: boolean) =>
     open ? <div className="modal-backdrop show" style={{ zIndex: 1050 }} /> : null;
+
+const status = composeBag ? (composeBag as any).status : undefined;
+const isSealed = status === "ready" || status === "SEALED";
+const canScan = !isSealed;
+
 
   // ==============================
   // Render
@@ -359,7 +399,7 @@ const filteredBags = useMemo(() => {
           <div className="pt-3 pt-md-0">
             <ShowIfCan permission="manage_bags">
               <button className="btn btn-primary d-inline-flex align-items-center gap-2 w-100" onClick={() => setCreateDialogOpen(true)} disabled={!activeCampaign}>
-                <Plus size={16} /> สร้างถุงข้อสอบ 
+                <Plus size={16} /> สร้างถุงข้อสอบ
               </button>
             </ShowIfCan>
           </div>
@@ -385,7 +425,7 @@ const filteredBags = useMemo(() => {
               <tbody>
                 {filteredBags.map((bag) => (
                   <tr key={bag.id} className="text-sm">
-                    <td className="fw-semibold">{String(bag.id).padStart(3, "0")}</td>
+                    <td className="fw-semibold">{String(bag.bag_no).padStart(3, "0")}</td>
                     <td>{bag.sessionLabel}</td>
                     {/*<td>
                      <div className="d-flex flex-column">
@@ -394,7 +434,7 @@ const filteredBags = useMemo(() => {
                       </div>
                     </td>*/}
                     <td className="text-center">{bag.capacity}</td>
-                    <td className="text-center">{bag.scanned.length}</td>
+                    <td className="text-center">{bag.scannedCount ?? 0}</td>
                     <td className="text-center">
                       {(() => {
                         const st = getStatusStyle((bag as any).status);
@@ -516,17 +556,49 @@ const filteredBags = useMemo(() => {
                           </div>
                           <div className="border rounded overflow-auto" style={{ maxHeight: 240 }}>
                             <ul className="list-group list-group-flush">
-                              {composeBag.scanned.map((code) => (
-                                <li key={code} className="list-group-item d-flex align-items-center justify-content-between">
-                                  <span className="fw-medium text-truncate" style={{ maxWidth: "80%" }}>{code}</span>
-                                  <button className="btn btn-link text-danger p-1" onClick={() => handleRemoveCode(code)} title="ลบ">
-                                    <X size={16} />
-                                  </button>
+                              {isSealed
+                                ? bookletsInBag.map((bk) => (
+                                  <li key={bk.id} className="list-group-item">
+                                    <div className="d-flex flex-column">
+                                      <span className="fw-medium">
+                                        {bk.userCode} — {bk.fullName}
+                                      </span>
+                                      <span
+                                        className="small text-muted text-truncate"
+                                        style={{ maxWidth: "100%" }}
+                                      >
+                                        {bk.qrPayload}
+                                      </span>
+                                    </div>
+                                  </li>
+                                ))
+                                : composeBag.scanned.map((code) => (
+                                  <li
+                                    key={code}
+                                    className="list-group-item d-flex align-items-center justify-content-between"
+                                  >
+                                    <span
+                                      className="fw-medium text-truncate"
+                                      style={{ maxWidth: "80%" }}
+                                    >
+                                      {code}
+                                    </span>
+                                    <button
+                                      className="btn btn-link text-danger p-1"
+                                      onClick={() => handleRemoveCode(code)}
+                                      title="ลบ"
+                                    >
+                                      <X size={16} />
+                                    </button>
+                                  </li>
+                                ))}
+
+                              {(!isSealed && composeBag.scanned.length === 0) ||
+                                (isSealed && bookletsInBag.length === 0) ? (
+                                <li className="list-group-item text-center text-muted">
+                                  ยังไม่มีการสแกน QR Code
                                 </li>
-                              ))}
-                              {composeBag.scanned.length === 0 && (
-                                <li className="list-group-item text-center text-muted">ยังไม่มีการสแกน QR Code</li>
-                              )}
+                              ) : null}
                             </ul>
                           </div>
                           <div className="d-flex justify-content-between small mt-2">
@@ -553,7 +625,7 @@ const filteredBags = useMemo(() => {
                           <div className="mb-3">
                             <label className="form-label small text-uppercase text-muted">สแกนด้วยกล้อง</label>
                             <div className="rounded border bg-black overflow-hidden">
-                              {scannerEnabled ? (
+                              {canScan && scannerEnabled ? (
                                 <Scanner
                                   formats={["qr_code"]}
                                   constraints={deviceId ? { deviceId } : undefined}
@@ -574,8 +646,8 @@ const filteredBags = useMemo(() => {
                           <div className="mb-2">
                             <label className="form-label small text-uppercase text-muted">เพิ่มรหัสด้วยตนเอง</label>
                             <div className="d-flex gap-2">
-                              <input className="form-control" value={manualCode} onChange={(e) => setManualCode(e.target.value)} placeholder="กรอก QR code" />
-                              <button className="btn btn-outline-secondary" onClick={handleManualAdd}>เพิ่ม</button>
+                              <input className="form-control" value={manualCode} onChange={(e) => setManualCode(e.target.value)} placeholder="กรอก QR code" disabled={!canScan} />
+                              <button className="btn btn-outline-secondary" onClick={handleManualAdd} disabled={!canScan}>เพิ่ม</button>
                             </div>
                           </div>
                           {composeBag.scanned.length < composeBag.capacity && (
@@ -588,8 +660,8 @@ const filteredBags = useMemo(() => {
                 </div>
                 <div className="modal-footer">
                   <button className="btn btn-outline-secondary" onClick={() => setComposeBagId(null)}>ยกเลิก</button>
-                   <button className="btn btn-primary d-inline-flex align-items-center gap-2" onClick={handleFinalizeAndLink} > {/*disabled={bagStatus === "loading" || composeBag.scanned.length < composeBag.capacity */}
-                    {bagStatus === "loading" ? <Loader2 size={16} className="spin-animation" /> : <DatabaseZap size={16} />}
+                  <button className="btn btn-primary d-inline-flex align-items-center gap-2" onClick={handleFinalizeAndLink} disabled={!canScan}> {/*disabled={bagStatus === "loading" || composeBag.scanned.length < composeBag.capacity */}
+                    {bagStatus === "loading" ? <Loader2 size={16} className="spin-animation" /> : <DatabaseZap size={16} /> }
                     บันทึกข้อมูล
                   </button>
                 </div>
