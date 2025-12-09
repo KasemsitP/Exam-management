@@ -1,7 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { authSlice } from "./slices/auth.slice";
 import { sessionsSlice } from "./slices/sessions.slice";
-import { subjectsSlice } from "./slices/subjects.slice";
 import { seatsSlice } from "./slices/seats.slice";
 import { gradingSlice } from "./slices/grading.slice";
 //import { campaignsSlice } from "./slices/campaigns.slice";
@@ -18,11 +17,11 @@ import { userCampaignsSlice} from "./slices/usercampaign.slice";
 import { roomSeatsSlice} from "./slices/roomseat.slice"
 import { examRoomsSlice } from "./slices/examRooms.slice";
 import { qrSlice } from "./slices/qrscanner.slice";
+import { subjectsSlice } from "./slices/subjects.slice";
 export const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
     sessions: sessionsSlice.reducer,
-    subjects: subjectsSlice.reducer,
     seats: seatsSlice.reducer,
     bags: bagsSlice.reducer,
     grading: gradingSlice.reducer,
@@ -39,7 +38,7 @@ export const store = configureStore({
     roomSeats : roomSeatsSlice.reducer,
     qr: qrSlice.reducer,
     bagHandover: bagHandoverSlice.reducer,
-
+    subjects: subjectsSlice.reducer
 
   },
   middleware: (getDefaultMiddleware) =>

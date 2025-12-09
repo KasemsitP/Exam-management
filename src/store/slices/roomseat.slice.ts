@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import { RootState } from "../index";
 
 // (Interface นี้ต้องตรงกับ 'room_seats')
 export interface RoomSeat {
@@ -71,30 +72,42 @@ const roomSeatsSlice = createSlice({
   },
 });
 
-// (Selectors)
-type LocalRootState = {
-  roomSeats: RoomSeatsState;
-};
-export const selectAllRoomSeats = (state: LocalRootState) => 
-  Object.values(state.roomSeats.seats);
+// ========== Selectors ==========
 
-export const selectRoomSeatsForSite = (siteId: string | number | null) => (state: LocalRootState) => {
-  if (!siteId) return [];
-  // (FIXME: Logic นี้ควร Filter ด้วย siteId จริงๆ)
-  return Object.values(state.roomSeats.seats);
-};
+export const selectAllRoomSeats = (state: RootState) =>
+  Object.values(state.roomSeats.seats);
 
-// (Selector นี้สำคัญมากสำหรับ Algorithm)
-export const selectRoomSeatsMeta = (siteId: string | number | null) => (state: LocalRootState) => {
-  const seats = selectRoomSeatsForSite(siteId)(state);
-  if (seats.length === 0) {
-    return { totalSeats: 0, columns: 1 };
-  }
-  const maxCol = Math.max(...seats.map(s => s.col_no));
-  const columns = maxCol + 1; // (col_no เริ่มจาก 0)
-  const totalSeats = seats.length;
-  return { totalSeats, columns };
-};
+// รับได้ทั้ง 1 / "1" / "site-1"
+export const selectRoomSeatsForSite =
+  (siteId: string | number | null) =>
+  (state: RootState) => {
+    if (!siteId) return [];
+
+    const numericSiteId = parseInt(String(siteId).replace("site-", ""));
+    if (Number.isNaN(numericSiteId)) return [];
+
+    return Object.values(state.roomSeats.seats).filter(
+      (seat) => seat.site_id === numericSiteId
+    );
+  };
+
+// ใช้ข้อมูลจาก selectRoomSeatsForSite เพื่อคำนวณ meta
+export const selectRoomSeatsMeta =
+  (siteId: string | number | null) =>
+  (state: RootState) => {
+    const seats = selectRoomSeatsForSite(siteId)(state);
+
+    if (seats.length === 0) {
+      return { totalSeats: 0, columns: 1 };
+    }
+
+    const maxCol = Math.max(...seats.map((s) => s.col_no));
+    const columns = maxCol + 1; // col_no เริ่มจาก 0
+    const totalSeats = seats.length;
+
+    return { totalSeats, columns };
+  };
+
 
 
 export{ roomSeatsSlice}

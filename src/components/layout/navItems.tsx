@@ -14,6 +14,7 @@ import {
   Search as SearchIcon,
   QrCode,
   LucideIcon,
+  BookOpen,
 } from "lucide-react";
 import type { Permission } from "@/lib/rbac";
 
@@ -22,16 +23,36 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   permissions?: Permission[];
+  notRequiredCampaignActive?: boolean;
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { to: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
+
+    {
+    to: "/subject",
+    label: "จัดการรายวิชา",
+    icon: BookOpen,
+    permissions: ["manage_sessions"],
+    notRequiredCampaignActive: true
+  },
   {
     to: "/campaign-sessions",
     label: "จัดการรอบสอบ",
     icon: CalendarDays,
     permissions: ["manage_sessions"],
+    notRequiredCampaignActive: true
   },
+  {
+    to: "/accounts",
+    label: "จัดการบัญชีผู้ใช้",
+    icon: Users,
+    permissions: ["manage_accounts"],
+    notRequiredCampaignActive: true
+  },
+
+
+  { to: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
+
   {
     to: "/seat-allocation",
     label: "จัดที่นั่งสอบ",
@@ -44,6 +65,7 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ClipboardCheck,
     permissions: ["manage_rooms"],
   },
+
   {
     to: "/bags",
     label: "ถุงข้อสอบ",
@@ -91,12 +113,6 @@ export const NAV_ITEMS: NavItem[] = [
     label: "ค้นหาผู้ใช้",
     icon: SearchIcon,
     permissions: ["manage_users", "view_sessions"],
-  },
-  {
-    to: "/accounts",
-    label: "จัดการบัญชีผู้ใช้",
-    icon: Users,
-    permissions: ["manage_accounts"],
   },
   {
     to: "/qrscanner",

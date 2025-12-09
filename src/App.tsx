@@ -4,22 +4,34 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { hydrateAuth, selectAuthStatus } from "@/store/slices/auth.slice";
 import Login from "@/pages/Login";
-import Dashboard from "@/pages/Dashboard";
-import CampaignsPage from "@/pages/Sessions";
 import SeatAllocationPage from "@/pages/SeatAllocation";
-import ExamRoomsPage from "@/pages/ExamRooms";
-import BagsPage from "@/pages/Bags";
-import BagHandoverPage from "@/pages/BagHandover";
-import ImportCsvPage from "@/pages/importcsv";
-import SignSheetsPage from "@/pages/SignSheets";
 // import GraderManagementPage from "@/pages/GraderManagement";
-import GradingStationPage from "@/pages/GradingStation";
 import ScoreReviewPage from "@/pages/ScoreReview";
-import KeyManagementPage from "@/pages/key";
-import AccountsPage from "./pages/AccountManagement";
+// import AccountsPage from "./pages/AccountManagement";
+// import BagHandoverPage from "@/pages/BagHandover";
+//import BagsPage from "@/pages/Bags";
+//import Dashboard from "@/pages/Dashboard";
+//import ExamRoomsPage from "@/pages/ExamRooms";
+//import GradingStationPage from "@/pages/GradingStation";
+//import ImportCsvPage from "@/pages/importcsv";
+//import KeyManagementPage from "@/pages/key";
+//import CampaignsPage from "@/pages/Sessions";
+//import QrPage from '@/pages/QRScanner'
+//import SignSheetsPage from "@/pages/SignSheets";
+import AccountsPage from "./pages/accounts/AccountsPage";
+import BagHandoverPage from "@/pages/bag-handover/BagHandoverPage";
+import BagsPage from "@/pages/bags/BagsPage";
+import Dashboard from "@/pages/dashboard/Dashboard";
+import ExamRoomsPage from "@/pages/examrooms/ExamRoomsPage";
+import GradingStationPage from "@/pages/gradingstation/GradingStationPage";
+import ImportCsvPage from "@/pages/importcsv/ImportCsvPage"
+import KeyManagementPage from "@/pages/key/KeyManagementPage";
+import CampaignsPage from "@/pages/campaignsession/CampaignsPage";
+import QrPage from '@/pages/scan-check/ProctorScanPage';
+import SignSheetsPage from "@/pages/signsheets/SignSheetsPage";
+import SubjectPage from "./pages/subjects/SubjectPage";
 //import UserSearchPage from "@/pages/UserSearch";
 import { AppLayout } from "@/components/layout/AppLayout";
-import QrPage from '@/pages/QRScanner'
 import { BootstrapToastViewport } from "@/components/ui/bootstrap-toast";
 import{OverlayLoader} from "@/components/ui/Loading";
 
@@ -87,6 +99,7 @@ function AppContent() {
           {/* <Route path="/user-search" element={<UserSearchPage />} /> */}
           <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/qrscanner" element={<QrPage />} />
+          <Route path="/subject" element={<SubjectPage/>}/>
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<NotFound />} />

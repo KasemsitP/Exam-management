@@ -81,16 +81,6 @@ export function AppLayout() {
         onConfirm={handleSelectCampaign}
       />
 
-      <style>{`
-        .font-sans { font-family: 'Sarabun', 'Inter', sans-serif; }
-        .hover-bg-light:hover { background-color: #f9fafb; }
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e5e7eb; border-radius: 10px; }
-        .hover-shadow-sm:hover { box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-color: #d1d5db !important; }
-        .animate-fade-in { animation: fadeIn 0.2s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-      `}</style>
     </div>
   );
 }

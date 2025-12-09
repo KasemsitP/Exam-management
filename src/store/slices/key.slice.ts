@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import { RootState } from "../index";
 
 // (ใช้ { keyManagement: KeyManagementState } เพื่อหลีกเลี่ยง Circular Import)
 type LocalRootState = { keyManagement: KeyManagementState };
@@ -244,16 +245,23 @@ export const { clearActiveKeys, clearEncryptionResult } =
 export { keyManagementSlice };
 
 // --- 5. Selectors ---
-export const selectKeyManagementStatus = (state: LocalRootState) =>
+// --- 5. Selectors ---
+// ใช้ RootState จาก store โดยตรง
+
+export const selectKeyManagementStatus = (state: RootState) =>
   state.keyManagement.status;
-export const selectAllActiveKeys = (state: LocalRootState) =>
+
+export const selectAllActiveKeys = (state: RootState) =>
   state.keyManagement.keys;
-export const selectKeyManagementError = (state: LocalRootState) =>
+
+export const selectKeyManagementError = (state: RootState) =>
   state.keyManagement.error;
-export const selectPrerequisites = (state: LocalRootState) =>
+
+export const selectPrerequisites = (state: RootState) =>
   state.keyManagement.prerequisites;
-export const selectEncryptionStatus = (state: LocalRootState) =>
+
+export const selectEncryptionStatus = (state: RootState) =>
   state.keyManagement.encryptionStatus;
-// [ ⭐️ FIX ⭐️ ]
-export const selectLastBulkEncryptionStats = (state: LocalRootState) =>
+
+export const selectLastBulkEncryptionStats = (state: RootState) =>
   state.keyManagement.lastBulkEncryptionStats;

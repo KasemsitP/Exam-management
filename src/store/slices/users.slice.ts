@@ -1,5 +1,6 @@
 ﻿import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
+import { RootState } from "../index";
 interface ImportPayload {
   campaignId: string; 
   rows: Record<string, string>[];
@@ -88,10 +89,12 @@ export const { clearImportStatus } = usersSlice.actions;
 export { usersSlice };
 
 
-export const selectUserImportStatus = (state: { users: UsersState }) =>
+export const selectUserImportStatus = (state: RootState) =>
   state.users.status;
-export const selectUserImportError = (state: { users: UsersState }) =>
+
+export const selectUserImportError = (state: RootState) =>
   state.users.error;
-export const selectUserImportStats = (state: { users: UsersState }) =>
+
+export const selectUserImportStats = (state: RootState) =>
   state.users.lastImportStats;
 

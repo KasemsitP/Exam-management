@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import { X } from "lucide-react";
 import type { NavItem } from "./navItems";
 import type { AuthUser } from "@/store/slices/auth.slice";
+import Logo from "../../assets/kmutnblogo.png"
 
 const THEME_COLOR = "#6366f1";
 const THEME_BG_ACTIVE = "#e0e7ff";
@@ -22,85 +23,146 @@ export function AppSidebar({
   onCloseMobile,
 }: AppSidebarProps) {
   const SidebarInner = (
-    <div className="d-flex flex-column h-100 bg-white">
-      {/* Logo / Title */}
-      <div className="px-4 py-4 d-flex align-items-center" style={{ height: "80px" }}>
-        <div className="d-flex align-items-center gap-3">
-          <div className="px-0 d-flex align-items-center">
-            <div>
-              <h2 className="h6 mb-0 fw-bold text-dark" style={{ fontSize: "1.1rem" }}>
+    <>
+      <style>{styleScrollbar}</style>
+      <div className="d-flex flex-column h-100 bg-white">
+        {/* Logo / Title */}
+        <div
+          className="px-4 py-4 d-flex align-items-center bg-white"
+          style={{
+            height: "150px",
+            position: "sticky",
+            top: 0,
+            zIndex: 10, 
+            borderBottom: "1px solid #e5e7eb",
+          }}
+        >
+          <div className="d-flex align-items-center gap-3 w-100">
+            <div className="px-0 d-flex align-items-center w-100 flex-column text-center">
+              <img src={Logo} alt="Logo" style={{ width: 100, height: "auto" }} />
+              <h2 className="h6 mb-0 fw-bold text-dark mt-2" style={{ fontSize: "1.1rem" }}>
                 ระบบจัดการข้อสอบ
               </h2>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Menu */}
-      <div className="flex-grow-1 overflow-auto px-3 py-2 custom-scrollbar">
-        <p
-          className="px-3 mb-2 small text-muted text-uppercase fw-bold"
-          style={{ fontSize: "0.7rem", letterSpacing: "1.5px", color: "#9ca3af" }}
-        >
-          Menu
-        </p>
-
-        <nav className="d-flex flex-column gap-1">
-          {navItems.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                [
-                  "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none",
-                  isActive ? "fw-semibold" : "text-secondary",
-                ].join(" ")
-              }
-              style={({ isActive }) => ({
-                backgroundColor: isActive ? THEME_BG_ACTIVE : "transparent",
-                color: isActive ? THEME_COLOR : "#4b5563",
-              })}
-              onClick={() => mobile && onCloseMobile?.()}
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon size={14} strokeWidth={2} style={{ opacity: isActive ? 1 : 0.8 }} />
-                  <div className="text-wrap">
-                    <span className="menu-title">{label}</span>
-                  </div>
-                  {isActive && (
-                    <div
-                      className="ms-auto rounded-circle"
-                      style={{ width: 6, height: 6, backgroundColor: THEME_COLOR }}
-                    />
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-
-      {/* User footer */}
-      <div className="p-4 border-top mt-auto">
-        <div className="d-flex align-items-center gap-3">
-          <div
-            className="rounded-circle d-flex align-items-center justify-content-center text-secondary fw-bold shadow-sm"
-            style={{ width: 48, height: 48, backgroundColor: "#e5e7eb", fontSize: "1.2rem" }}
+        {/* Menu */}
+        <div className="flex-grow-1 px-3 py-2 custom-scrollbar sidebar-scroll">
+          <p
+            className="px-3 mb-2 mt-2 small text-muted text-uppercase fw-bold"
+            style={{ fontSize: "0.8rem", letterSpacing: "1.5px", color: "#9ca3af" }}
           >
-            {user?.name?.charAt(0) ?? "A"}
-          </div>
-          <div className="overflow-hidden">
-            <p className="mb-0 text-dark fw-bold text-truncate" style={{ fontSize: "0.95rem" }}>
-              {user?.name ?? "Admin User"}
+            Menu จัดการสอบ 
+          </p>
+
+          <nav className="d-flex flex-column gap-1">
+            {/*
+    แยกเป็น 2 กลุ่ม:
+    1️⃣ notRequiredCampaignActive = true
+    2️⃣ notRequiredCampaignActive = false
+  */}
+            {navItems
+              .filter((item) => item.notRequiredCampaignActive)
+              .map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    [
+                      "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none",
+                      isActive ? "fw-semibold" : "text-secondary",
+                    ].join(" ")
+                  }
+                  style={({ isActive }) => ({
+                    backgroundColor: isActive ? THEME_BG_ACTIVE : "transparent",
+                    color: isActive ? THEME_COLOR : "#4b5563",
+                  })}
+                  onClick={() => mobile && onCloseMobile?.()}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon size={14} strokeWidth={2} style={{ opacity: isActive ? 1 : 0.8 }} />
+                      <div className="text-wrap">
+                        <span className="menu-title">{label}</span>
+                      </div>
+                      {isActive && (
+                        <div
+                          className="ms-auto rounded-circle"
+                          style={{ width: 6, height: 6, backgroundColor: THEME_COLOR }}
+                        />
+                      )}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+
+            {/* เส้นแบ่ง */}
+            <div className="my-2 border-top" />
+            <p
+              className="px-3 mb-2 small text-muted text-uppercase fw-bold"
+              style={{ fontSize: "0.8rem", letterSpacing: "1.5px", color: "#9ca3af" }}
+            >
+              Menu จัดการภายในรอบสอบ
             </p>
-            <p className="mb-0 text-muted small text-truncate" style={{ fontSize: "0.8rem" }}>
-              {user?.username || "admin"}
-            </p>
+            {navItems
+              .filter((item) => !item.notRequiredCampaignActive)
+              .map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  className={({ isActive }) =>
+                    [
+                      "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none",
+                      isActive ? "fw-semibold" : "text-secondary",
+                    ].join(" ")
+                  }
+                  style={({ isActive }) => ({
+                    backgroundColor: isActive ? THEME_BG_ACTIVE : "transparent",
+                    color: isActive ? THEME_COLOR : "#4b5563",
+                  })}
+                  onClick={() => mobile && onCloseMobile?.()}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <Icon size={14} strokeWidth={2} style={{ opacity: isActive ? 1 : 0.8 }} />
+                      <div className="text-wrap">
+                        <span className="menu-title">{label}</span>
+                      </div>
+                      {isActive && (
+                        <div
+                          className="ms-auto rounded-circle"
+                          style={{ width: 6, height: 6, backgroundColor: THEME_COLOR }}
+                        />
+                      )}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+          </nav>
+        </div>
+
+        {/* User footer */}
+        <div className="p-4 border-top mt-auto">
+          <div className="d-flex align-items-center gap-3">
+            <div
+              className="rounded-circle d-flex align-items-center justify-content-center text-secondary fw-bold shadow-sm"
+              style={{ width: 48, height: 48, backgroundColor: "#e5e7eb", fontSize: "1.2rem" }}
+            >
+              {user?.name?.charAt(0) ?? "A"}
+            </div>
+            <div className="overflow-hidden">
+              <p className="mb-0 text-dark fw-bold text-truncate" style={{ fontSize: "0.95rem" }}>
+                {user?.name ?? "Admin User"}
+              </p>
+              <p className="mb-0 text-muted small text-truncate" style={{ fontSize: "0.8rem" }}>
+                {user?.username || "admin"}
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
   if (!mobile) {
@@ -149,3 +211,33 @@ export function AppSidebar({
     </>
   );
 }
+
+
+
+const styleScrollbar = `
+/* เริ่มต้นซ่อน scroll */
+.sidebar-scroll {
+  overflow: hidden;
+}
+
+/* hover บน desktop ให้ scroll ปรากฏ */
+@media (min-width: 992px) { /* lg ขึ้นไป = desktop */
+  .sidebar-scroll:hover {
+    overflow-y: auto;
+  }
+}
+
+/* Custom scrollbar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(170,170,170);
+  border-radius: 3px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+`;

@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, nanoid, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import { RootState } from "../index";
 
 export interface CampaignSubject {
   id: string;
@@ -659,34 +660,34 @@ export const {
 
 export { examDataSlice };
 
-export const selectCampaigns = (state: { examData: ExamDataState }) => state.examData.list;
+export const selectCampaigns = (state: RootState) => state.examData.list;
 
-export const selectActiveCampaign = (state: { examData: ExamDataState }) =>
+export const selectActiveCampaign = (state: RootState) =>
   state.examData.list.find((campaign) => campaign.id === state.examData.activeCampaignId) ?? null;
 
 export const selectSessionsForCampaign =
   (campaignId: string | null) =>
-    (state: { examData: ExamDataState }) =>
-      campaignId
-        ? state.examData.list.find((campaign) => campaign.id === campaignId)?.sessions ?? []
-        : [];
+  (state: RootState) =>
+    campaignId
+      ? state.examData.list.find((campaign) => campaign.id === campaignId)?.sessions ?? []
+      : [];
 
-export const selectActiveCampaignSessions = (state: { examData: ExamDataState }) =>
+export const selectActiveCampaignSessions = (state: RootState) =>
   selectActiveCampaign(state)?.sessions ?? [];
 
 export const selectSessionById =
   (campaignId: string, sessionId: string) =>
-    (state: { examData: ExamDataState }) =>
-      state.examData.list
-        .find((campaign) => campaign.id === campaignId)
-        ?.sessions.find((session) => session.id === sessionId) ?? null;
+  (state: RootState) =>
+    state.examData.list
+      .find((campaign) => campaign.id === campaignId)
+      ?.sessions.find((session) => session.id === sessionId) ?? null;
 
 export const selectSubjectsForSession =
   (campaignId: string, sessionId: string) =>
-    (state: { examData: ExamDataState }) =>
-      state.examData.list
-        .find((campaign) => campaign.id === campaignId)
-        ?.sessions.find((session) => session.id === sessionId)?.subjects ?? [];
+  (state: RootState) =>
+    state.examData.list
+      .find((campaign) => campaign.id === campaignId)
+      ?.sessions.find((session) => session.id === sessionId)?.subjects ?? [];
 
-export const selectExamDataStatus = (state: { examData: ExamDataState }) => state.examData.status;
-export const selectExamDataError = (state: { examData: ExamDataState }) => state.examData.error ?? null;
+export const selectExamDataStatus = (state: RootState) => state.examData.status;
+export const selectExamDataError = (state: RootState) => state.examData.error ?? null;

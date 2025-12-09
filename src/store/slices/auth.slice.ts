@@ -1,8 +1,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios"; 
-
+import { RootState } from "../index";
 export type Role = "admin" | "manager" | "staff" | "grader";
-
 
 
 export interface AuthUser {
@@ -166,6 +165,6 @@ export const { setUser, clearAuth ,setAuthenticated} = authSlice.actions;
 export { authSlice };
 
 // Selectors (ยังคงเดิม)
-export const selectCurrentUser = (state: { auth: AuthState }) => state.auth.user;
-export const selectAuthStatus = (state: { auth: AuthState }) => state.auth.status;
-export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
+export const selectCurrentUser = (state: RootState) => state.auth.user;
+export const selectAuthStatus = (state: RootState) => state.auth.status;
+export const selectAuthError = (state: RootState) => state.auth.error;

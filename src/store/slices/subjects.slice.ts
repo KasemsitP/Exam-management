@@ -1,125 +1,170 @@
+// src/store/slices/subjects.slice.ts
 import { createSlice, nanoid, PayloadAction } from "@reduxjs/toolkit";
+import type { RootState } from "../index";
+
+/* ------------------------------ Types ------------------------------ */
+
+export interface SubjectQuestion {
+  id: string;          // key ใน React
+  questionNo: number;  // เลขข้อ 1,2,3,...
+  label: string;       // ชื่อหัวข้อ เช่น "กฎหมายรัฐธรรมนูญ"
+}
 
 export interface Subject {
-  id: string;
+  id: number;
   code: string;
   name: string;
-  owner: string;
-  sessionId: string;
-  candidateCount: number;
-  updatedAt: string;
+  questions: SubjectQuestion[];
 }
 
 interface SubjectsState {
-  list: Subject[];
-  importStatus: "idle" | "importing" | "success" | "error";
-  importError?: string;
+  items: Subject[];
+  selectedId: number | null;
+  nextId: number; // auto-id ฝั่ง frontend
 }
 
+/* --------------------------- Initial State ------------------------- */
+
 const initialState: SubjectsState = {
-  list: [
-    {
-      id: "sub-law101-summary",
-      code: "LAW101",
-      name: "Civil Law I",
-      owner: "Exam Committee",
-      sessionId: "sess-y68-t2-d1",
-      candidateCount: 420,
-      updatedAt: "2025-04-20T09:00:00+07:00",
-    },
-    {
-      id: "sub-law215-summary",
-      code: "LAW215",
-      name: "Civil Procedure",
-      owner: "Exam Committee",
-      sessionId: "sess-y68-t2-d1",
-      candidateCount: 420,
-      updatedAt: "2025-04-20T09:15:00+07:00",
-    },
-    {
-      id: "sub-law205-summary",
-      code: "LAW205",
-      name: "Criminal Procedure",
-      owner: "Exam Committee",
-      sessionId: "sess-y68-t2-d2",
-      candidateCount: 415,
-      updatedAt: "2025-04-21T09:00:00+07:00",
-    },
-    {
-      id: "sub-law320-summary",
-      code: "LAW320",
-      name: "International Law",
-      owner: "Exam Committee",
-      sessionId: "sess-y68-t2-d2",
-      candidateCount: 410,
-      updatedAt: "2025-04-21T09:15:00+07:00",
-    },
-  ],
-  importStatus: "idle",
+  items: [],
+  selectedId: null,
+  nextId: 1,
 };
+
+/* ------------------------------ Slice ------------------------------ */
 
 const subjectsSlice = createSlice({
   name: "subjects",
   initialState,
   reducers: {
-    subjectAdded: {
-      prepare: (payload: Omit<Subject, "id" | "updatedAt"> & { updatedAt?: string }) => ({
-        payload: {
-          ...payload,
-          id: `sub-${nanoid(6)}`,
-          updatedAt: payload.updatedAt ?? new Date().toISOString(),
-        },
-      }),
-      reducer: (state, action: PayloadAction<Subject>) => {
-        state.list.unshift(action.payload);
-      },
+    // สร้างวิชาใหม่ (พร้อมเลือกวิชานั้นให้เลย)
+    createSubject(
+      state,
+      action: PayloadAction<{ code: string; name: string }>
+    ) {
+      const { code, name } = action.payload;
+      const id = state.nextId;
+
+      const newSubject: Subject = {
+        id,
+        code,
+        name,
+        questions: [],
+      };
+
+      state.items.push(newSubject);
+      state.nextId += 1;
+      state.selectedId = id;
     },
-    subjectUpdated: (state, action: PayloadAction<Subject>) => {
-      const index = state.list.findIndex((subject) => subject.id === action.payload.id);
-      if (index >= 0) {
-        state.list[index] = action.payload;
+
+    setSelectedSubjectId(state, action: PayloadAction<number | null>) {
+      state.selectedId = action.payload;
+    },
+
+    updateSubject(
+      state,
+      action: PayloadAction<{ id: number; code: string; name: string }>
+    ) {
+      const { id, code, name } = action.payload;
+      const subject = state.items.find((s) => s.id === id);
+      if (subject) {
+        subject.code = code;
+        subject.name = name;
       }
     },
-    subjectRemoved: (state, action: PayloadAction<string>) => {
-      state.list = state.list.filter((subject) => subject.id !== action.payload);
+
+    deleteSubject(state, action: PayloadAction<{ id: number }>) {
+      const { id } = action.payload;
+      state.items = state.items.filter((s) => s.id !== id);
+      if (state.selectedId === id) {
+        state.selectedId = state.items.length ? state.items[0].id : null;
+      }
     },
-    subjectsImported: (state, action: PayloadAction<Subject[]>) => {
-      state.list = [...action.payload, ...state.list];
-      state.importStatus = "success";
-      state.importError = undefined;
+
+    // ------------------- จัดการ "ข้อ" ภายในวิชา -------------------
+
+    addQuestion(state, action: PayloadAction<{ subjectId: number }>) {
+      const { subjectId } = action.payload;
+      const subject = state.items.find((s) => s.id === subjectId);
+      if (!subject) return;
+
+      const nextNo = subject.questions.length + 1;
+
+      subject.questions.push({
+        id: nanoid(),
+        questionNo: nextNo,
+        label: "",
+      });
     },
-    subjectsImportStarted: (state) => {
-      state.importStatus = "importing";
-      state.importError = undefined;
+
+    updateQuestionLabel(
+      state,
+      action: PayloadAction<{
+        subjectId: number;
+        questionId: string;
+        label: string;
+      }>
+    ) {
+      const { subjectId, questionId, label } = action.payload;
+      const subject = state.items.find((s) => s.id === subjectId);
+      if (!subject) return;
+
+      const q = subject.questions.find((q) => q.id === questionId);
+      if (q) q.label = label;
     },
-    subjectsImportFailed: (state, action: PayloadAction<string>) => {
-      state.importStatus = "error";
-      state.importError = action.payload;
+
+    removeQuestion(
+      state,
+      action: PayloadAction<{ subjectId: number; questionId: string }>
+    ) {
+      const { subjectId, questionId } = action.payload;
+      const subject = state.items.find((s) => s.id === subjectId);
+      if (!subject) return;
+
+      subject.questions = subject.questions
+        .filter((q) => q.id !== questionId)
+        .map((q, index) => ({
+          ...q,
+          questionNo: index + 1,
+        }));
     },
-    subjectsImportReset: (state) => {
-      state.importStatus = "idle";
-      state.importError = undefined;
+
+    clearQuestionsForSubject(state, action: PayloadAction<{ subjectId: number }>) {
+      const { subjectId } = action.payload;
+      const subject = state.items.find((s) => s.id === subjectId);
+      if (subject) subject.questions = [];
     },
   },
 });
 
+/* ---------------------------- Actions ----------------------------- */
+
 export const {
-  subjectAdded,
-  subjectRemoved,
-  subjectsImported,
-  subjectsImportFailed,
-  subjectsImportReset,
-  subjectsImportStarted,
-  subjectUpdated,
+  createSubject,
+  setSelectedSubjectId,
+  updateSubject,
+  deleteSubject,
+  addQuestion,
+  updateQuestionLabel,
+  removeQuestion,
+  clearQuestionsForSubject,
 } = subjectsSlice.actions;
 
-export { subjectsSlice };
+/* --------------------------- Selectors ---------------------------- */
 
-export const selectSubjects = (state: { subjects: SubjectsState }) => state.subjects.list;
-export const selectSubjectsBySession =
-  (sessionId: string | null) => (state: { subjects: SubjectsState }) =>
-    sessionId ? state.subjects.list.filter((subject) => subject.sessionId === sessionId) : [];
-export const selectSubjectsImportStatus = (state: { subjects: SubjectsState }) =>
-  state.subjects.importStatus;
-export const selectSubjectsImportError = (state: { subjects: SubjectsState }) =>
-  state.subjects.importError;
+export const selectSubjectsSlice = (state: RootState) => state.subjects;
+
+export const selectAllSubjects = (state: RootState) => state.subjects.items;
+
+export const selectSelectedSubjectId = (state: RootState) =>
+  state.subjects.selectedId;
+
+export const selectSubjectById = (state: RootState, id: number) =>
+  state.subjects.items.find((s) => s.id === id) || null;
+
+export const selectQuestionsForSubject = (state: RootState, id: number) => {
+  const s = state.subjects.items.find((x) => x.id === id);
+  return s ? s.questions : [];
+};
+
+export {subjectsSlice}

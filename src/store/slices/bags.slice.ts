@@ -1,9 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from 'axios';
+import { RootState } from "../index";
 
-type LocalRootState = {
-    bags: BagsState;
-};
+
 
 // (Interfaces - เหมือนเดิม)
 export interface Bag {
@@ -400,29 +399,46 @@ export const {
 } = bagsSlice.actions;
 
 // ========== (Selectors) ==========
-export const selectBagsSlice = (state: LocalRootState) => state.bags;
-export const selectDefaultBagCapacity = (state: LocalRootState) => state.bags.defaultCapacity;
-export const selectAllBagsAsArray = (state: LocalRootState) => Object.values(state.bags.bags);
-export const selectBagsForCampaign = (campaignId: string | null) => (state: LocalRootState) => {
+export const selectBagsSlice = (state: RootState) => state.bags;
+
+export const selectDefaultBagCapacity = (state: RootState) =>
+  state.bags.defaultCapacity;
+
+export const selectAllBagsAsArray = (state: RootState) =>
+  Object.values(state.bags.bags);
+
+export const selectBagsForCampaign =
+  (campaignId: string | null) =>
+  (state: RootState) => {
     if (!campaignId) return [];
-    return Object.values(state.bags.bags).filter((bag) => bag.campaignId === campaignId);
-};
-export const selectBagById = (campaignId: string, bagId: string) => (state: LocalRootState) => {
+    return Object.values(state.bags.bags).filter(
+      (bag) => bag.campaignId === campaignId
+    );
+  };
+
+export const selectBagById =
+  (campaignId: string, bagId: string) =>
+  (state: RootState) => {
     const bag = state.bags.bags[bagId];
     if (bag && bag.campaignId === campaignId) {
-        return bag;
+      return bag;
     }
     return undefined;
-};
-export const selectBagStatsForCampaign = (campaignId: string | null) => (state: LocalRootState) => {
+  };
+
+// ⭐ แนะนำให้คืนโครงสร้าง BagStats ให้ครบทุก field เสมอ
+export const selectBagStatsForCampaign =
+  (campaignId: string | null) =>
+  (state: RootState): BagStats => {
     if (!campaignId || !state.bags.stats[campaignId]) {
-        return { total: 0, completed: 0, inProgress: 0 };
+      return { total: 0, completed: 0, inProgress: 0, scanned: 0 };
     }
     return state.bags.stats[campaignId];
-};
+  };
+
 export const selectBookletsInBag =
   (campaignId: number, sessionId: number, bagNo: number) =>
-  (state: LocalRootState) => {
+  (state: RootState) => {
     const key = `${campaignId}:${sessionId}:${bagNo}`;
     return state.bags.inBags[key] ?? [];
   };

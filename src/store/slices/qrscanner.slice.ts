@@ -1,7 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
-import { RootState } from ".."; // (ต้อง Import RootState)
-//import { UserSessionData } from "./userSessions.slice"; // (ใช้ Interface เดิม)
+import { RootState } from "../index"; // (ต้อง Import RootState)
 
 export interface QRverification {
   user_session_id: number;

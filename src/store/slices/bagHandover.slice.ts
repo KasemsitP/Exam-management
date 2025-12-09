@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
+import { RootState } from '../index'; // path ของ RootState ของคุณ
 
 /* -------------------------------------------------------------------------- */
 /*  Types                                                                     */

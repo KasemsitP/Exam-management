@@ -1,8 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from "../index";
-// ⭐️ (1) Interfaces
-// (อ้างอิงจาก Schema 'accounts' และ 'roles' ของคุณ)
 export interface Role {
   id: number;
   code: string;
@@ -35,9 +33,9 @@ const initialState: AccountsState = {
   error: null,
 };
 
-// ⭐️ (2) Thunks (API Calls)
 
-// (GET /api/accounts - API ที่เราต้องสร้าง)
+
+
 export const fetchAccountsThunk = createAsyncThunk<
   Account[],
   void,
@@ -47,12 +45,11 @@ export const fetchAccountsThunk = createAsyncThunk<
     const response = await axios.get("/api/accounts");
     return response.data as Account[];
   } catch (error: unknown) {
-    // ... (Error handling)
     return rejectWithValue("Failed to fetch accounts");
   }
 });
 
-// (GET /api/roles - API ที่เราต้องสร้าง)
+
 export const fetchRolesThunk = createAsyncThunk<
   Role[],
   void,
@@ -62,32 +59,27 @@ export const fetchRolesThunk = createAsyncThunk<
     const response = await axios.get("/api/roles");
     return response.data as Role[];
   } catch (error: unknown) {
-    // ... (Error handling)
     return rejectWithValue("Failed to fetch roles");
   }
 });
 
-// (POST /api/auth/register - ใช้ API ที่คุณมีอยู่)
-// (Interface นี้ต้องตรงกับ AuthController.register)
+
 interface CreateAccountPayload {
   username: string;
   password: string;
   full_name: string;
   email: string;
-  role: number; // (ตาม AuthController.register)
+  role: number; 
 }
 export const createAccountThunk = createAsyncThunk<
-  Account, // (สมมติว่า API Register ควร Return Account ใหม่)
+  Account, 
   CreateAccountPayload,
   { rejectValue: string }
 >(
   "accounts/create",
   async (payload, { rejectWithValue }) => {
     try {
-      // ⭐️ (ใช้ Endpoint ที่คุณมีอยู่)
       const response = await axios.post("/api/auth/register", payload);
-      // (หมายเหตุ: API register ของคุณไม่ได้ Return Account ใหม่)
-      // (เราจึงต้องสร้างข้อมูลจำลองส่งกลับไปที่ Reducer)
       return {
         ...payload,
         id: Date.now(), // (ID จำลอง, ควรให้ API Return ID จริง)
