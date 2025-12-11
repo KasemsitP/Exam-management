@@ -186,7 +186,26 @@ const accountsSlice = createSlice({
 export const selectAccountsSlice = (state: RootState) => state.accounts;
 
 export const selectAllAccounts = (state: RootState) =>
-  Object.values(state.accounts.accounts).sort((a, b) => a.id - b.id);
+{
+    return Object.values(state.accounts.accounts)
+    .filter((acc) => acc.role_code !== "GRADER") 
+    .sort((a, b) => a.id - b.id);
+}
 
-export const selectAllRoles = (state: RootState) => state.accounts.roles;
+export const selectAllRoles = (state: RootState) => {
+  return state.accounts.roles.filter((role) => role.code !== "GRADER");
+};
+
+export const selectGraderRole = (state : RootState) => {
+  return state.accounts.roles.filter((role) => role.code === "GRADER");
+}
+
+
+export const selectGraderAccounts = (state: RootState) => {
+  return Object.values(state.accounts.accounts)
+    .filter((acc) => acc.role_code === "GRADER") 
+    .sort((a, b) => a.id - b.id);
+};
+
+
 export { accountsSlice };

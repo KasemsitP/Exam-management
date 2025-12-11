@@ -22,7 +22,8 @@ import {
 } from "@/store/slices/examData.slice";
 import { showSuccess } from "@/components/ui/successAlert";
 import { showError } from "@/components/ui/ErrorAlert";
-
+import { selectAllSubjects, fetchSubjectsThunk } from "@/store/slices/subjects.slice";
+import Swal from "sweetalert2"
 /* -------------------------------------------------------------------------- */
 /*  Types for forms & view                                                     */
 /* -------------------------------------------------------------------------- */
@@ -43,14 +44,13 @@ export interface SessionFormValues {
 }
 
 export interface SubjectFormValues {
+  subjectId: string;
   code: string;
   name: string;
   startTime: string;
   endTime: string;
   questions: number;
-  bookletRange: string;
 }
-
 export interface VisibleCampaign {
   campaign: ExamCampaign;
   sessions: CampaignSession[];
@@ -85,11 +85,14 @@ export function useCampaignsPage() {
 
   const campaigns = useAppSelector(selectCampaigns);
   const status = useAppSelector(selectExamDataStatus);
+  const allSubjects = useAppSelector(selectAllSubjects);
 
   // โหลด initial data
   useEffect(() => {
     if (status === "idle") {
       dispatch(fetchInitialExamData());
+      dispatch(fetchSubjectsThunk());
+
     }
   }, [dispatch, status]);
 
@@ -119,36 +122,37 @@ export function useCampaignsPage() {
 
   /* ------------------------------ Forms setup ------------------------------ */
 
-const campaignForm = useForm<CampaignFormValues>({
-  defaultValues: {
-    code: "",
-    name: "",
-    startDate: "",
-    endDate: "",
-    description: "",
-    isActive: true, // boolean
-  },
-});
+  const campaignForm = useForm<CampaignFormValues>({
+    defaultValues: {
+      code: "",
+      name: "",
+      startDate: "",
+      endDate: "",
+      description: "",
+      isActive: true, // boolean
+    },
+  });
 
-const sessionForm = useForm<SessionFormValues>({
-  defaultValues: {
-    label: "",
-    examDate: "",
-    note: "",
-  },
-});
+  const sessionForm = useForm<SessionFormValues>({
+    defaultValues: {
+      label: "",
+      examDate: "",
+      note: "",
+    },
+  });
 
 
   const subjectForm: UseFormReturn<SubjectFormValues> = useForm({
     defaultValues: {
+      subjectId: "",
       code: "",
       name: "",
       startTime: "09:00",
       endTime: "13:00",
       questions: 4,
-      bookletRange: "",
     },
   });
+
 
   /* ------------------------------- Reset forms ----------------------------- */
 
@@ -193,24 +197,25 @@ const sessionForm = useForm<SessionFormValues>({
   const resetSubjectForm = (subject?: CampaignSubject | null) => {
     if (subject) {
       subjectForm.reset({
+        subjectId: "", // ยังไม่ map กลับ master ก็ปล่อยว่างไปก่อน
         code: subject.code,
         name: subject.name,
         startTime: subject.startTime,
         endTime: subject.endTime,
         questions: subject.questions,
-        bookletRange: subject.bookletRange,
       });
     } else {
       subjectForm.reset({
+        subjectId: "",
         code: "",
         name: "",
         startTime: "09:00",
         endTime: "13:00",
         questions: 4,
-        bookletRange: "",
       });
     }
   };
+
 
   /* ------------------------------ Open dialogs ----------------------------- */
 
@@ -245,7 +250,7 @@ const sessionForm = useForm<SessionFormValues>({
       .map<VisibleCampaign | null>((campaign) => {
         const campaignMatches = keyword
           ? campaign.name.toLowerCase().includes(keyword) ||
-            campaign.description?.toLowerCase().includes(keyword)
+          campaign.description?.toLowerCase().includes(keyword)
           : true;
 
         const sessions = campaign.sessions.filter((session) => {
@@ -403,7 +408,6 @@ const sessionForm = useForm<SessionFormValues>({
             startTime: values.startTime,
             endTime: values.endTime,
             questions: Number(values.questions),
-            bookletRange: values.bookletRange,
           },
         })
       );
@@ -428,6 +432,7 @@ const sessionForm = useForm<SessionFormValues>({
       await dispatch(
         createSubjectThunk({
           campaignId: subjectContext.campaignId,
+          subjectId: Number(values.subjectId),
           sessionId: subjectContext.sessionId,
           sessionDate,
           code: values.code,
@@ -435,7 +440,7 @@ const sessionForm = useForm<SessionFormValues>({
           startTime: values.startTime,
           endTime: values.endTime,
           questions: Number(values.questions),
-          bookletRange: values.bookletRange,
+          bookletRange: "",
           orderNo: (parentSession?.subjects.length ?? 0) + 1,
         })
       ).unwrap();
@@ -457,7 +462,16 @@ const sessionForm = useForm<SessionFormValues>({
   /* ------------------------------- Delete handlers ------------------------- */
 
   const confirmAndRemoveCampaign = async (campaign: ExamCampaign) => {
-    if (!window.confirm(`ต้องการลบแคมเปญ "${campaign.name}" ใช่หรือไม่?`)) {
+    const result = await Swal.fire({
+      title: "คำเตือน",
+      text: `ต้องการลบรอบสอบ "${campaign.name}" ใช่หรือไม่?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ลบเลย",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!result.isConfirmed) {
       return;
     }
     try {
@@ -480,7 +494,16 @@ const sessionForm = useForm<SessionFormValues>({
     campaignId: string,
     session: CampaignSession
   ) => {
-    if (!window.confirm(`ต้องการลบเซสชัน "${session.label}" ใช่หรือไม่?`)) {
+    const result = await Swal.fire({
+      title: "คำเตือน",
+      text: `ต้องการลบเซสชั่น "${session.label}" ใช่หรือไม่?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ลบเลย",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!result.isConfirmed) {
       return;
     }
     try {
@@ -506,8 +529,18 @@ const sessionForm = useForm<SessionFormValues>({
     sessionId: string,
     subject: CampaignSubject
   ) => {
-    if (!window.confirm(`ต้องการลบรายวิชา "${subject.name}" ใช่หรือไม่?`)) {
-      return;
+    console.log(campaignId)
+    const result = await Swal.fire({
+      title: "คำเตือน",
+      text: `ต้องการลบรายวิชา "${subject.name}" ใช่หรือไม่?`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ลบเลย",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!result.isConfirmed) {
+      return; 
     }
     try {
       await dispatch(
@@ -565,6 +598,7 @@ const sessionForm = useForm<SessionFormValues>({
     campaigns,
     visibleCampaigns,
     sessionCount,
+    allSubjects,
 
     // filters
     textFilter,

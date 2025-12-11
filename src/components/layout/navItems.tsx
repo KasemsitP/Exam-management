@@ -15,6 +15,7 @@ import {
   QrCode,
   LucideIcon,
   BookOpen,
+  User2Icon
 } from "lucide-react";
 import type { Permission } from "@/lib/rbac";
 
@@ -108,11 +109,17 @@ export const NAV_ITEMS: NavItem[] = [
     icon: ClipboardCheck,
     permissions: ["view_reports"],
   },
+  // {
+  //   to: "/user-search",
+  //   label: "ค้นหาผู้ใช้",
+  //   icon: SearchIcon,
+  //   permissions: ["manage_users", "view_sessions"],
+  // },
   {
-    to: "/user-search",
-    label: "ค้นหาผู้ใช้",
-    icon: SearchIcon,
-    permissions: ["manage_users", "view_sessions"],
+    to: "/graders",
+    label: "จัดการผู้ตรวจข้อสอบ",
+    icon: User2Icon,
+    permissions: ["manage_graders"],
   },
   {
     to: "/qrscanner",

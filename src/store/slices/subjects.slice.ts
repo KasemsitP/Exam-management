@@ -1,6 +1,7 @@
 // src/store/slices/subjects.slice.ts
-import { createSlice, nanoid, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, nanoid, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import type { RootState } from "../index";
+import axios from "axios";
 
 /* ------------------------------ Types ------------------------------ */
 
@@ -20,24 +21,124 @@ export interface Subject {
 interface SubjectsState {
   items: Subject[];
   selectedId: number | null;
-  nextId: number; // auto-id ฝั่ง frontend
+  nextId: number;
+  loading: boolean;
+  error: string | null;
 }
-
 /* --------------------------- Initial State ------------------------- */
 
 const initialState: SubjectsState = {
   items: [],
   selectedId: null,
   nextId: 1,
+  loading: false,
+  error: null,
 };
 
-/* ------------------------------ Slice ------------------------------ */
+/* --------------------------- Thunks -------------------------------- */
+
+export const fetchSubjectsThunk = createAsyncThunk<
+  Subject[],
+  void,
+  { rejectValue: string }
+>("subjects/fetch", async (_, { rejectWithValue }) => {
+  try {
+    const response = await axios.get<Subject[]>("/api/subjects");
+    //console.log(response.data)
+    return response.data;
+  } catch (error: unknown) {
+    return rejectWithValue("Failed to fetch subjects");
+  }
+});
+
+// สร้างวิชาใหม่ + (optional) questions ไปพร้อมกัน
+export const createSubjectThunk = createAsyncThunk<
+  Subject,
+  { code: string; name: string; questions?: { questionNo: number; label: string }[] },
+  { rejectValue: string }
+>("subjects/create", async (payload, { rejectWithValue }) => {
+  try {
+    const response = await axios.post<Subject>("/api/subjects", payload);
+    return response.data;
+  } catch (error: unknown) {
+    return rejectWithValue("Failed to create subject");
+  }
+});
+
+// แก้ไขวิชา (code + name) — ยังไม่ยุ่งกับ questions
+export const updateSubjectThunk = createAsyncThunk<
+  Subject,
+  { id: number; code: string; name: string },
+  { rejectValue: string }
+>("subjects/update", async ({ id, code, name }, { rejectWithValue }) => {
+  try {
+    const response = await axios.put<Subject>(`/api/subjects/${id}`, {
+      code,
+      name,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    return rejectWithValue("Failed to update subject");
+  }
+});
+
+// ลบวิชา
+export const deleteSubjectThunk = createAsyncThunk<
+  number, // คืน id ที่ลบสำเร็จ
+  { id: number },
+  { rejectValue: string }
+>("subjects/delete", async ({ id }, { rejectWithValue }) => {
+  try {
+    await axios.delete(`/api/subjects/${id}`);
+    return id;
+  } catch (error: unknown) {
+    return rejectWithValue("Failed to delete subject");
+  }
+});
+export const addQuestionToSubjectThunk = createAsyncThunk<
+  Subject,
+  { subjectId: number; label: string; questionNo: number },
+  { rejectValue: string }
+>(
+  "subjects/addQuestionToSubject",
+  async ({ subjectId, label, questionNo }, { rejectWithValue }) => {
+    try {
+      console.log(questionNo)
+      const { data } = await axios.post<Subject>(
+        `/api/subjects/${subjectId}/questions`,
+        { label, questionNo }
+      );
+      return data;
+    } catch (err) {
+      return rejectWithValue("Failed to add question");
+    }
+  }
+);
+
+
+export const deleteQuestionFromSubjectThunk = createAsyncThunk<
+  Subject,
+  { subjectId: number; questionId: string },
+  { rejectValue: string }
+>(
+  "subjects/deleteQuestionFromSubject",
+  async ({ subjectId, questionId }, { rejectWithValue }) => {
+    try {
+      const res = await axios.delete<Subject>(
+        `/api/subjects/${subjectId}/questions/${Number(questionId)}`
+      );
+      return res.data;
+    } catch (err) {
+      return rejectWithValue("Failed to delete question");
+    }
+  }
+);
 
 const subjectsSlice = createSlice({
   name: "subjects",
   initialState,
   reducers: {
-    // สร้างวิชาใหม่ (พร้อมเลือกวิชานั้นให้เลย)
+    // สร้างวิชาใหม่ (ฝั่ง client อย่างเดียว)
     createSubject(
       state,
       action: PayloadAction<{ code: string; name: string }>
@@ -129,11 +230,98 @@ const subjectsSlice = createSlice({
         }));
     },
 
-    clearQuestionsForSubject(state, action: PayloadAction<{ subjectId: number }>) {
+    clearQuestionsForSubject(
+      state,
+      action: PayloadAction<{ subjectId: number }>
+    ) {
       const { subjectId } = action.payload;
       const subject = state.items.find((s) => s.id === subjectId);
       if (subject) subject.questions = [];
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchSubjectsThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchSubjectsThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload;
+
+        state.selectedId = action.payload.length ? action.payload[0].id : null;
+        state.nextId = action.payload.length
+          ? Math.max(...action.payload.map((s) => s.id)) + 1
+          : 1;
+      })
+      .addCase(fetchSubjectsThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Failed to fetch subjects";
+      });
+
+    // ---------------- createSubjectThunk ----------------
+    builder
+      .addCase(createSubjectThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createSubjectThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        const subject = action.payload;
+        state.items.push(subject);
+        state.selectedId = subject.id;
+        state.nextId = Math.max(state.nextId, subject.id + 1);
+      })
+      .addCase(createSubjectThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Failed to create subject";
+      });
+
+    // ---------------- updateSubjectThunk ----------------
+    builder
+      .addCase(updateSubjectThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateSubjectThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        const idx = state.items.findIndex((s) => s.id === updated.id);
+        if (idx !== -1) {
+          state.items[idx] = updated;
+        }
+      })
+      .addCase(updateSubjectThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Failed to update subject";
+      });
+
+    // ---------------- deleteSubjectThunk ----------------
+    builder
+      .addCase(deleteSubjectThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteSubjectThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        const id = action.payload;
+        state.items = state.items.filter((s) => s.id !== id);
+        if (state.selectedId === id) {
+          state.selectedId = state.items.length ? state.items[0].id : null;
+        }
+      })
+      .addCase(deleteSubjectThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Failed to delete subject";
+      })
+      .addCase(addQuestionToSubjectThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        const updated = action.payload;
+        const idx = state.items.findIndex((s) => s.id === updated.id);
+        if (idx !== -1) {
+          state.items[idx] = updated;
+        }
+      });
   },
 });
 
@@ -148,6 +336,7 @@ export const {
   updateQuestionLabel,
   removeQuestion,
   clearQuestionsForSubject,
+
 } = subjectsSlice.actions;
 
 /* --------------------------- Selectors ---------------------------- */
@@ -166,5 +355,8 @@ export const selectQuestionsForSubject = (state: RootState, id: number) => {
   const s = state.subjects.items.find((x) => x.id === id);
   return s ? s.questions : [];
 };
+export const selectSubjectsLoading = (state: RootState) => state.subjects.loading;
+export const selectSubjectsError = (state: RootState) => state.subjects.error;
 
-export {subjectsSlice}
+
+export { subjectsSlice };

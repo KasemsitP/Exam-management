@@ -5,20 +5,14 @@ import { RootState } from "../index";
 export interface PayloadScore {
   qrPayload: string;
   campaignId: number;
-  subjectId: number;
-  sessionId: number;
   graderId: number;
   slotId: number;
-  questionNo: number;
   score: number;
 }
 export interface PayloadSlot {
   qrPayload: string;
   campaignId: number;
-  subjectId: number;
-  sessionId: number;
   graderId: number;
-  questionNo: number;
 }
 
 

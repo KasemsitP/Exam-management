@@ -17,6 +17,8 @@ interface CampaignModalProps {
   onSubmit: (values: CampaignFormValues) => Promise<void> | void;
 }
 
+
+
 export function CampaignModal({
   open,
   editingCampaignName,
@@ -235,12 +237,19 @@ export function SessionModal({
 
 /* --------------------------- Subject Modal ---------------------------- */
 
+type MasterSubject = {
+  id: number;
+  code: string;
+  name: string;
+};
+
 interface SubjectModalProps {
   open: boolean;
   context: { subject: CampaignSubject | null } | null;
   form: UseFormReturn<SubjectFormValues>;
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: SubjectFormValues) => Promise<void> | void;
+  allSubjects: MasterSubject[];   // 👈 เพิ่ม
 }
 
 export function SubjectModal({
@@ -249,10 +258,37 @@ export function SubjectModal({
   form,
   onOpenChange,
   onSubmit,
+  allSubjects,
 }: SubjectModalProps) {
   if (!open) return null;
 
   const isEdit = Boolean(context?.subject);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = form;
+
+  // ค่าที่เลือกปัจจุบัน
+  const selectedSubjectId = watch("subjectId");
+
+  const selectedMaster = allSubjects.find(
+    (s) => String(s.id) === String(selectedSubjectId)
+  );
+
+  const handleSubjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setValue("subjectId", value, { shouldValidate: true });
+
+    const subj = allSubjects.find((s) => String(s.id) === value);
+    if (subj) {
+      // auto-fill code / name จาก master
+      setValue("code", subj.code);
+      setValue("name", subj.name);
+    }
+  };
 
   return (
     <>
@@ -269,8 +305,43 @@ export function SubjectModal({
                 onClick={() => onOpenChange(false)}
               />
             </div>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
+            <form onSubmit={handleSubmit(onSubmit)}>
               <div className="modal-body">
+                {/* เลือกวิชาจาก master */}
+                <div className="mb-3">
+                  <label className="form-label">
+                    รายวิชา <span className="text-danger">*</span>
+                  </label>
+                  <select
+                    className={`form-select ${
+                      errors.subjectId ? "is-invalid" : ""
+                    }`}
+                    value={selectedSubjectId || ""}
+                    onChange={handleSubjectChange}
+                  >
+                    <option value="">เลือกรายวิชา</option>
+                    {allSubjects.map((subj) => (
+                      <option key={subj.id} value={subj.id}>
+                        {subj.code} - {subj.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.subjectId && (
+                    <div className="invalid-feedback">
+                      {errors.subjectId.message as string}
+                    </div>
+                  )}
+                  {selectedMaster && (
+                    <div className="form-text">
+                      จะผูกกับ:{" "}
+                      <strong>
+                        {selectedMaster.code} - {selectedMaster.name}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+
+                {/* แสดง code / name ที่ถูก auto-fill (อ่านอย่างเดียว) */}
                 <div className="row g-3">
                   <div className="col-sm-6">
                     <label htmlFor="subject-code" className="form-label">
@@ -279,38 +350,25 @@ export function SubjectModal({
                     <input
                       id="subject-code"
                       className="form-control"
-                      {...form.register("code", { required: true })}
+                      readOnly
+                      {...register("code")}
                     />
                   </div>
                   <div className="col-sm-6">
-                    <label
-                      htmlFor="subject-questions"
-                      className="form-label"
-                    >
-                      จำนวนข้อ
+                    <label htmlFor="subject-name" className="form-label">
+                      ชื่อวิชา
                     </label>
                     <input
-                      id="subject-questions"
-                      type="number"
-                      min={1}
+                      id="subject-name"
                       className="form-control"
-                      {...form.register("questions", { valueAsNumber: true })}
+                      readOnly
+                      {...register("name")}
                     />
                   </div>
                 </div>
 
-                <div className="mt-3">
-                  <label htmlFor="subject-name" className="form-label">
-                    ชื่อวิชา
-                  </label>
-                  <input
-                    id="subject-name"
-                    className="form-control"
-                    {...form.register("name", { required: true })}
-                  />
-                </div>
-
-                <div className="row g-3 mt-1">
+                {/* เวลา + จำนวนข้อ + ช่วงเล่ม เหมือนเดิม */}
+                <div className="row g-3 mt-3">
                   <div className="col-sm-6">
                     <label htmlFor="subject-start" className="form-label">
                       เวลาเริ่ม
@@ -319,7 +377,7 @@ export function SubjectModal({
                       id="subject-start"
                       type="time"
                       className="form-control"
-                      {...form.register("startTime", { required: true })}
+                      {...register("startTime", { required: true })}
                     />
                   </div>
                   <div className="col-sm-6">
@@ -330,20 +388,9 @@ export function SubjectModal({
                       id="subject-end"
                       type="time"
                       className="form-control"
-                      {...form.register("endTime", { required: true })}
+                      {...register("endTime", { required: true })}
                     />
                   </div>
-                </div>
-
-                <div className="mt-3">
-                  <label htmlFor="subject-range" className="form-label">
-                    ชุดหมายเล่มข้อสอบ (เช่น 1-6)
-                  </label>
-                  <input
-                    id="subject-range"
-                    className="form-control"
-                    {...form.register("bookletRange")}
-                  />
                 </div>
               </div>
 

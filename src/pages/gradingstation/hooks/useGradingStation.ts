@@ -22,6 +22,7 @@ import {
   selectGradersStatus,
   fetchGradersForCampaignThunk,
   CrmGrader,
+  selectAssignmentsForGrader
 } from "@/store/slices/graders.slice";
 
 import { DeleteCamp } from "@/utils/camp";
@@ -42,12 +43,23 @@ export const useGradingStation = () => {
   const lastSlotId = useAppSelector(selectLastSlotId);
   const records = useAppSelector(selectGradingRecords);
 
+  const campaignNumericId = activeCampaign?.id
+    ? Number(DeleteCamp(String(activeCampaign.id)))
+    : null;
+
+  const accountId = user ? Number(user.id) : null;
   const gradersStatus = useAppSelector(selectGradersStatus);
   const graders = useAppSelector(
-    selectGradersForCampaign(
-      activeCampaign?.id ? Number(DeleteCamp(activeCampaign.id)) : null
-    )
+    selectGradersForCampaign(campaignNumericId)
   );
+
+  const gradersAssignment = useAppSelector(
+    selectAssignmentsForGrader(campaignNumericId, accountId)
+  );
+
+  useEffect(() => {
+    console.log("gradersAssignment =", gradersAssignment);
+  }, [gradersAssignment]);
 
   const isLoading = useAppSelector(selectIsGradingLoading);
   const gradingError = useAppSelector(selectGradingError);
@@ -86,7 +98,7 @@ export const useGradingStation = () => {
 
   useEffect(() => {
     if (myAssignments.length > 0) {
-      setActiveAssignment(myAssignments[0]); // default assignment แรก
+      setActiveAssignment(myAssignments[0]); 
     } else {
       setActiveAssignment(null);
     }
@@ -143,7 +155,7 @@ export const useGradingStation = () => {
             enteredAt:
               (r as any).enteredAt ??
               new Date().toLocaleTimeString("th-TH"),
-          })) // map เผื่อ type ไม่ตรง
+          }))
       );
     } else {
       setRecent([]);
@@ -166,10 +178,7 @@ export const useGradingStation = () => {
     const result = await dispatch(
       verifyAndAllocateThunk({
         qrPayload: value,
-        campaignId: activeAssignment.campaign_id,
-        sessionId: activeAssignment.session_id,
-        subjectId: activeAssignment.subject_id,
-        questionNo: activeAssignment.question_no,
+        campaignId: Number(DeleteCamp(activeCampaign.id)),
         graderId: graderProfile.grader_id,
       })
     );
@@ -239,10 +248,7 @@ export const useGradingStation = () => {
       slotId: lastSlotId,
       qrPayload: scanData,
       campaignId: activeAssignment.campaign_id,
-      subjectId: activeAssignment.subject_id,
-      sessionId: activeAssignment.session_id,
       graderId: activeAssignment.grader_id,
-      questionNo: activeAssignment.question_no,
       score: Number(score),
     };
 
@@ -302,7 +308,7 @@ export const useGradingStation = () => {
     gradersStatus,
     activeAssignment,
     isLoading,
-
+    gradersAssignment,
     scanData,
     score,
     manualPayload,

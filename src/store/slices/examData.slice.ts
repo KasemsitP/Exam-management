@@ -6,6 +6,7 @@ export interface CampaignSubject {
   id: string;
   code: string;
   name: string;
+  subjectId: number;
   questions: number;
   bookletRange: string;
   startTime: string;
@@ -111,6 +112,7 @@ const parseSubjectCompositeId = (id: string) => {
 
 const mapApiSubject = (subject: ApiSubject): CampaignSubject => ({
   id: buildSubjectId(subject.session_id, subject.subject_id),
+  subjectId: subject.subject_id,
   code: subject.code,
   name: subject.name,
   questions: subject.question_count,
@@ -337,6 +339,7 @@ interface CreateSubjectInput {
   campaignId: string;
   sessionId: string;
   sessionDate: string | undefined;
+  subjectId: number,
   code: string;
   name: string;
   startTime: string;
@@ -357,8 +360,11 @@ export const createSubjectThunk = createAsyncThunk<
     return `${date} ${normalized}`;
   };
   try {
+    console.log(payload)
+
     const response = await axios.post<ApiSubject>("/api/session-subjects", {
       session_id: parseSessionId(payload.sessionId),
+      subject_id: payload.subjectId,
       code: payload.code,
       name: payload.name,
       start_at: toDateTime(payload.sessionDate, payload.startTime),
@@ -387,7 +393,9 @@ export const deleteSubjectThunk = createAsyncThunk<
 >("examData/deleteSubject", async ({ campaignId, sessionId, subjectId }, { rejectWithValue }) => {
   try {
     const composite = parseSubjectCompositeId(subjectId);
-    await axios.delete(`/api/session-subjects/${composite.sessionId}/${composite.subjectId}`);
+    console.log(composite)
+   const res =  await axios.delete(`/api/session-subjects/${composite.sessionId}/${composite.subjectId}`);
+   console.log(res)
     return { campaignId, sessionId, subjectId };
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
@@ -504,6 +512,7 @@ const examDataSlice = createSlice({
         if (session) {
           session.subjects.push({
             id: action.payload.id,
+            subjectId: action.payload.subjectId ?? 0,
             code: action.payload.code,
             name: action.payload.name,
             questions: action.payload.questions,
@@ -667,27 +676,27 @@ export const selectActiveCampaign = (state: RootState) =>
 
 export const selectSessionsForCampaign =
   (campaignId: string | null) =>
-  (state: RootState) =>
-    campaignId
-      ? state.examData.list.find((campaign) => campaign.id === campaignId)?.sessions ?? []
-      : [];
+    (state: RootState) =>
+      campaignId
+        ? state.examData.list.find((campaign) => campaign.id === campaignId)?.sessions ?? []
+        : [];
 
 export const selectActiveCampaignSessions = (state: RootState) =>
   selectActiveCampaign(state)?.sessions ?? [];
 
 export const selectSessionById =
   (campaignId: string, sessionId: string) =>
-  (state: RootState) =>
-    state.examData.list
-      .find((campaign) => campaign.id === campaignId)
-      ?.sessions.find((session) => session.id === sessionId) ?? null;
+    (state: RootState) =>
+      state.examData.list
+        .find((campaign) => campaign.id === campaignId)
+        ?.sessions.find((session) => session.id === sessionId) ?? null;
 
 export const selectSubjectsForSession =
   (campaignId: string, sessionId: string) =>
-  (state: RootState) =>
-    state.examData.list
-      .find((campaign) => campaign.id === campaignId)
-      ?.sessions.find((session) => session.id === sessionId)?.subjects ?? [];
+    (state: RootState) =>
+      state.examData.list
+        .find((campaign) => campaign.id === campaignId)
+        ?.sessions.find((session) => session.id === sessionId)?.subjects ?? [];
 
 export const selectExamDataStatus = (state: RootState) => state.examData.status;
 export const selectExamDataError = (state: RootState) => state.examData.error ?? null;

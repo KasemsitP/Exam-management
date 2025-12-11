@@ -30,6 +30,7 @@ import CampaignsPage from "@/pages/campaignsession/CampaignsPage";
 import QrPage from '@/pages/scan-check/ProctorScanPage';
 import SignSheetsPage from "@/pages/signsheets/SignSheetsPage";
 import SubjectPage from "./pages/subjects/SubjectPage";
+import GraderPage from "@/pages/grader/GradersPage";
 //import UserSearchPage from "@/pages/UserSearch";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BootstrapToastViewport } from "@/components/ui/bootstrap-toast";
@@ -100,6 +101,7 @@ function AppContent() {
           <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/qrscanner" element={<QrPage />} />
           <Route path="/subject" element={<SubjectPage/>}/>
+           <Route path="/graders" element={<GraderPage/>}/>
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<NotFound />} />

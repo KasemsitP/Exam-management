@@ -16,10 +16,13 @@ export interface CrmGrader {
   subject_id: number;
   subject_code: string;
   subject_name: string;
-  grader_name:string;
-  question_no: number;
-}
 
+  grader_name: string;
+
+  subject_question_id: number;   
+  question_no: number
+  question_label?: string;       
+}
 // export interface AssignedSubject {
 //   sessionId: number;
 //   sessionLabel: string;
@@ -66,10 +69,10 @@ export const fetchGradersForCampaignThunk = createAsyncThunk<
         subject_id: g.subject_id,
         subject_code: g.subject_code,
         subject_name: g.subject_name,
-
+        question_label : g.question_label,
         question_no: g.question_no,
       }));
-
+      console.log(mappedAssignments)
       return mappedAssignments;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch graders");
@@ -166,5 +169,37 @@ export const selectAssignmentError = createSelector(
   [selectGradersState],
   (gradersState) => gradersState.assignmentError
 );
+
+export const selectAssignmentsForGrader = (
+  campaignId: number | null,
+  accountId: number | null
+) =>
+  createSelector([selectGradersState], (gradersState) => {
+    if (!campaignId || !accountId) return [];
+
+    const allForCampaign = gradersState.byCampaign[campaignId] || [];
+
+    return allForCampaign.filter(
+      (row) => row.account_id === accountId
+    );
+  });
+
+
+// export const selectGradersState = (state: RootState) => state.graders;
+
+// export const selectGradersForCampaign = (state: RootState, campaignId: number | null) => {
+//   if (!campaignId) return [];
+//   return selectGradersState(state).byCampaign[campaignId] || [];
+// };
+
+// export const selectGradersStatus = (state: RootState) =>
+//   selectGradersState(state).status;
+
+// export const selectAssignmentStatus = (state: RootState) =>
+//   selectGradersState(state).assignmentStatus;
+
+// export const selectAssignmentError = (state: RootState) =>
+//   selectGradersState(state).assignmentError;
+
 
 export { gradersSlice };

@@ -13,6 +13,7 @@ export type Permission =
   | "view_sessions"
   | "view_reports"
   | "view_qr"
+  | "manage_graders"
   | "manage_accounts";
 
 const ALL_PERMISSIONS: Permission[] = [
@@ -22,6 +23,7 @@ const ALL_PERMISSIONS: Permission[] = [
   "manage_subjects",
   "manage_users",
   "manage_keys",
+  "manage_graders",
   "import_subjects",
   "allocate_seats",
   "grade_exams",

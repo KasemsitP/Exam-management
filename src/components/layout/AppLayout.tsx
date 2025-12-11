@@ -15,7 +15,7 @@ import { NAV_ITEMS } from "./navItems";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { CampaignPickerModal } from "./CampaignPickerModal";
-
+import { showSuccess } from "../ui/successAlert";
 export function AppLayout() {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectCurrentUser);
@@ -38,7 +38,11 @@ export function AppLayout() {
     [roles]
   );
 
-  const handleLogout = () => dispatch(logout());
+  const handleLogout = () => {
+    dispatch(logout())
+    showSuccess("ออกจากระบบสำเร็จ", "ออกจากระบบ")
+
+  }
 
   const handleSelectCampaign = (campaignId: number) => {
     dispatch(campaignSelected((String(campaignId))));

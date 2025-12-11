@@ -18,6 +18,7 @@ export default function CampaignsPage() {
     dateFilter,
     setDateFilter,
     resetFilters,
+    allSubjects,
     campaignDialog,
     sessionDialog,
     subjectDialog,
@@ -79,6 +80,7 @@ export default function CampaignsPage() {
           form={subjectDialog.form}
           onOpenChange={subjectDialog.onOpenChange}
           onSubmit={subjectDialog.onSubmit}
+          allSubjects={allSubjects}
         />
       </div>
     </ShowIfCan>

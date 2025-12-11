@@ -8,6 +8,7 @@ import NoAssignmentCard from "./components/NoAssignmentCard";
 import ScannerPanel from "./components/ScannerPanel";
 import RecentScoresCard from "./components/RecentScoresCard";
 import ConfirmSaveModal from "./components/ConfirmSaveModal";
+import AssignmentCard from "./components/AssignmentCard"
 
 export default function GradingStationPage() {
   const {
@@ -16,7 +17,7 @@ export default function GradingStationPage() {
     gradersStatus,
     activeAssignment,
     isLoading,
-
+    gradersAssignment,
     // scanner state
     scanData,
     score,
@@ -89,7 +90,13 @@ export default function GradingStationPage() {
 
             {/* Right: Recent */}
             <div className="col-lg-5">
-              <RecentScoresCard recent={recent} />
+              <div className="mb-4">
+                <AssignmentCard recent={gradersAssignment} />
+              </div>
+
+              <div>
+                <RecentScoresCard recent={recent} />
+              </div>
             </div>
           </div>
         )}
