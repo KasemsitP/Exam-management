@@ -50,7 +50,8 @@ export function AppLayout() {
   };
 
   return (
-    <div className="d-flex min-vh-100 font-sans bg-light">
+    <div className="d-flex min-vh-100 font-sans bg-light app-compact">
+    {/* <div className="d-flex min-vh-100 font-sans bg-light"> */}
       {/* Desktop Sidebar */}
       <AppSidebar user={user} navItems={allowedNavItems} />
 
@@ -72,9 +73,9 @@ export function AppLayout() {
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
         />
 
-        <main className="flex-grow-1 overflow-auto p-3 p-md-4">
-          <Outlet />
-        </main>
+<main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-lg-4">
+  <Outlet />
+</main>
       </div>
 
       <CampaignPickerModal

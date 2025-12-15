@@ -1,10 +1,15 @@
-* {
-  font-family: 'Kanit', sans-serif;
+* { font-family: "Kanit", sans-serif; }
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
 }
+
 :root {
-  /* Font override comes after Bootstrap import */
   --bs-body-font-family: "Kanit", sans-serif;
-  font-family: 'Kanit', sans-serif;
   line-height: 1.5;
   font-weight: 400;
   font-synthesis: none;
@@ -15,51 +20,108 @@
   color: #1f2937;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
-
 body {
   margin: 0;
   min-height: 100vh;
   background-color: #f4f7fb;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+a { color: inherit; text-decoration: none; }
+a:hover { text-decoration: underline; }
 
-a:hover {
-  text-decoration: underline;
-}
-
-/* ทำให้ลิงก์เมนูไม่ล้นบรรทัดบนมือถือ */
+/* มือถือ: กันเมนูล้น + กัน iOS zoom */
 @media (max-width: 576px) {
-  .nav-link, .list-group-item .fw-semibold {
+  .nav-link,
+  .list-group-item .fw-semibold {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  /* ลดระยะห่าง/ขนาดฟอนต์โดยรวมใน header */
-  header h1.h6 {
-    line-height: 1.2;
+  input, select, textarea, button { font-size: 16px; }
+
+  header h1.h6 { line-height: 1.2; }
+}
+
+/* helper */
+.translate-x--100 { transform: translateX(-100%); }
+.flex-grow-1 { min-width: 0; }
+
+.bg-orange-100 { background-color: rgba(255, 176, 107, 0.2) !important; }
+.text-orange-700 { color: #8d3d00 !important; }
+
+/*---------------------*/
+/* ---------------------------
+   Global compact UI
+--------------------------- */
+.app-compact {
+  --app-font-sm: 0.875rem;  /* 14px */
+  --app-font-xs: 0.8125rem; /* 13px */
+  --app-pad-1: 0.75rem;     /* 12px */
+  --app-pad-2: 1rem;        /* 16px */
+}
+
+/* card */
+.app-compact .card-header,
+.app-compact .card-body {
+  padding: var(--app-pad-1) var(--app-pad-2);
+}
+
+/* headings ในการ์ด */
+.app-compact .card-title {
+  font-size: 1rem;
+  margin-bottom: .25rem;
+}
+.app-compact h5, .app-compact h6 {
+  margin-bottom: .25rem;
+}
+
+/* form controls */
+.app-compact .form-label {
+  margin-bottom: .25rem;
+}
+.app-compact .form-control,
+.app-compact .form-select,
+.app-compact .input-group-text {
+  font-size: var(--app-font-sm);
+  padding: .375rem .5rem;
+}
+
+/* buttons */
+.app-compact .btn {
+  font-size: var(--app-font-sm);
+  padding: .375rem .6rem;
+}
+.app-compact .btn.btn-sm {
+  font-size: var(--app-font-xs);
+  padding: .25rem .5rem;
+}
+
+/* badges */
+.app-compact .badge {
+  font-size: var(--app-font-xs);
+}
+
+/* tables */
+.app-compact .table {
+  font-size: var(--app-font-sm);
+}
+.app-compact .table > :not(caption) > * > * {
+  padding: .5rem .5rem;
+}
+
+/* main padding (แทน p-3/p-4 ที่หนา) */
+.app-compact main {
+  padding: .5rem !important;
+}
+@media (min-width: 576px) {
+  .app-compact main {
+    padding: .75rem !important;
   }
 }
-
-/* ปรับสีไฮไลต์เมนูที่เลือก ให้เห็นชัดบนพื้นส้มอ่อน */
-.bg-orange-100 {
-  background-color: rgba(255, 176, 107, 0.2) !important;
-}
-.text-orange-700 {
-  color: #8d3d00 !important;
-}
-
-/* helper class (เผื่อใช้ต่อ) */
-.translate-x--100 {
-  transform: translateX(-100%);
+@media (min-width: 992px) {
+  .app-compact main {
+    padding: 1rem !important;
+  }
 }
 

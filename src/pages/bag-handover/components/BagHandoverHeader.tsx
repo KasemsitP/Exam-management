@@ -16,12 +16,8 @@ export default function BagHandoverHeader({
         <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
           <div>
             <h5 className="card-title mb-1 text-body">
-              ลงทะเบียนผู้ตรวจกับถุง
+              ลงทะเบียนผู้ตรวจและถุง
             </h5>
-            <p className="card-text text-muted mb-0">
-              บันทึกการส่งมอบถุงข้อสอบให้ผู้ตรวจ
-              เพื่อป้องกันการใช้งานซ้ำและติดตามการทำงานแบบเรียลไทม์
-            </p>
           </div>
 
           <div className="d-flex flex-column gap-2">

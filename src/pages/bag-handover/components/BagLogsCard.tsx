@@ -14,9 +14,9 @@ export default function BagLogsCard({ logs, bagMap, onSelectBagId }: Props) {
       <div className="card-header bg-white d-flex align-items-center justify-content-between">
         <div>
           <h6 className="mb-1">บันทึกการส่งมอบล่าสุด</h6>
-          <small className="text-muted">
+          {/* <small className="text-muted">
             ติดตามประวัติ Check-in / Check-out แยกตามถุง
-          </small>
+          </small> */}
         </div>
         <History size={16} className="text-muted" />
       </div>

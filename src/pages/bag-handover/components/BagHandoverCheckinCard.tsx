@@ -49,13 +49,8 @@ export default function BagHandoverCheckinCard({
         <div className="d-flex align-items-center justify-content-between">
           <div>
             <div className="d-flex align-items-center gap-2">
-              <HandCoins size={18} className="text-primary" />
               <h6 className="mb-0">ส่งมอบ / รับคืนถุงข้อสอบ</h6>
             </div>
-            <small className="text-muted">
-              เลือกรอบสอบ ถุง และผู้ตรวจ จากนั้นบันทึกเพื่อ
-              Check-in (ส่งมอบ) หรือ Check-out (รับคืนถุง)
-            </small>
           </div>
         </div>
       </div>

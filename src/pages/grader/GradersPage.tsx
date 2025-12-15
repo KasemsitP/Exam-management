@@ -1,4 +1,4 @@
-// src/pages/accounts/AccountsPage.tsx
+
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
@@ -19,6 +19,11 @@ import GradersToolbar from "./components/GradersToolbar";
 import GradersTable from "./components/GradersTable";
 import GradersCreateModal from "./components/GradersCreateModal";
 import GradersEditModal from "./components/GradersEditModal";
+import { selectSessionsForCampaign } from "@/store/slices/examData.slice";
+import { selectActiveCampaign } from "@/store/slices/examData.slice";
+import { createGraderAssignmentsThunk } from "@/store/slices/graders.slice";
+import { showSuccess } from "@/components/ui/successAlert"
+import { showError } from "@/components/ui/ErrorAlert";
 
 import type {
   Account,
@@ -35,10 +40,10 @@ export default function AccountsPage() {
 
   const { status: accountStatus } = useAppSelector(selectAccountsSlice);
   const accounts = useAppSelector(selectGraderAccounts);
-  //const roles = useAppSelector(selectAllRoles) as Role[];
+  
   const roles = useAppSelector(selectGraderRole);
 
-  // Filters
+  
   const [searchText, setSearchText] = useState("");
   const initialRole = roles.find((r) => r.code === "GRADER")?.id ?? "all";
   const [roleFilter, setRoleFilter] = useState<RoleFilter>(
@@ -46,17 +51,30 @@ export default function AccountsPage() {
   );
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
 
-  // Modals
+  
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
-  // initial fetch
+  const camp = useAppSelector(selectActiveCampaign);
+  const sessInCamp = useAppSelector(
+    selectSessionsForCampaign(camp ? camp.id : null)
+  );
+
+  useEffect(() => {
+    console.log("activeCampaign =", camp);
+    console.log("campId =", camp?.id);
+    console.log("sessions in camp =", sessInCamp);
+  }, [camp, sessInCamp]);
+
+  
   useEffect(() => {
     dispatch(fetchAccountsThunk());
     dispatch(fetchRolesThunk());
   }, [dispatch]);
 
-  // derived: filtered accounts
+
+
+  
   const filteredAccounts = useMemo(() => {
     const term = searchText.trim().toLowerCase();
     let list = accounts;
@@ -81,7 +99,7 @@ export default function AccountsPage() {
     );
   }, [accounts, searchText, roleFilter, activeFilter]);
 
-  // stats
+  
   const stats = useMemo(() => {
     const total = accounts.length;
     const active = accounts.filter((a) => a.active).length;
@@ -89,26 +107,49 @@ export default function AccountsPage() {
     return { total, active, inactive };
   }, [accounts]);
 
-  // handlers
+  
   const handleCreate = async (data: CreateAccountFormValues) => {
     try {
-      await dispatch(
+      const created = await dispatch(
         createAccountThunk({
           username: data.username,
           password: data.password,
           full_name: data.full_name,
           email: data.email,
-          role: data.role_id, // backend expects 'role'
+          role: data.role_id,
         })
       ).unwrap();
-      toast({ title: "สร้างผู้ใช้สำเร็จ", description: data.username });
+
+      const accountId = created.id;
+      const campaignId = Number(camp?.id);
+      console.log("lnw", accountId)
+
+      
+      const assignments = (data.assignments ?? [])
+        .filter(a => a.sessionId > 0 && a.subjectId > 0 && a.questionNo > 0)
+        .map(a => ({
+          campaignId,
+          accountId: accountId,
+          sessionId: a.sessionId,
+          subjectId: a.subjectId,
+          questionNo: a.questionNo,
+        }));
+        console.log(assignments)
+      if (assignments.length > 0) { 
+        await dispatch(
+          createGraderAssignmentsThunk({ assignments })
+        ).unwrap();
+      }
+
+
+      dispatch(fetchAccountsThunk())
+      showSuccess(
+        "สร้างผู้ตรวจสำเร็จ",
+        ""                                                        
+      )
       setCreateOpen(false);
     } catch (err: any) {
-      toast({
-        title: "สร้างผู้ใช้ล้มเหลว",
-        description: err?.message ?? "ไม่สามารถสร้างบัญชีได้",
-        variant: "destructive",
-      });
+      showError("ไม่สามารถสร้างผู้ตรวจได้", err)
     }
   };
 
@@ -186,6 +227,7 @@ export default function AccountsPage() {
         loading={accountStatus === "loading"}
         onClose={() => setCreateOpen(false)}
         onSubmit={handleCreate}
+        sessions={sessInCamp}
       />
 
       <GradersEditModal

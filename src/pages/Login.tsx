@@ -14,6 +14,7 @@ import {
   Role
 } from "@/store/slices/auth.slice";
 import { User, Lock, Loader2, GraduationCap, BookOpen } from "lucide-react"; // ใช้ไอคอนการศึกษา
+import { showError } from "@/components/ui/ErrorAlert"
 
 interface LoginFormValues {
   username: string;
@@ -42,10 +43,13 @@ export default function Login() {
       const redirect = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
       navigate(redirect ?? "/dashboard", { replace: true });
     }
+    if (status === "error") {
+      showError("ล็อคอินไม่สำเร็จ", "ชื่อผู้ใช้หรือรหัสผ่านผิด");
+    }
   }, [status, user, navigate, location.state]);
 
   const onSubmit = (values: LoginFormValues) => {
-    dispatch(login(values));
+    dispatch(login(values))
   };
 
   const handleBypass = () => {

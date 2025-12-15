@@ -15,8 +15,9 @@ import {
   ExamCampaign,
 } from "@/store/slices/examData.slice";
 import { VisibleCampaign } from "../hooks/useCampaignsPage";
+import './campaignsession.css'
 
-/* date สำหรับ display เท่านั้น */
+
 const formatDateDisplay = (date: string) => {
   if (!date) return "-";
   try {
@@ -175,15 +176,24 @@ export function CampaignList({
                 </div>
 
                 <div className="table-responsive mt-3">
-                  <table className="table align-middle table-hover">
-                    <thead className="table-light text-muted small">
+                  <table className="table align-middle table-hover ">
+                    <colgroup>
+                      <col style={{ width: 110 }} /> {/* รหัสวิชา */}
+                      <col />                        {/* ชื่อวิชา */}
+                      <col style={{ width: 140 }} /> {/* เวลา */}
+                      <col style={{ width: 110 }} /> {/* จำนวนข้อ */}
+                      <col style={{ width: 170 }} /> {/* ชุดเล่มข้อสอบ */}
+                      <col style={{ width: 110 }} /> {/* การจัดการ */}
+                    </colgroup>
+
+                    <thead>
                       <tr>
                         <th>รหัสวิชา</th>
                         <th>ชื่อวิชา</th>
-                        <th className="text-nowrap">เวลา</th>
-                        <th className="text-center text-nowrap">จำนวนข้อ</th>
-                        <th className="text-nowrap">ชุดเล่มข้อสอบ</th>
-                        <th className="text-end">การจัดการ</th>
+                        <th>เวลา</th>
+                        <th>จำนวนข้อ</th>
+                        <th>ชุดเล่มข้อสอบ</th>
+                        <th>การจัดการ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -192,10 +202,10 @@ export function CampaignList({
                           <td className="fw-medium">{subject.code}</td>
                           <td>
                             <div>{subject.name}</div>
-                            <div className="small text-muted d-flex align-items-center gap-1">
+                            {/* <div className="small text-muted d-flex align-items-center gap-1">
                               <Clock size={12} />
                               {subject.startTime} - {subject.endTime}
-                            </div>
+                            </div> */}
                           </td>
                           <td className="small">
                             {subject.startTime} - {subject.endTime}

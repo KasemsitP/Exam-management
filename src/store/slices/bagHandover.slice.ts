@@ -127,7 +127,7 @@ export const registerBagToGraderThunk = createAsyncThunk<
 
     await axios.post("/api/bag-handover/check-in", {
       campaignId: payload.campaignId,
-      bagNo,
+      bagId : bagNo,
       graderId: graderIdNumeric,
       operatorId: payload.operatorId,
       note: payload.note ?? null,
@@ -165,7 +165,7 @@ export const returnBagThunk = createAsyncThunk<
   try {
     await axios.post("/api/bag-handover/check-out", {
       campaignId: payload.campaignId,
-      bagNo: payload.bagId,
+      bagId: payload.bagId,
       operatorId: payload.operatorId,
     });
 

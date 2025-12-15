@@ -70,13 +70,20 @@ export default function AccountsTable({
                       >
                         <Edit size={14} /> แก้ไข
                       </button>
+                      <button
+                        className="btn btn-outline-dark btn-sm d-inline-flex align-items-center gap-1"
+                        onClick={() => onEdit(acc)}
+                        title="ถอนสิทธิ์"
+                      >
+                        <X size={14} /> ถอนสิทธิ์
+                      </button>
                       <ShowIfCan permission="manage_accounts">
                         <button
-                          className="btn btn-link text-danger p-2"
+                          className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
                           onClick={() => onDelete(acc)}
                           title="ลบบัญชี"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={16} /> ลบ
                         </button>
                       </ShowIfCan>
                     </div>

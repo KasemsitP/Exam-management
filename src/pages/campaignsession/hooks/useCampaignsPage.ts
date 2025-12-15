@@ -91,9 +91,10 @@ export function useCampaignsPage() {
   useEffect(() => {
     if (status === "idle") {
       dispatch(fetchInitialExamData());
-      dispatch(fetchSubjectsThunk());
 
     }
+    dispatch(fetchSubjectsThunk());
+
   }, [dispatch, status]);
 
   /* ------------------------------ Filters & UI ----------------------------- */

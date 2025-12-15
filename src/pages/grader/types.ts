@@ -20,11 +20,16 @@ export interface CreateAccountFormValues {
   username: string;
   password: string;
   full_name: string;
-  email: string;
+  email?: string;
   role_id: number;
   active: boolean;
-}
 
+  assignments?: {
+    sessionId: number;  
+    subjectId: number;  
+    questionNo: number;  
+  }[];
+}
 export interface UpdateAccountFormValues {
   full_name: string;
   email: string;

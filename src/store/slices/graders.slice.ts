@@ -31,6 +31,14 @@ export interface CrmGrader {
 //   questionNo: number;
 //   seatNo: number; 
 // }
+export interface CreateGraderAssignmentInput {
+  campaignId: number;
+  accountId: number;
+  sessionId: number;
+  subjectId: number;
+  questionNo: number;
+}
+
 
 interface GradersState {
   byCampaign: { [campaignId: number]: CrmGrader[] };
@@ -76,6 +84,28 @@ export const fetchGradersForCampaignThunk = createAsyncThunk<
       return mappedAssignments;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch graders");
+    }
+  }
+);
+
+export const createGraderAssignmentsThunk = createAsyncThunk<
+  void,
+  { assignments: CreateGraderAssignmentInput[] },
+  { rejectValue: string }
+>(
+  "graders/createAssignmentsBulk",
+  async ({ assignments }, { rejectWithValue }) => {
+    console.log(assignments)
+    try {
+      await axios.post("/api/grader-assignments", { assignments });
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(
+          error.response?.data?.message ??
+            "Failed to create grader assignments"
+        );
+      }
+      return rejectWithValue("Failed to create grader assignments");
     }
   }
 );

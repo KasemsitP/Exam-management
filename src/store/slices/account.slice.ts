@@ -80,12 +80,19 @@ export const createAccountThunk = createAsyncThunk<
   async (payload, { rejectWithValue }) => {
     try {
       const response = await axios.post("/api/auth/register", payload);
-      return {
-        ...payload,
-        id: Date.now(), // (ID จำลอง, ควรให้ API Return ID จริง)
-        active: true,
-        role_id: payload.role,
-      } as Account;
+      console.log(response.data)
+      const newId = response.data.id; 
+
+      const account: Account = {
+        id: newId,
+        username: payload.username,
+        full_name: payload.full_name,
+        email: payload.email ?? "",
+        role_id: payload.role,
+        active: true,
+      };
+
+      return account;
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         return rejectWithValue(error.response?.data?.message ?? "Create failed");
@@ -135,7 +142,6 @@ export const deleteAccountThunk = createAsyncThunk<
     }
 });
 
-// ⭐️ (3) Slice
 const accountsSlice = createSlice({
   name: "accounts",
   initialState,
