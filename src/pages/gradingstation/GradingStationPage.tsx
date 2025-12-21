@@ -43,6 +43,7 @@ export default function GradingStationPage() {
     handleSaveScore,
     handleScan,
     closeConfirmModal,
+    // requestCameraPermission
   } = useGradingStation();
 
   return (
@@ -66,6 +67,7 @@ export default function GradingStationPage() {
             {/* Left: Scanner & Form */}
             <div className="col-lg-7">
               <ScannerPanel
+              //  requestCameraPermission={requestCameraPermission}
                 scanData={scanData}
                 manualPayload={manualPayload}
                 score={score}

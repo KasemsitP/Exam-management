@@ -99,17 +99,18 @@ export default function BagHandoverCheckinCard({
               disabled={!sessionIdInForm}
             >
               <option value="">
-                {sessionIdInForm
-                  ? "เลือกถุงข้อสอบ"
-                  : "กรุณาเลือกรอบสอบก่อน"}
+                {sessionIdInForm ? "เลือกถุงข้อสอบ" : "กรุณาเลือกรอบสอบก่อน"}
               </option>
               {bagsForSelectedSession.map((bag) => {
                 const lock = locks.find(
-                  (l) => String(l.bagId) === String(bag.id)
+                  (l) => String(l.bagId) === String(bag.id) // เดี๋ยวเราจะให้ bagId = PK เหมือนกัน
                 );
 
                 return (
-                  <option key={bag.id} value={String(bag.id)}>
+                  <option
+                    key={`sess-${bag.sessionId}-bag-${bag.id}`}  // ✅ key ยูนีคแน่ ๆ
+                    value={String(bag.id)}                       // ✅ ใช้ PK เป็น value
+                  >
                     {String(bag.bag_no).padStart(3, "0")} •{" "}
                     {bag.subjectName ?? "ไม่ระบุ"} ({bag.sessionLabel}){" "}
                     {lock ? `• กำลังตรวจโดย ${lock.graderName}` : ""}
@@ -138,9 +139,8 @@ export default function BagHandoverCheckinCard({
                   {(
                     grader.grader_name ??
                     grader.name ??
-                    `${grader.first_name ?? ""} ${
-                      grader.last_name ?? ""
-                    }`.trim()
+                    `${grader.first_name ?? ""} ${grader.last_name ?? ""
+                      }`.trim()
                   ) || `Grader #${grader.account_id}`}{" "}
                   • {grader.code ?? `G-${grader.account_id}`}
                 </option>

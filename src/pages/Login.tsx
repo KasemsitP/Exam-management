@@ -43,7 +43,7 @@ export default function Login() {
       const redirect = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
       navigate(redirect ?? "/dashboard", { replace: true });
     }
-    if (status === "error") {
+      if (status === "error" && error) {
       showError("ล็อคอินไม่สำเร็จ", "ชื่อผู้ใช้หรือรหัสผ่านผิด");
     }
   }, [status, user, navigate, location.state]);

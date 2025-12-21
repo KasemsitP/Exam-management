@@ -127,7 +127,7 @@ export const registerBagToGraderThunk = createAsyncThunk<
 
     await axios.post("/api/bag-handover/check-in", {
       campaignId: payload.campaignId,
-      bagId : bagNo,
+      bagId: bagNo,
       graderId: graderIdNumeric,
       operatorId: payload.operatorId,
       note: payload.note ?? null,
@@ -158,27 +158,32 @@ export const registerBagToGraderThunk = createAsyncThunk<
  * backend จะ map เป็น action RETURN → ฝั่ง frontend ถือว่า CHECK_IN
  */
 export const returnBagThunk = createAsyncThunk<
-  { campaignId: string; bagId: number; operatorId: number },
-  { campaignId: string; bagId: number; operatorId: number },
+  { campaignId: string; sessionId: number; bagNo: number; operatorId: number },
+  { campaignId: string; sessionId: number; bagNo: number; operatorId: number },
   { rejectValue: string }
->("bagHandover/returnBag", async (payload, { rejectWithValue }) => {
-  try {
-    await axios.post("/api/bag-handover/check-out", {
-      campaignId: payload.campaignId,
-      bagId: payload.bagId,
-      operatorId: payload.operatorId,
-    });
+>(
+  "bagHandover/returnBag",
+  async (payload, { rejectWithValue }) => {
+    try {
+      await axios.post("/api/bag-handover/check-out", {
+        campaignId: payload.campaignId,
+        sessionId: payload.sessionId,
+        bagNo: payload.bagNo,
+        operatorId: payload.operatorId,
+      });
 
-    return payload;
-  } catch (error: unknown) {
-    if (axios.isAxiosError(error)) {
-      return rejectWithValue(
-        (error.response?.data as any)?.message ?? "Failed to return bag"
-      );
+      return payload;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(
+          (error.response?.data as any)?.message ?? "Failed to return bag"
+        );
+      }
+      return rejectWithValue("Failed to return bag");
     }
-    return rejectWithValue("Failed to return bag");
   }
-});
+);
+
 
 /* -------------------------------------------------------------------------- */
 /*  Slice (local reducers + extraReducers)                                    */
@@ -348,17 +353,21 @@ const bagHandoverSlice = createSlice({
 
       // รับคืนถุง (check-out API) → ใช้ logic เดียวกับ bagCheckedIn
       .addCase(returnBagThunk.fulfilled, (state, action) => {
-        const { campaignId, bagId, operatorId } = action.payload;
+        const { campaignId, bagNo, operatorId } = action.payload;
         const bucket = state.byCampaign[campaignId];
         if (!bucket) return;
 
         const nowIso = new Date().toISOString();
 
-        bucket.locks = bucket.locks.filter((l) => l.bagId !== bagId);
+        // ใน state.lock.bagId = bag_no (เพราะเราเลือกใช้เลขถุงเป็นตัวอ้างอิง)
+        bucket.locks = bucket.locks.filter(
+          (l) => Number(l.bagId) !== Number(bagNo)
+        );
+
         bucket.logs.unshift({
-          id: `log-${campaignId}-${bagId}-${nowIso}`,
+          id: `log-${campaignId}-${bagNo}-${nowIso}`,
           campaignId,
-          bagId,
+          bagId: bagNo,          // 👈 เก็บ bagNo เป็น bagId ใน log
           action: "CHECK_IN",
           graderId: undefined,
           operatorId,
@@ -394,19 +403,19 @@ export const selectBagHandoverError = (state: { bagHandover: BagHandoverState })
  */
 export const selectBagLocksForCampaign =
   (campaignId: string | null) =>
-  (state: { bagHandover: BagHandoverState }): BagLock[] => {
-    if (!campaignId) return [];
-    const bucket = state.bagHandover.byCampaign[campaignId];
-    return bucket?.locks ?? [];
-  };
+    (state: { bagHandover: BagHandoverState }): BagLock[] => {
+      if (!campaignId) return [];
+      const bucket = state.bagHandover.byCampaign[campaignId];
+      return bucket?.locks ?? [];
+    };
 
 /**
  * ดึง logs (ประวัติ Check-in / Check-out) สำหรับ campaign
  */
 export const selectBagLogsForCampaign =
   (campaignId: string | null) =>
-  (state: { bagHandover: BagHandoverState }): BagLog[] => {
-    if (!campaignId) return [];
-    const bucket = state.bagHandover.byCampaign[campaignId];
-    return bucket?.logs ?? [];
-  };
+    (state: { bagHandover: BagHandoverState }): BagLog[] => {
+      if (!campaignId) return [];
+      const bucket = state.bagHandover.byCampaign[campaignId];
+      return bucket?.logs ?? [];
+    };

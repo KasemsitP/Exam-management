@@ -33,7 +33,7 @@ export default function BagLocksTable({
           <thead className="table-light text-uppercase small">
             <tr>
               <th scope="col">รหัสถุง</th>
-              <th scope="col">รอบสอบ / วิชา</th>
+              <th scope="col">วันที่สอบ </th>
               <th scope="col">ผู้ตรวจ</th>
               <th scope="col" className="text-end">
                 เจ้าหน้าที่ / เวลา
@@ -43,25 +43,26 @@ export default function BagLocksTable({
           <tbody>
             {filteredBags.map((bag) => {
               const lock = locks.find(
-                (item) => String(item.bagId) === String(bag.id)
+                (item) => String(item.bagId) === String(bag.bag_no) // 👈 bagId = bag_no ตาม DTO ปัจจุบัน
               );
-              const isSelected = String(bag.id) === String(selectedBagId);
+              const isSelected = String(bag.bag_no) === String(selectedBagId);
 
               return (
                 <tr
-                  key={bag.id}
-                  onClick={() => onSelectBagId(String(bag.id))}
+                  key={`${bag.id}-${bag.bag_no}`}            // ✅ key ใช้ bag.id + bag_no ให้ unique
+                  onClick={() => onSelectBagId(String(bag.bag_no))} // 👈 state ใช้ bag_no
                   style={{ cursor: "pointer" }}
                   className={isSelected ? "table-primary" : ""}
                 >
                   <td className="fw-semibold">
-                    {String(bag.bag_no).padStart(3, "0")}
+                    {String(bag.bag_no).padStart(3, "0")}    {/* ✅ แสดง bag_no */}
                   </td>
+                  {/* <p> {bag.id} adadad {bag.bag_no}</p> */}
                   <td>
                     <div className="fw-medium">
-                      {bag.subjectName ?? "ไม่ระบุวิชา"}
+                      {bag.sessionLabel ?? "ไม่ระบุวิชา"}
                     </div>
-                    <div className="small text-muted">{bag.sessionLabel}</div>
+                    {/* <div className="small text-muted">{bag.sessionLabel}</div> */}
                   </td>
                   <td>
                     {lock ? (
@@ -76,10 +77,7 @@ export default function BagLocksTable({
                     {lock ? (
                       <>
                         <div className="small">{lock.operatorName}</div>
-                        <div
-                          className="text-muted"
-                          style={{ fontSize: 11 }}
-                        >
+                        <div className="text-muted" style={{ fontSize: 11 }}>
                           {new Date(lock.at).toLocaleString("th-TH", {
                             day: "numeric",
                             month: "short",
@@ -95,6 +93,7 @@ export default function BagLocksTable({
                 </tr>
               );
             })}
+
             {filteredBags.length === 0 && (
               <tr>
                 <td colSpan={4} className="text-center text-muted py-4">

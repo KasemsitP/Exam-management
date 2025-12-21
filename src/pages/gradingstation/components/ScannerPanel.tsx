@@ -30,6 +30,7 @@ interface ScannerPanelProps {
   onVerifyManualPayload: () => void;
   onChangeScore: (value: string) => void;
   onConfirmScore: () => void;
+  // requestCameraPermission: () => void;
   onScan: (value: string) => void;
 }
 
@@ -51,6 +52,7 @@ export default function ScannerPanel({
   onChangeManualPayload,
   onVerifyManualPayload,
   onChangeScore,
+  // requestCameraPermission,
   onConfirmScore,
   onScan,
 }: ScannerPanelProps) {
@@ -65,13 +67,12 @@ export default function ScannerPanel({
         <div className="small text-muted">
           สถานะกล้อง:{" "}
           <span
-            className={`badge ${
-              !scannerEnabled
-                ? "bg-secondary"
-                : pause
+            className={`badge ${!scannerEnabled
+              ? "bg-secondary"
+              : pause
                 ? "bg-warning"
                 : "bg-success"
-            }`}
+              }`}
           >
             {!scannerEnabled ? "หยุดอยู่" : pause ? "พักอยู่" : "พร้อม"}
           </span>
@@ -106,10 +107,19 @@ export default function ScannerPanel({
           <option value={2000}>Cooldown: 2.0s</option>
         </select>
 
-        <button
+        {/* <button
           className={`btn btn-${
             scannerEnabled ? "outline-secondary" : "success"
           } btn-sm d-inline-flex align-items-center gap-1`}
+          onClick={onToggleScanner}
+          title={scannerEnabled ? "หยุดกล้อง" : "เริ่มกล้อง"}
+        >
+          {scannerEnabled ? <Pause size={16} /> : <Play size={16} />}
+          {scannerEnabled ? "หยุด" : "เริ่ม"}
+        </button> */}
+        <button
+          className={`btn btn-${scannerEnabled ? "outline-secondary" : "success"
+            } btn-sm d-inline-flex align-items-center gap-1`}
           onClick={onToggleScanner}
           title={scannerEnabled ? "หยุดกล้อง" : "เริ่มกล้อง"}
         >

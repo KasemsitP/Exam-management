@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import axios from "axios"; 
+import axios from "axios";
 import { RootState } from "../index";
 export type Role = "admin" | "manager" | "staff" | "grader";
 
@@ -16,7 +16,8 @@ export interface AuthUser {
 
 interface AuthState {
   user: AuthUser | null;
-  status: "idle" | "loading" | "authenticated" | "error";
+  status: "idle" | "loading" | "authenticated" | "unauthenticated" | "error";
+  hydrated: boolean;
   error?: string;
 }
 
@@ -38,7 +39,7 @@ export const login = createAsyncThunk<
 >("auth/login", async (credentials, { rejectWithValue }) => {
   try {
     const response = await axios.post<AuthUser | Record<string, unknown> | null>(
-      "/api/auth/login", 
+      "/api/auth/login",
       credentials
     );
 
@@ -95,13 +96,14 @@ export const logout = createAsyncThunk(
 const initialState: AuthState = {
   user: null,
   status: "idle",
+  hydrated: false,
 };
 
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-        setAuthenticated(state, action: PayloadAction<AuthUser>) {
+    setAuthenticated(state, action: PayloadAction<AuthUser>) {
       state.user = action.payload;
       state.status = "authenticated";
       state.error = undefined;
@@ -110,8 +112,9 @@ const authSlice = createSlice({
     // เป็น action ง่ายๆ สำหรับ Clear State (จะถูกเรียกโดย logout thunk)
     clearAuth: (state) => {
       state.user = null;
-      state.status = "idle";
+      state.status = "unauthenticated";
       state.error = undefined;
+      state.hydrated = true;
     },
     // setUser ยังคงเดิม (เผื่อใช้)
     setUser: (state, action: PayloadAction<AuthUser | null>) => {
@@ -131,37 +134,44 @@ const authSlice = createSlice({
         state.user = action.payload;
         state.status = "authenticated";
         state.error = undefined;
+        state.hydrated = true;
       })
       .addCase(login.rejected, (state, action) => {
-        state.status = "error";
+        state.status = "error";              // ❗ error เฉพาะ login
         state.error = action.payload ?? "Unable to login";
-      })
-      .addCase(hydrateAuth.pending, (state) => {
-        // [เพิ่ม] เมื่อเริ่มโหลด ให้เป็น loading
-        state.status = "loading"; 
+        state.hydrated = true;
       })
       // Hydrate
+      .addCase(hydrateAuth.pending, (state) => {
+        // จะใส่ loading หรือไม่ก็ได้ (แล้วแต่ UX)
+        state.status = "loading";
+        state.error = undefined;             // ❗ ไม่เอา error จากครั้งก่อนมาหลอก
+      })
       .addCase(hydrateAuth.fulfilled, (state, action) => {
+        state.hydrated = true;
+
         if (action.payload) {
           state.user = action.payload;
           state.status = "authenticated";
         } else {
-          // ถ้า /me คืนค่า null (ไม่มี session)
+          // ✅ ไม่มี session = ยังไม่ login (ปกติ)
           state.user = null;
-          state.status = "error";
+          state.status = "unauthenticated";
         }
       })
       .addCase(hydrateAuth.rejected, (state) => {
+        // ✅ hydrate พัง/401 ก็ถือว่าไม่ได้ login (อย่าขึ้น toast ล็อกอินผิด)
         state.user = null;
-        // [แก้] เปลี่ยนเป็น 'error'
-        state.status = "error";
+        state.status = "unauthenticated";
+        state.hydrated = true;
+        state.error = undefined;
       });
-    
+
   },
 });
 
 // 8. Export action ใหม่
-export const { setUser, clearAuth ,setAuthenticated} = authSlice.actions;
+export const { setUser, clearAuth, setAuthenticated } = authSlice.actions;
 export { authSlice };
 
 // Selectors (ยังคงเดิม)

@@ -104,7 +104,7 @@ export default function BagsPage() {
     const bagNo = (composeBag as any).bag_no ?? Number(composeBag.id);
     const sessionId = Number(composeBag.sessionId);
     const campaignIdNumeric = Number(activeCampaign.id);
-
+    console.log("bagno: ",bagNo)
     dispatch(
       ScannedPayloadThunk({
         bagNo,
@@ -128,6 +128,10 @@ export default function BagsPage() {
       (composeBag?.scanned ?? []).map(normalizePayload)
     );
   }, [composeBag?.scanned]);
+  
+  // useEffect(()=>{
+  //   console.log(composeBag)
+  // },[composeBag])
 
   // ฟิลเตอร์ + ค้นหา
   const filteredBags = useMemo(() => {
@@ -268,7 +272,7 @@ export default function BagsPage() {
       await dispatch(
         finalizeAndLinkBagThunk({
           campaignId: activeCampaign.id,
-          bag_no: composeBag.bag_no,
+          bag_no: composeBag.id,
           scannedCodes: composeBag.scanned,
         })
       ).unwrap();

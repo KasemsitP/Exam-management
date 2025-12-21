@@ -302,6 +302,17 @@ export const useGradingStation = () => {
 
   const closeConfirmModal = () => setIsConfirmOpen(false);
 
+  const requestCameraPermission = async () => {
+  try {
+    await navigator.mediaDevices.getUserMedia({ video: true });
+    toggleScanner();
+  } catch (err) {
+    console.warn("ผู้ใช้ไม่ได้อนุญาตกล้อง:", err);
+    alert("กรุณาอนุญาตกล้องเพื่อใช้งานสแกน QR");
+  }
+};
+
+
   return {
     user,
     graderProfile,
@@ -319,7 +330,7 @@ export const useGradingStation = () => {
     cooldownMs,
     facingMode,
     isConfirmOpen,
-
+    // requestCameraPermission,
     setPauseAfterSuccess,
     setCooldownMs,
     toggleScanner,

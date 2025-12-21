@@ -35,22 +35,16 @@ export default function BagLogsCard({ logs, bagMap, onSelectBagId }: Props) {
             (log.operatorId ? `ID ${log.operatorId}` : "ไม่ระบุ/ระบบ");
 
           return (
-            <div
-              key={log.id}
-              className="border rounded p-2"
-              style={{ cursor: "pointer" }}
-              onClick={() => onSelectBagId(String(log.bagId))}
-            >
+            <div className="border rounded p-2">
               <div className="d-flex align-items-center justify-content-between">
                 <p className="fw-semibold mb-0">
                   {String(displayBagNo).padStart(3, "0")}
                 </p>
                 <span
-                  className={`badge ${
-                    log.action === "CHECK_OUT"
+                  className={`badge ${log.action === "CHECK_OUT"
                       ? "text-bg-primary"
                       : "text-bg-secondary"
-                  }`}
+                    }`}
                 >
                   {log.action === "CHECK_OUT" ? "ส่งมอบ" : "รับคืน"}
                 </span>

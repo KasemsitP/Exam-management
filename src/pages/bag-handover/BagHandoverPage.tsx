@@ -42,6 +42,7 @@ import BagHandoverCheckinCard from "./components/BagHandoverCheckinCard";
 import BagLocksTable from "./components/BagLocksTable";
 import BagLogsCard from "./components/BagLogsCard";
 import GradingHistoryCard from "./components/GradingHistoryCard";
+import ActiveLocksCard from "./components/ActivelockCard";
 
 import type {
   CheckoutFormValues,
@@ -155,9 +156,8 @@ export default function BagHandoverPage() {
     if (!term) return sessionFiltered;
 
     return sessionFiltered.filter((bag) => {
-      const subjectText = `${bag.subjectCode ?? ""} ${
-        bag.subjectName ?? ""
-      }`.toLowerCase();
+      const subjectText = `${bag.subjectCode ?? ""} ${bag.subjectName ?? ""
+        }`.toLowerCase();
       return (
         String(bag.id).toLowerCase().includes(term) ||
         (bag.sessionLabel ?? "").toLowerCase().includes(term) ||
@@ -176,8 +176,11 @@ export default function BagHandoverPage() {
 
   const currentBag = useMemo(() => {
     if (!selectedBagId) return undefined;
-    return bagMap[String(selectedBagId)];
-  }, [selectedBagId, bagMap]);
+    return bags.find(
+      (b) => String(b.bag_no) === String(selectedBagId)
+    );
+  }, [selectedBagId, bags]);
+
 
   const sessionIdInForm = form.watch("sessionId");
   const bagsForSelectedSession = useMemo(() => {
@@ -243,7 +246,7 @@ export default function BagHandoverPage() {
     //   `${grader.first_name ?? ""} ${grader.last_name ?? ""}`.trim() ||
     //   `Grader #${grader.account_id}`;
     const graderName =
-      grader.grader_name?? 
+      grader.grader_name ??
       `Grader #${grader.account_id}`;
 
     dispatch(
@@ -287,51 +290,66 @@ export default function BagHandoverPage() {
       });
   };
 
-  const handleReturnBag = () => {
-    if (!activeCampaign || !operator) {
+ const handleReturnBag = () => {
+  if (!activeCampaign || !operator) {
+    toast({
+      title: "ไม่พบข้อมูลแคมเปญหรือผู้ใช้งาน",
+      variant: "destructive",
+    });
+    return;
+  }
+  if (!currentLock) {
+    toast({
+      title: "ถุงนี้ยังไม่ได้ลงทะเบียน",
+      description: "กรุณาเลือกถุงที่กำลังใช้งานอยู่",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  // ✅ ตรงนี้สำคัญ: เอา bag จาก bagMap มาแปลงเป็น sessionId + bag_no
+  const bag = currentBag;
+  if (!bag) {
+    toast({
+      title: "ไม่พบบันทึกถุงในระบบ",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const sessionId = Number(bag.sessionId);
+  const bagNo = Number(bag.bag_no);
+
+  console.log("returnBag params:", {
+    campaignId: activeCampaign.id,
+    sessionId,
+    bagNo,
+    operatorId: Number(operator.id),
+  });
+
+  dispatch(
+    returnBagThunk({
+      campaignId: activeCampaign.id,
+      sessionId,
+      bagNo,
+      operatorId: Number(operator.id),
+    })
+  )
+    .unwrap()
+    .then(() => {
       toast({
-        title: "ไม่พบข้อมูลแคมเปญหรือผู้ใช้งาน",
+        title: "รับคืนถุงเรียบร้อย",
+        description: `ถุง ${String(bagNo).padStart(3, "0")} กลับสู่สถานะว่าง`,
+      });
+    })
+    .catch((err) => {
+      toast({
+        title: "ไม่สามารถรับคืนถุงได้",
+        description: String(err),
         variant: "destructive",
       });
-      return;
-    }
-    if (!currentLock) {
-      toast({
-        title: "ถุงนี้ยังไม่ได้ลงทะเบียน",
-        description: "กรุณาเลือกถุงที่กำลังใช้งานอยู่",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    dispatch(
-      returnBagThunk({
-        campaignId: activeCampaign.id,
-        bagId: Number(currentLock.bagId),
-        operatorId: Number(operator.id),
-      })
-    )
-      .unwrap()
-      .then(() => {
-        const bag = bagMap[String(currentLock.bagId)];
-        const bagNo = bag?.bag_no ?? currentLock.bagId;
-
-        toast({
-          title: "รับคืนถุงเรียบร้อย",
-          description: `ถุง ${String(bagNo).padStart(
-            3,
-            "0"
-          )} กลับสู่สถานะว่าง`,
-        });
-      })
-      .catch((err) => {
-        toast({
-          title: "ไม่สามารถรับคืนถุงได้",
-          description: String(err),
-          variant: "destructive",
-        });
-      });
-  };
+    });
+};
 
   // ---------- Render ----------
 
@@ -376,16 +394,26 @@ export default function BagHandoverPage() {
             </div>
 
             <div className="col-lg-5 d-flex flex-column gap-3">
+              <ActiveLocksCard
+                locks={locks}
+                bags={bags}
+                selectedBagId={selectedBagId}
+                onSelectBagId={(id) => {
+                  setSelectedBagId(id);
+                  // ดันค่าไปใน form ด้วย จะช่วยให้ check-out ง่าย
+                  const bag = bags.find(
+                    (b) => String(b.bag_no) === String(id)
+                  );
+                  if (bag) {
+                    form.setValue("sessionId", String(bag.sessionId));
+                    form.setValue("bagId", String(bag.bag_no));
+                  }
+                }}
+              />
               <BagLogsCard
                 logs={logs}
                 bagMap={bagMap}
                 onSelectBagId={setSelectedBagId}
-              />
-              <GradingHistoryCard
-                graderIdForHistory={graderIdForHistory}
-                gradingRecords={gradingRecords}
-                gradingLoading={gradingLoading}
-                gradingError={gradingError}
               />
             </div>
           </div>
