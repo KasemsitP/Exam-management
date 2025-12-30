@@ -6,6 +6,24 @@ import { RootState } from '../index'; // path ของ RootState ของค�
 /*  Types                                                                     */
 /* -------------------------------------------------------------------------- */
 
+export interface GraderHistoryCheckResult {
+  graderId: number;
+  bagId: number;
+  scoredCount: number;
+  hasGraded: boolean;
+}
+
+// 2. ผลลัพธ์ Progress ของถุง
+export interface BagProgressData {
+  bagId: number;
+  totalItems: number;
+  fullyAssigned: number;
+  halfAssigned: number;
+  unassigned: number;
+  status: string; // "EMPTY" | "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
+}
+
+
 export interface BagLock {
   id: string;         // internal id หรือมาจาก backend
   campaignId: string; // camp-1, camp-2, ...
@@ -40,6 +58,12 @@ export interface BagHandoverState {
   >;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
+  currentGraderCheck: GraderHistoryCheckResult | null;
+  isCheckingGrader: boolean;
+
+  // เก็บ Progress ของถุง (Cache ตาม bagId)
+  bagProgressMap: Record<number, BagProgressData>;
+  isFetchingProgress: boolean;
 }
 
 export type LocalState = BagHandoverState;
@@ -52,6 +76,10 @@ const initialState: BagHandoverState = {
   byCampaign: {},
   status: "idle",
   error: null,
+  currentGraderCheck: null,
+  isCheckingGrader: false,
+  bagProgressMap: {},
+  isFetchingProgress: false,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -183,6 +211,52 @@ export const returnBagThunk = createAsyncThunk<
     }
   }
 );
+export const checkGraderHistoryThunk = createAsyncThunk<
+  GraderHistoryCheckResult,
+  { graderId: number; bagId: number },
+  { rejectValue: string }
+>("bagHandover/checkGraderHistory", async ({ graderId, bagId }, { rejectWithValue }) => {
+  try {
+    const res = await axios.get<GraderHistoryCheckResult>(
+      `/api/grading-summary/check`,
+      { params: { graderId, bagId } }
+    );
+    console.log(res.data)
+    return res.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return rejectWithValue(
+        (error.response?.data as any)?.message ?? "Failed to check history"
+      );
+    }
+    return rejectWithValue("Failed to check history");
+  }
+});
+
+/**
+ * ดึง Progress ของถุง (ว่าเหลืออีกกี่ไม้)
+ * GET /api/grading-summary/bag-progress/:bagId
+ */
+export const fetchBagProgressThunk = createAsyncThunk<
+  BagProgressData,
+  number, // bagId
+  { rejectValue: string }
+>("bagHandover/fetchBagProgress", async (bagId, { rejectWithValue }) => {
+  try {
+    const res = await axios.get<BagProgressData>(
+      `/api/grading-summary/bag-progress/${bagId}`
+    );
+    console.log(res.data)
+    return res.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return rejectWithValue(
+        (error.response?.data as any)?.message ?? "Failed to fetch bag progress"
+      );
+    }
+    return rejectWithValue("Failed to fetch bag progress");
+  }
+});
 
 
 /* -------------------------------------------------------------------------- */
@@ -377,6 +451,33 @@ const bagHandoverSlice = createSlice({
       })
       .addCase(returnBagThunk.rejected, (state, action) => {
         state.error = action.payload ?? "Failed to return bag";
+      })
+      .addCase(checkGraderHistoryThunk.pending, (state) => {
+        state.isCheckingGrader = true;
+        // ล้างค่าเก่าออกก่อนเพื่อให้ UI รู้ว่ากำลังเช็คใหม่
+        state.currentGraderCheck = null;
+      })
+      .addCase(checkGraderHistoryThunk.fulfilled, (state, action) => {
+        state.isCheckingGrader = false;
+        state.currentGraderCheck = action.payload;
+      })
+      .addCase(checkGraderHistoryThunk.rejected, (state) => {
+        state.isCheckingGrader = false;
+        state.currentGraderCheck = null;
+      })
+
+      // --- ✅ ส่วนที่เพิ่มใหม่: Bag Progress ---
+      .addCase(fetchBagProgressThunk.pending, (state) => {
+        state.isFetchingProgress = true;
+      })
+      .addCase(fetchBagProgressThunk.fulfilled, (state, action) => {
+        state.isFetchingProgress = false;
+        const data = action.payload;
+        // เก็บลง Map โดยใช้ bagId เป็น key
+        state.bagProgressMap[data.bagId] = data;
+      })
+      .addCase(fetchBagProgressThunk.rejected, (state) => {
+        state.isFetchingProgress = false;
       });
   },
 });
@@ -419,3 +520,18 @@ export const selectBagLogsForCampaign =
       const bucket = state.bagHandover.byCampaign[campaignId];
       return bucket?.logs ?? [];
     };
+
+
+export const selectCurrentGraderCheck = (state: { bagHandover: BagHandoverState }) =>
+  state.bagHandover.currentGraderCheck;
+
+export const selectIsCheckingGrader = (state: { bagHandover: BagHandoverState }) =>
+  state.bagHandover.isCheckingGrader;
+
+/**
+ * ดึง Progress ของถุงที่ระบุ (สำหรับแสดงใน Card หรือ Table)
+ */
+export const selectBagProgress = (bagId: number | string) =>
+  (state: { bagHandover: BagHandoverState }) => {
+    return state.bagHandover.bagProgressMap[Number(bagId)] || null;
+  };

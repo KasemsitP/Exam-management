@@ -28,6 +28,11 @@ import {
   selectBagLogsForCampaign,
   returnBagThunk,
   registerBagToGraderThunk,
+  fetchBagProgressThunk,
+  selectBagProgress,
+  checkGraderHistoryThunk,
+  selectCurrentGraderCheck,
+
 } from "@/store/slices/bagHandover.slice";
 
 import {
@@ -122,6 +127,7 @@ export default function BagHandoverPage() {
     );
   }, [activeCampaign, dispatch]);
 
+
   // Default session
   useEffect(() => {
     if (!sessions.length) return;
@@ -197,11 +203,34 @@ export default function BagHandoverPage() {
     return null;
   }, [graderIdInForm, currentLock]);
 
+  useEffect(() => {
+    if (selectedBagId) {
+      dispatch(fetchBagProgressThunk(Number(selectedBagId)));
+    }
+  }, [selectedBagId, dispatch]);
+
   // Fetch grading history when grader changes
   useEffect(() => {
-    if (!graderIdForHistory) return;
-    dispatch(fetchRecordThunk(Number(graderIdForHistory)));
-  }, [graderIdForHistory, dispatch]);
+    if (currentBag) {
+      dispatch(fetchBagProgressThunk(Number(currentBag.id)));
+    }
+  }, [currentBag, dispatch]); // เปลี่ยน dependency เป็น currentBag
+
+  // ✅ แก้ไข: ดึงข้อมูลจาก Selector ด้วย PK เช่นกัน
+  const progress = useAppSelector(selectBagProgress(currentBag?.id ?? ""));
+  const graderCheckResult = useAppSelector(selectCurrentGraderCheck);
+
+  // 2. Logic การยิงเช็คเมื่อ form เปลี่ยน (graderId หรือ bagId เปลี่ยน)
+  useEffect(() => {
+    if (graderIdInForm && currentBag) {
+      dispatch(
+        checkGraderHistoryThunk({
+          graderId: Number(graderIdInForm),
+          bagId: Number(currentBag.id),
+        })
+      );
+    }
+  }, [graderIdInForm, currentBag, dispatch]);
 
   // ---------- Handlers ----------
 
@@ -290,66 +319,66 @@ export default function BagHandoverPage() {
       });
   };
 
- const handleReturnBag = () => {
-  if (!activeCampaign || !operator) {
-    toast({
-      title: "ไม่พบข้อมูลแคมเปญหรือผู้ใช้งาน",
-      variant: "destructive",
-    });
-    return;
-  }
-  if (!currentLock) {
-    toast({
-      title: "ถุงนี้ยังไม่ได้ลงทะเบียน",
-      description: "กรุณาเลือกถุงที่กำลังใช้งานอยู่",
-      variant: "destructive",
-    });
-    return;
-  }
+  const handleReturnBag = () => {
+    if (!activeCampaign || !operator) {
+      toast({
+        title: "ไม่พบข้อมูลแคมเปญหรือผู้ใช้งาน",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!currentLock) {
+      toast({
+        title: "ถุงนี้ยังไม่ได้ลงทะเบียน",
+        description: "กรุณาเลือกถุงที่กำลังใช้งานอยู่",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  // ✅ ตรงนี้สำคัญ: เอา bag จาก bagMap มาแปลงเป็น sessionId + bag_no
-  const bag = currentBag;
-  if (!bag) {
-    toast({
-      title: "ไม่พบบันทึกถุงในระบบ",
-      variant: "destructive",
-    });
-    return;
-  }
+    // ✅ ตรงนี้สำคัญ: เอา bag จาก bagMap มาแปลงเป็น sessionId + bag_no
+    const bag = currentBag;
+    if (!bag) {
+      toast({
+        title: "ไม่พบบันทึกถุงในระบบ",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const sessionId = Number(bag.sessionId);
-  const bagNo = Number(bag.bag_no);
+    const sessionId = Number(bag.sessionId);
+    const bagNo = Number(bag.bag_no);
 
-  console.log("returnBag params:", {
-    campaignId: activeCampaign.id,
-    sessionId,
-    bagNo,
-    operatorId: Number(operator.id),
-  });
-
-  dispatch(
-    returnBagThunk({
+    console.log("returnBag params:", {
       campaignId: activeCampaign.id,
       sessionId,
       bagNo,
       operatorId: Number(operator.id),
-    })
-  )
-    .unwrap()
-    .then(() => {
-      toast({
-        title: "รับคืนถุงเรียบร้อย",
-        description: `ถุง ${String(bagNo).padStart(3, "0")} กลับสู่สถานะว่าง`,
-      });
-    })
-    .catch((err) => {
-      toast({
-        title: "ไม่สามารถรับคืนถุงได้",
-        description: String(err),
-        variant: "destructive",
-      });
     });
-};
+
+    dispatch(
+      returnBagThunk({
+        campaignId: activeCampaign.id,
+        sessionId,
+        bagNo,
+        operatorId: Number(operator.id),
+      })
+    )
+      .unwrap()
+      .then(() => {
+        toast({
+          title: "รับคืนถุงเรียบร้อย",
+          description: `ถุง ${String(bagNo).padStart(3, "0")} กลับสู่สถานะว่าง`,
+        });
+      })
+      .catch((err) => {
+        toast({
+          title: "ไม่สามารถรับคืนถุงได้",
+          description: String(err),
+          variant: "destructive",
+        });
+      });
+  };
 
   // ---------- Render ----------
 
@@ -390,6 +419,8 @@ export default function BagHandoverPage() {
                 locks={locks}
                 selectedBagId={selectedBagId}
                 onSelectBagId={setSelectedBagId}
+                bagProgress={progress}
+                graderCheck={graderCheckResult}
               />
             </div>
 
@@ -409,6 +440,7 @@ export default function BagHandoverPage() {
                     form.setValue("bagId", String(bag.bag_no));
                   }
                 }}
+                bagProgress={progress}
               />
               <BagLogsCard
                 logs={logs}

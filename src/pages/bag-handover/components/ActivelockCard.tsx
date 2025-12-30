@@ -1,10 +1,11 @@
-import type { BagLock, BagSummary } from "../bagHandover.types";
+import type { BagLock, BagSummary , BagProgressData} from "../bagHandover.types";
 
 interface Props {
   locks: BagLock[];
   bags: BagSummary[];
   selectedBagId: string;
   onSelectBagId: (id: string) => void;
+  bagProgress?: BagProgressData | null;
 }
 
 export default function ActiveLocksCard({
@@ -12,6 +13,7 @@ export default function ActiveLocksCard({
   bags,
   selectedBagId,
   onSelectBagId,
+  bagProgress,
 }: Props) {
   const bagMapByNo = bags.reduce<Record<string, BagSummary>>((map, b) => {
     map[String(b.bag_no)] = b;
@@ -62,6 +64,24 @@ export default function ActiveLocksCard({
                 เจ้าหน้าที่: {lock.operatorName} •{" "}
                 {new Date(lock.at).toLocaleString("th-TH")}
               </div>
+              {isSelected && bagProgress && (
+                <div className="mt-2 pt-2 border-top small">
+                  <strong>สถานะการตรวจ:</strong>
+                  <ul className="mb-0 ps-3">
+                     <li>ทั้งหมด: {bagProgress.totalItems} ข้อ</li>
+                     <li className="text-success">ตรวจครบ 2 คนแล้ว: {bagProgress.fullyAssigned}</li>
+                     <li className="text-warning">รอไม้ 2: {bagProgress.halfAssigned}</li>
+                     <li className="text-danger">ยังไม่เริ่ม: {bagProgress.unassigned}</li>
+                  </ul>
+                  {bagProgress.unassigned > 0 || bagProgress.halfAssigned > 0 ? (
+                      <div className="text-danger mt-1 fw-bold">
+                        ต้องส่งมอบถุงอีก: {bagProgress.unassigned * 2 + bagProgress.halfAssigned} ครั้ง
+                      </div>
+                  ) : (
+                      <div className="text-success mt-1 fw-bold">ตรวจครบสมบูรณ์แล้ว ✅</div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

@@ -54,5 +54,19 @@ export interface GradingRecord {
   score: number;
   enteredAt: string;
 }
+export interface BagProgressData {
+  bagId: number;
+  totalItems: number;
+  fullyAssigned: number;
+  halfAssigned: number;
+  unassigned: number;
+  status: string; // "EMPTY" | "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED"
+}
+export interface GraderHistoryCheckResult {
+  graderId: number;
+  bagId: number;
+  scoredCount: number;
+  hasGraded: boolean;
+}
 
 export type { BagLock };

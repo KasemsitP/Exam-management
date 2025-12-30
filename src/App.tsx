@@ -6,7 +6,7 @@ import { hydrateAuth, selectAuthStatus } from "@/store/slices/auth.slice";
 import Login from "@/pages/Login";
 import SeatAllocationPage from "@/pages/SeatAllocation";
 // import GraderManagementPage from "@/pages/GraderManagement";
-import ScoreReviewPage from "@/pages/ScoreReview";
+//import ScoreReviewPage from "@/pages/ScoreReview";
 // import AccountsPage from "./pages/AccountManagement";
 // import BagHandoverPage from "@/pages/BagHandover";
 //import BagsPage from "@/pages/Bags";
@@ -32,6 +32,7 @@ import SignSheetsPage from "@/pages/signsheets/SignSheetsPage";
 import SubjectPage from "./pages/subjects/SubjectPage";
 import GraderPage from "@/pages/grader/GradersPage";
 //import UserSearchPage from "@/pages/UserSearch";
+import ScoreReviewPage from "./pages/scores/ScorePage"
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BootstrapToastViewport } from "@/components/ui/bootstrap-toast";
 import{OverlayLoader} from "@/components/ui/Loading";

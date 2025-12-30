@@ -150,7 +150,7 @@ export function useCampaignsPage() {
       name: "",
       startTime: "09:00",
       endTime: "13:00",
-      questions: 4,
+      questions: 0,
     },
   });
 
@@ -212,7 +212,7 @@ export function useCampaignsPage() {
         name: "",
         startTime: "09:00",
         endTime: "13:00",
-        questions: 4,
+        questions: 0,
       });
     }
   };

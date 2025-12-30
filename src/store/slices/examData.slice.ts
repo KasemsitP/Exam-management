@@ -352,6 +352,7 @@ export const createSubjectThunk = createAsyncThunk<
   CreateSubjectInput,
   { rejectValue: string }
 >("examData/createSubject", async (payload, { rejectWithValue }) => {
+  console.log(payload.questions)
   try {
     const response = await axios.post<ApiSubject>("/api/session-subjects", {
       session_id: parseSessionId(payload.sessionId),
