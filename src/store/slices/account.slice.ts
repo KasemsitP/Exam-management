@@ -1,217 +1,246 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from "../index";
+
 export interface Role {
-  id: number;
-  code: string;
-  name: string;
+  id: number;
+  code: string;
+  name: string;
 }
 
 export interface Account {
-  id: number;
-  username: string;
-  full_name: string;
-  email: string;
-  active: boolean;
-  role_id: number;
-  role_name?: string; // (ได้จาก JOIN)
-  role_code?: string; // (ได้จาก JOIN)
+  id: number;
+  username: string;
+  full_name: string;
+  email: string;
+  active: boolean;
+  role_id: number;
+  role_name?: string; // จาก JOIN
+  role_code?: string; // จาก JOIN
+  campaign_id? : number
 }
 
-// (Interface สำหรับ State)
 interface AccountsState {
-  accounts: Record<string, Account>; // (เก็บแบบ Object)
-  roles: Role[]; // (เก็บ Role ทั้งหมด)
-  status: "idle" | "loading" | "succeeded" | "failed";
-  error: string | null;
+  accounts: Record<string, Account>; // all accounts (admin/staff/ฯลฯ)
+  roles: Role[];
+  graders: Account[];                // รายชื่อผู้ตรวจที่ filter ตาม campaign แล้ว
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
+
+  gradersStatus: "idle" | "loading" | "succeeded" | "failed";
+  gradersError: string | null;
 }
 
 const initialState: AccountsState = {
-  accounts: {},
-  roles: [],
-  status: "idle",
-  error: null,
+  accounts: {},
+  roles: [],
+  graders: [],
+  status: "idle",
+  error: null,
+  gradersStatus: "idle",
+  gradersError: null,
 };
 
-
-
-
+/** ดึงบัญชีทุกประเภท (ไม่ filter campaign) */
 export const fetchAccountsThunk = createAsyncThunk<
-  Account[],
-  void,
-  { rejectValue: string }
+  Account[],
+  void,
+  { rejectValue: string }
 >("accounts/fetch", async (_, { rejectWithValue }) => {
-  try {
-    const response = await axios.get("/api/accounts");
-    return response.data as Account[];
-  } catch (error: unknown) {
-    return rejectWithValue("Failed to fetch accounts");
-  }
+  try {
+    const response = await axios.get("/api/accounts");
+    return response.data as Account[];
+  } catch {
+    return rejectWithValue("Failed to fetch accounts");
+  }
 });
 
+export const fetchAccountsGradersThunk = createAsyncThunk<
+  Account[],
+  number,
+  { rejectValue: string }
+>(
+  "accounts/fetchGradersByCampaign",
+  async (campaignId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/api/accounts/graders/${campaignId}`);
+      console.log(response)
+      return response.data as Account[];
+    } catch {
+      return rejectWithValue("Failed to fetch graders for this campaign");
+    }
+  }
+);
 
+/** ดึง Roles ทั้งหมด */
 export const fetchRolesThunk = createAsyncThunk<
-  Role[],
-  void,
-  { rejectValue: string }
+  Role[],
+  void,
+  { rejectValue: string }
 >("accounts/fetchRoles", async (_, { rejectWithValue }) => {
-  try {
-    const response = await axios.get("/api/roles");
-    return response.data as Role[];
-  } catch (error: unknown) {
-    return rejectWithValue("Failed to fetch roles");
-  }
+  try {
+    const response = await axios.get("/api/roles");
+    return response.data as Role[];
+  } catch {
+    return rejectWithValue("Failed to fetch roles");
+  }
 });
-
 
 interface CreateAccountPayload {
-  username: string;
-  password: string;
-  full_name: string;
-  email: string;
-  role: number; 
+  username: string;
+  password: string;
+  full_name: string;
+  email: string;
+  role: number; // role_id
 }
+
 export const createAccountThunk = createAsyncThunk<
-  Account, 
-  CreateAccountPayload,
-  { rejectValue: string }
->(
-  "accounts/create",
-  async (payload, { rejectWithValue }) => {
-    try {
-      const response = await axios.post("/api/auth/register", payload);
-      console.log(response.data)
-      const newId = response.data.id; 
+  Account,
+  CreateAccountPayload,
+  { rejectValue: string }
+>("accounts/create", async (payload, { rejectWithValue }) => {
+  try {
+    const response = await axios.post("/api/auth/register", payload);
+    const newId = response.data.id;
 
-      const account: Account = {
-        id: newId,
-        username: payload.username,
-        full_name: payload.full_name,
-        email: payload.email ?? "",
-        role_id: payload.role,
-        active: true,
-      };
+    const account: Account = {
+      id: newId,
+      username: payload.username,
+      full_name: payload.full_name,
+      email: payload.email ?? "",
+      role_id: payload.role,
+      active: true,
+    };
 
-      return account;
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        return rejectWithValue(error.response?.data?.message ?? "Create failed");
-      }
-      return rejectWithValue("Create failed");
-    }
-  }
-);
+    return account;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return rejectWithValue(error.response?.data?.message ?? "Create failed");
+    }
+    return rejectWithValue("Create failed");
+  }
+});
 
-// (PUT /api/accounts/:id - API ที่เราต้องสร้าง)
 interface UpdateAccountPayload {
-  id: number;
-  full_name: string;
-  email: string;
-  role_id: number;
-  active: boolean;
-  newPassword?: string; // (ส่งรหัสใหม่ถ้ามี)
+  id: number;
+  full_name: string;
+  email: string;
+  role_id: number;
+  active: boolean;
+  newPassword?: string;
 }
-export const updateAccountThunk = createAsyncThunk<
-  Account, // (Backend ควรอัปเดตและ Return ข้อมูลใหม่)
-  UpdateAccountPayload,
-  { rejectValue: string }
->(
-  "accounts/update",
-  async (payload, { rejectWithValue }) => {
-    try {
-      const response = await axios.put(`/api/accounts/${payload.id}`, payload);
-      return response.data as Account;
-    } catch (error: unknown) {
-      return rejectWithValue("Update failed");
-    }
-  }
-);
 
-// (DELETE /api/accounts/:id - API ที่เราต้องสร้าง)
+export const updateAccountThunk = createAsyncThunk<
+  Account,
+  UpdateAccountPayload,
+  { rejectValue: string }
+>("accounts/update", async (payload, { rejectWithValue }) => {
+  try {
+    const response = await axios.put(`/api/accounts/${payload.id}`, payload);
+    return response.data as Account;
+  } catch {
+    return rejectWithValue("Update failed");
+  }
+});
+
 export const deleteAccountThunk = createAsyncThunk<
-  number, // (Return ID ที่ถูกลบ)
-  number, // (รับ ID ที่จะลบ)
-  { rejectValue: string }
+  number,
+  number,
+  { rejectValue: string }
 >("accounts/delete", async (id, { rejectWithValue }) => {
-  try {
-    await axios.delete(`/api/accounts/${id}`);
-    return id;
-  } catch (error: unknown) {
-      // ... (Error handling)
-      return rejectWithValue("Delete failed");
-    }
+  try {
+    await axios.delete(`/api/accounts/${id}`);
+    return id;
+  } catch {
+    return rejectWithValue("Delete failed");
+  }
 });
 
 const accountsSlice = createSlice({
-  name: "accounts",
-  initialState,
-  reducers: {
-    // (Reducers ปกติ ถ้ามี)
-  },
-  extraReducers: (builder) => {
-    builder
-      // (Fetch Accounts)
-      .addCase(fetchAccountsThunk.pending, (state) => {
-        state.status = "loading";
-      })
-      .addCase(fetchAccountsThunk.fulfilled, (state, action) => {
-        state.status = "succeeded";
-        const newAccounts: Record<string, Account> = {};
-        action.payload.forEach((acc) => {
-          newAccounts[acc.id] = acc;
-        });
-        state.accounts = newAccounts;
-      })
-      .addCase(fetchAccountsThunk.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload ?? "Failed";
-      })
-      // (Fetch Roles)
-      .addCase(fetchRolesThunk.fulfilled, (state, action) => {
-        state.roles = action.payload;
-      })
-      // (Create Account)
-      .addCase(createAccountThunk.fulfilled, (state, action) => {
-        const newAccount = action.payload;
-        state.accounts[newAccount.id] = newAccount;
-      })
-      // (Update Account)
-      .addCase(updateAccountThunk.fulfilled, (state, action) => {
-        const updatedAccount = action.payload;
-        state.accounts[updatedAccount.id] = updatedAccount;
-      })
-      // (Delete Account)
-      .addCase(deleteAccountThunk.fulfilled, (state, action) => {
-        const id = action.payload;
-        delete state.accounts[id];
-      });
-  },
+  name: "accounts",
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    // ---------- FETCH ACCOUNTS (ทั้งหมด) ----------
+    builder
+      .addCase(fetchAccountsThunk.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(fetchAccountsThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        const newAccounts: Record<string, Account> = {};
+        action.payload.forEach((acc) => {
+          newAccounts[acc.id] = acc;
+        });
+        state.accounts = newAccounts;
+      })
+      .addCase(fetchAccountsThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed";
+      });
+
+    // ---------- FETCH ROLES ----------
+    builder.addCase(fetchRolesThunk.fulfilled, (state, action) => {
+      state.roles = action.payload;
+    });
+
+    // ---------- CREATE ----------
+    builder.addCase(createAccountThunk.fulfilled, (state, action) => {
+      const newAccount = action.payload;
+      state.accounts[newAccount.id] = newAccount;
+    });
+
+    // ---------- UPDATE ----------
+    builder.addCase(updateAccountThunk.fulfilled, (state, action) => {
+      const updatedAccount = action.payload;
+      state.accounts[updatedAccount.id] = updatedAccount;
+    });
+
+    // ---------- DELETE ----------
+    builder.addCase(deleteAccountThunk.fulfilled, (state, action) => {
+      const id = action.payload;
+      delete state.accounts[id];
+    });
+
+    // ---------- FETCH GRADERS BY CAMPAIGN ----------
+    builder
+      .addCase(fetchAccountsGradersThunk.pending, (state) => {
+        state.gradersStatus = "loading";
+        state.gradersError = null;
+      })
+      .addCase(fetchAccountsGradersThunk.fulfilled, (state, action) => {
+        state.gradersStatus = "succeeded";
+        // backend ส่งมาเฉพาะผู้ตรวจของ campaign นั้นแล้ว → เก็บตรง ๆ
+        state.graders = action.payload;
+      })
+      .addCase(fetchAccountsGradersThunk.rejected, (state, action) => {
+        state.gradersStatus = "failed";
+        state.gradersError = action.payload ?? "Failed to fetch graders";
+        state.graders = [];
+      });
+  },
 });
 
-
+// ---------- SELECTORS ----------
 export const selectAccountsSlice = (state: RootState) => state.accounts;
 
-export const selectAllAccounts = (state: RootState) =>
-{
-    return Object.values(state.accounts.accounts)
-    .filter((acc) => acc.role_code !== "GRADER") 
+export const selectAllAccounts = (state: RootState) => {
+  return Object.values(state.accounts.accounts)
+    .filter((acc) => acc.role_code !== "GRADER") // ตัดผู้ตรวจออก
     .sort((a, b) => a.id - b.id);
-}
+};
 
 export const selectAllRoles = (state: RootState) => {
   return state.accounts.roles.filter((role) => role.code !== "GRADER");
 };
 
-export const selectGraderRole = (state : RootState) => {
+export const selectGraderRole = (state: RootState) => {
   return state.accounts.roles.filter((role) => role.code === "GRADER");
-}
-
-
-export const selectGraderAccounts = (state: RootState) => {
-  return Object.values(state.accounts.accounts)
-    .filter((acc) => acc.role_code === "GRADER") 
-    .sort((a, b) => a.id - b.id);
 };
 
+export const selectGraderAccounts = (state: RootState) => {
+  return [...state.accounts.graders].sort((a, b) => a.id - b.id);
+};
 
 export { accountsSlice };

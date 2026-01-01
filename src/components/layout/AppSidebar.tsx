@@ -170,7 +170,12 @@ export function AppSidebar({
     return (
       <aside
         className="d-none d-lg-flex flex-column text-dark bg-white border-end position-sticky top-0"
-        style={{ width: 280, height: "100vh", zIndex: 1020 }}
+        style={{ 
+   width: 280, 
+   minWidth: 280, 
+   flexShrink: 0,   
+   height: "100vh", 
+   zIndex: 1020, }}
       >
         {SidebarInner}
       </aside>
@@ -234,6 +239,34 @@ const styleScrollbar = `
 
 .sidebar-scroll::-webkit-scrollbar-thumb {
   background-color: rgb(170,170,170);
+  border-radius: 3px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* บน Mobile ให้ scroll ได้ตลอดเวลา */
+.sidebar-scroll {
+  overflow-y: auto;
+}
+
+/* บน Desktop (lg ขึ้นไป) ให้ซ่อนไว้ก่อนแล้วค่อยโชว์ตอน hover */
+@media (min-width: 992px) { 
+  .sidebar-scroll {
+    overflow: hidden;
+  }
+  .sidebar-scroll:hover {
+    overflow-y: auto;
+  }
+}
+
+/* Custom scrollbar */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1); /* ปรับให้จางลงหน่อยเพื่อความสวยงาม */
   border-radius: 3px;
 }
 

@@ -12,8 +12,8 @@ import {
   createAccountThunk,
   updateAccountThunk,
   deleteAccountThunk,
+  fetchAccountsGradersThunk
 } from "@/store/slices/account.slice";
-
 import GradersHeader from "./components/GradersHeader";
 import GradersToolbar from "./components/GradersToolbar";
 import GradersTable from "./components/GradersTable";
@@ -39,11 +39,12 @@ export default function AccountsPage() {
   const { toast } = useToast();
 
   const { status: accountStatus } = useAppSelector(selectAccountsSlice);
+
   const accounts = useAppSelector(selectGraderAccounts);
-  
+
   const roles = useAppSelector(selectGraderRole);
 
-  
+
   const [searchText, setSearchText] = useState("");
   const initialRole = roles.find((r) => r.code === "GRADER")?.id ?? "all";
   const [roleFilter, setRoleFilter] = useState<RoleFilter>(
@@ -51,7 +52,7 @@ export default function AccountsPage() {
   );
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
 
-  
+
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
 
@@ -64,17 +65,26 @@ export default function AccountsPage() {
     console.log("activeCampaign =", camp);
     console.log("campId =", camp?.id);
     console.log("sessions in camp =", sessInCamp);
+    console.log(accounts)
   }, [camp, sessInCamp]);
 
-  
+
   useEffect(() => {
     dispatch(fetchAccountsThunk());
     dispatch(fetchRolesThunk());
   }, [dispatch]);
 
+  useEffect(() => {
+    const campaignId = camp ? Number(camp.id) : null;
+    if (!campaignId) {
+      return;
+    }
+    dispatch(fetchAccountsGradersThunk(campaignId));
+  }, [dispatch, camp]);
 
 
-  
+
+
   const filteredAccounts = useMemo(() => {
     const term = searchText.trim().toLowerCase();
     let list = accounts;
@@ -99,7 +109,7 @@ export default function AccountsPage() {
     );
   }, [accounts, searchText, roleFilter, activeFilter]);
 
-  
+
   const stats = useMemo(() => {
     const total = accounts.length;
     const active = accounts.filter((a) => a.active).length;
@@ -107,7 +117,7 @@ export default function AccountsPage() {
     return { total, active, inactive };
   }, [accounts]);
 
-  
+
   const handleCreate = async (data: CreateAccountFormValues) => {
     try {
       const created = await dispatch(
@@ -124,7 +134,7 @@ export default function AccountsPage() {
       const campaignId = Number(camp?.id);
       console.log("lnw", accountId)
 
-      
+
       const assignments = (data.assignments ?? [])
         .filter(a => a.sessionId > 0 && a.subjectId > 0 && a.questionNo > 0)
         .map(a => ({
@@ -134,8 +144,8 @@ export default function AccountsPage() {
           subjectId: a.subjectId,
           questionNo: a.questionNo,
         }));
-        console.log(assignments)
-      if (assignments.length > 0) { 
+      console.log(assignments)
+      if (assignments.length > 0) {
         await dispatch(
           createGraderAssignmentsThunk({ assignments })
         ).unwrap();
@@ -145,7 +155,7 @@ export default function AccountsPage() {
       dispatch(fetchAccountsThunk())
       showSuccess(
         "สร้างผู้ตรวจสำเร็จ",
-        ""                                                        
+        ""
       )
       setCreateOpen(false);
     } catch (err: any) {

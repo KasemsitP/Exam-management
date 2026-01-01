@@ -6,11 +6,39 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "./index.css";
 import axios from 'axios';
 import "./App.css";
+import { clearAuth } from "@/store/slices/auth.slice";
+import Swal from "sweetalert2";
 
- axios.defaults.baseURL = "http://localhost:8000"; 
+axios.defaults.baseURL = "http://localhost:8000";
 // axios.defaults.baseURL = "http://192.168.1.39:8000"; 
- //axios.defaults.baseURL = "https://backend-exam-yy5g.onrender.com"; 
+//axios.defaults.baseURL = "https://backend-exam-yy5g.onrender.com"; 
 axios.defaults.withCredentials = true; //  เพื่อให้ส่ง/รับ httpOnly cookie ได้
+
+
+axios.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const status = err?.response?.status;
+    const url: string = err?.config?.url ?? "";
+
+    const isAuthEndpoint =
+      url.includes("/api/auth/login") ||
+      url.includes("/api/auth/me") ||
+      url.includes("/api/auth/logout");
+
+    if (!isAuthEndpoint && (status === 401 || status === 403)) {
+      store.dispatch(clearAuth());
+      Swal.fire({
+        icon: "warning",
+        title: "Session หมดอายุ",
+        text: "กรุณาเข้าสู่ระบบใหม่",
+        timer: 2000,
+      });
+    }
+
+    return Promise.reject(err);
+  }
+);
 createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
     <App />

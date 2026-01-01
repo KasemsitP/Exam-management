@@ -4,17 +4,10 @@ import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import type { RoomFormValues } from "../hooks/useExamRooms";
 
-interface EditingRoom {
-  sessionId: string;
-  roomCode: string;
-  capacity: number;
-}
-
 interface RoomFormModalProps {
   open: boolean;
-  sessions: any[];
-  selectedSessionId: string | null;
-  editingRoom: EditingRoom | null;
+  campaignId: string | null;
+  editingRoom: RoomFormValues | null;
   loading: boolean;
   onSubmit: (values: RoomFormValues) => Promise<void> | void;
   onClose: () => void;
@@ -22,8 +15,7 @@ interface RoomFormModalProps {
 
 export default function RoomFormModal({
   open,
-  sessions,
-  selectedSessionId,
+  campaignId,
   editingRoom,
   loading,
   onSubmit,
@@ -31,54 +23,45 @@ export default function RoomFormModal({
 }: RoomFormModalProps) {
   const form = useForm<RoomFormValues>({
     defaultValues: {
-      sessionId: selectedSessionId ?? sessions[0]?.id ?? "",
+      campaign_id: campaignId ?? editingRoom?.campaign_id ?? "",
       roomCode: editingRoom?.roomCode ?? "",
       capacity: editingRoom?.capacity ?? 30,
-      applyToAllSessions: false,
     },
   });
 
-  const watchApplyToAll = form.watch("applyToAllSessions");
   const watchRoomCode = form.watch("roomCode");
 
-  // reset form values when modal opens / editingRoom changes
+  // reset เมื่อเปิด modal / campaignId เปลี่ยน / editingRoom เปลี่ยน
   useEffect(() => {
     if (!open) return;
 
     form.reset({
-      sessionId:
-        editingRoom?.sessionId ??
-        selectedSessionId ??
-        sessions[0]?.id ??
-        "",
+      campaign_id: campaignId ?? editingRoom?.campaign_id ?? "",
       roomCode: editingRoom?.roomCode ?? "",
       capacity: editingRoom?.capacity ?? 30,
-      applyToAllSessions: false,
     });
-  }, [open, editingRoom, selectedSessionId, sessions, form]);
+  }, [open, campaignId, editingRoom, form]);
 
   const handleClose = () => {
     form.reset({
-      sessionId:
-        editingRoom?.sessionId ??
-        selectedSessionId ??
-        sessions[0]?.id ??
-        "",
+      campaign_id: campaignId ?? editingRoom?.campaign_id ?? "",
       roomCode: editingRoom?.roomCode ?? "",
       capacity: editingRoom?.capacity ?? 30,
-      applyToAllSessions: false,
     });
     onClose();
   };
 
   const handleSubmit = form.handleSubmit(async (values) => {
-    await onSubmit(values);
-    // การปิด modal ทำจาก hook เมื่อบันทึกสำเร็จ
+    // ย้ำว่าต้องมี campaign_id
+    const payload: RoomFormValues = {
+      campaign_id: values.campaign_id || (campaignId ?? ""),
+      roomCode: values.roomCode,
+      capacity: Number(values.capacity),
+    };
+    await onSubmit(payload);
   });
 
   if (!open) return null;
-
-  const canBulk = !editingRoom;
 
   return (
     <>
@@ -105,44 +88,29 @@ export default function RoomFormModal({
 
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
-                {/* Session */}
-                <div className="mb-3">
-                  <label htmlFor="room-session" className="form-label">
-                    เลือกเซสชัน
-                  </label>
-                  <select
-                    id="room-session"
-                    className="form-select"
-                    value={form.watch("sessionId")}
-                    onChange={(e) =>
-                      form.setValue("sessionId", e.target.value)
-                    }
-                    disabled={Boolean(editingRoom) || Boolean(watchApplyToAll)}
-                  >
-                    {sessions.map((s: any) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label ?? s.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* campaign_id ซ่อนไว้ ไม่ให้แก้ในฟอร์ม */}
+                <input
+                  type="hidden"
+                  {...form.register("campaign_id")}
+                  value={campaignId ?? editingRoom?.campaign_id ?? ""}
+                />
 
                 {/* Room code */}
                 <div className="mb-3">
                   <label htmlFor="room-code" className="form-label">
-                    รหัสห้องสอบ
+                    รหัสห้องสอบหรือชื่อห้องสอบ
                   </label>
                   <input
                     id="room-code"
                     className="form-control"
-                    placeholder="เช่น RM101"
+                    placeholder="THE DECK 1"
                     {...form.register("roomCode", { required: true })}
-                    disabled={Boolean(editingRoom)}
+                    disabled={Boolean(editingRoom)} 
                   />
                 </div>
 
                 {/* Capacity */}
-                <div className="mb-1">
+                <div className="mb-3">
                   <label htmlFor="room-capacity" className="form-label">
                     จำนวนที่รองรับ (คน)
                   </label>
@@ -158,28 +126,10 @@ export default function RoomFormModal({
                   />
                 </div>
 
-                {/* Apply to all sessions */}
-                {canBulk && (
-                  <div className="form-check mt-3">
-                    <input
-                      className="form-check-input"
-                      type="checkbox"
-                      id="applyToAll"
-                      {...form.register("applyToAllSessions")}
-                    />
-                    <label
-                      className="form-check-label"
-                      htmlFor="applyToAll"
-                    >
-                      เพิ่มห้อง{" "}
-                      <strong className="text-primary">
-                        {watchRoomCode || "(รหัสห้อง)"}
-                      </strong>{" "}
-                      นี้ลงใน <strong>ทุก Session</strong> (
-                      {sessions.length} รอบ)
-                    </label>
-                  </div>
-                )}
+                <p className="text-muted small mb-0">
+                  ห้อง{" "}
+                  <strong>{watchRoomCode || "(ระบุรหัสห้อง)"}</strong>{" "}
+                </p>
               </div>
 
               <div className="modal-footer">
@@ -198,11 +148,7 @@ export default function RoomFormModal({
                   {loading && (
                     <Loader2 size={16} className="me-2 spin-animation" />
                   )}
-                  {editingRoom
-                    ? "บันทึก"
-                    : watchApplyToAll
-                    ? "เพิ่ม (ทุก Session)"
-                    : "เพิ่มห้องสอบ"}
+                  {editingRoom ? "บันทึก" : "เพิ่มห้องสอบ"}
                 </button>
               </div>
             </form>

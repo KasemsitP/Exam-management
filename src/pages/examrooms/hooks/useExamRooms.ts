@@ -7,23 +7,15 @@ import {
   selectActiveCampaignSessions,
 } from "@/store/slices/examData.slice";
 import {
-  fetchRoomsBySessionThunk,
+  fetchRoomsByCampaignThunk,
   saveRoomThunk,
   deleteRoomThunk,
-  selectRoomSummary,
-  selectRoomsBySession,
   selectExamRoomsSlice,
 } from "@/store/slices/examRooms.slice";
 
-export interface RoomFormValues {
-  sessionId: string;
-  roomCode: string;
-  capacity: number;
-  applyToAllSessions?: boolean;
-}
 
-interface EditingRoom {
-  sessionId: string;
+export interface RoomFormValues {
+  campaign_id: string;
   roomCode: string;
   capacity: number;
 }
@@ -34,65 +26,64 @@ export const useExamRooms = () => {
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const sessions = useAppSelector(selectActiveCampaignSessions) ?? [];
-  const { status: roomStatus } = useAppSelector(selectExamRoomsSlice);
 
-  // -------- Session selection ----------
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
-    sessions[0]?.id ?? null
-  );
+  const { rooms = [], status: roomStatus } = useAppSelector(
+    selectExamRoomsSlice
+  ) as {
+    rooms: Array<{ campaign_id: string; roomCode: string; capacity: number }>;
+    status: "idle" | "loading" | "succeeded" | "failed";
+  };
 
-  useEffect(() => {
-    if (!sessions.length) {
-      setSelectedSessionId(null);
-      return;
-    }
-
-    setSelectedSessionId((current) => {
-      if (!current || !sessions.some((s: any) => s.id === current)) {
-        return sessions[0].id;
-      }
-      return current;
-    });
-  }, [sessions]);
-
-  // -------- Fetch rooms when session changes ----------
-  useEffect(() => {
-    if (selectedSessionId) {
-      dispatch(fetchRoomsBySessionThunk(selectedSessionId));
-    }
-  }, [selectedSessionId, dispatch]);
-
-  // -------- Data/selectors ----------
-  const rooms =
-    useAppSelector(selectRoomsBySession(selectedSessionId ?? "")) ?? [];
-
-  const summary =
-    useAppSelector(selectRoomSummary(selectedSessionId ?? "")) ?? {
-      totalRooms: 0,
-      totalCapacity: 0,
-    };
-
-  // -------- Search/filter ----------
   const [searchTerm, setSearchTerm] = useState("");
 
+
+  useEffect(() => {
+    if (!activeCampaign) return;
+    dispatch(fetchRoomsByCampaignThunk(Number(activeCampaign.id)));
+  }, [dispatch, activeCampaign]);
+
+
   const filteredRooms = useMemo(() => {
-    if (!searchTerm.trim()) return rooms;
+    const campaignId = activeCampaign?.id;
+    let list = Array.isArray(rooms) ? rooms : [];
+    if (campaignId != null) {
+      list = list.filter(
+        (r) => Number(r.campaign_id) === Number(campaignId)
+      );
+    
+    }
+    console.log(list)
+
     const term = searchTerm.trim().toLowerCase();
-    return rooms.filter((r: any) =>
-      r.roomCode.toLowerCase().includes(term)
+    if (!term) return list;
+
+    return list.filter(
+      (r) =>
+        r.roomCode.toLowerCase().includes(term) ||
+        String(r.capacity).includes(term)
     );
-  }, [rooms, searchTerm]);
+  }, [rooms, activeCampaign, searchTerm]);
+
+  // summary ง่าย ๆ
+  const summary = useMemo(() => {
+    const totalRooms = filteredRooms.length;
+    const totalCapacity = filteredRooms.reduce(
+      (sum, r) => sum + (Number(r.capacity) || 0),
+      0
+    );
+    return { totalRooms, totalCapacity };
+  }, [filteredRooms]);
 
   // -------- Modal state ----------
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingRoom, setEditingRoom] = useState<EditingRoom | null>(null);
+  const [editingRoom, setEditingRoom] = useState<RoomFormValues | null>(null);
 
   const openCreate = () => {
     setEditingRoom(null);
     setDialogOpen(true);
   };
 
-  const openEdit = (room: { sessionId: string; roomCode: string; capacity: number }) => {
+  const openEdit = (room: RoomFormValues) => {
     setEditingRoom(room);
     setDialogOpen(true);
   };
@@ -103,20 +94,12 @@ export const useExamRooms = () => {
   };
 
   // -------- Actions ----------
-  const handleRemove = async (sessionId: string, roomCode: string) => {
+  const handleRemove = async (campaign_id: string, roomCode: string) => {
     if (!window.confirm(`ยืนยันลบห้องสอบ ${roomCode} หรือไม่`)) return;
 
     try {
-      await dispatch(deleteRoomThunk({ sessionId, roomCode })).unwrap();
+      await dispatch(deleteRoomThunk({ campaign_id, roomCode })).unwrap();
       toast({ title: "ลบห้องสอบแล้ว", description: roomCode });
-
-      if (
-        editingRoom &&
-        editingRoom.sessionId === sessionId &&
-        editingRoom.roomCode === roomCode
-      ) {
-        closeDialog();
-      }
     } catch (error: any) {
       toast({
         title: "ลบล้มเหลว",
@@ -135,57 +118,31 @@ export const useExamRooms = () => {
 
     const capacity = Number(values.capacity);
     if (Number.isNaN(capacity) || capacity <= 0) {
-      toast({ title: "จำนวนที่รองรับต้องมากกว่า 0", variant: "destructive" });
-      return;
-    }
-
-    // Bulk add
-    if (values.applyToAllSessions && !editingRoom) {
       toast({
-        title: "กำลังเพิ่มห้องสอบ (ทุกเซสชัน)…",
-        description: `เพิ่ม ${roomCode} ทั้งหมด ${sessions.length} เซสชัน`,
+        title: "จำนวนที่รองรับต้องมากกว่า 0",
+        variant: "destructive",
       });
-
-      const jobs = sessions.map((session: any) =>
-        dispatch(
-          saveRoomThunk({ sessionId: session.id, roomCode, capacity })
-        ).unwrap()
-      );
-
-      try {
-        await Promise.all(jobs);
-        toast({
-          title: "สำเร็จ",
-          description: `${roomCode} ถูกเพิ่มใน ${sessions.length} เซสชัน`,
-        });
-
-        if (selectedSessionId) {
-          dispatch(fetchRoomsBySessionThunk(selectedSessionId));
-        }
-
-        closeDialog();
-      } catch (error: any) {
-        toast({
-          title: "เพิ่มแบบกลุ่มล้มเหลว",
-          description: error?.message ?? "API Error",
-          variant: "destructive",
-        });
-      }
-
       return;
     }
 
-    // Single add / edit
-    const sessionIdForSave = values.sessionId;
-    if (!sessionIdForSave) {
-      toast({ title: "กรุณาเลือกเซสชัน", variant: "destructive" });
+    const payload: RoomFormValues = {
+      campaign_id:
+        values.campaign_id || (activeCampaign ? String(activeCampaign.id) : ""),
+      roomCode,
+      capacity,
+    };
+
+    if (!payload.campaign_id) {
+      toast({
+        title: "ไม่พบข้อมูลรอบสอบ",
+        description: "กรุณาเลือกแคมเปญก่อน",
+        variant: "destructive",
+      });
       return;
     }
 
     try {
-      await dispatch(
-        saveRoomThunk({ sessionId: sessionIdForSave, roomCode, capacity })
-      ).unwrap();
+      await dispatch(saveRoomThunk(payload)).unwrap();
 
       toast({
         title: editingRoom ? "บันทึกห้องสอบเรียบร้อย" : "เพิ่มห้องสอบสำเร็จ",
@@ -202,23 +159,14 @@ export const useExamRooms = () => {
     }
   };
 
-  const selectedSessionLabel = useMemo(() => {
-    if (!selectedSessionId) return "-";
-    const session = sessions.find((s: any) => s.id === selectedSessionId);
-    return session?.label ?? session?.note ?? "-";
-  }, [selectedSessionId, sessions]);
+
 
   return {
     activeCampaign,
     sessions,
-    rooms,
     summary,
     filteredRooms,
-    roomStatus,
     loading: roomStatus === "loading",
-    selectedSessionId,
-    setSelectedSessionId,
-    selectedSessionLabel,
     searchTerm,
     setSearchTerm,
     modal: {

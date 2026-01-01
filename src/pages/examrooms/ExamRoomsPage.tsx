@@ -10,9 +10,6 @@ export default function ExamRoomsPage() {
   const {
     activeCampaign,
     sessions,
-    selectedSessionId,
-    setSelectedSessionId,
-    selectedSessionLabel,
     summary,
     filteredRooms,
     loading,
@@ -32,37 +29,34 @@ export default function ExamRoomsPage() {
   }
 
   return (
-    <ShowIfCan permission="manage_rooms">
-      <div className="d-flex flex-column gap-4">
-        <RoomsHeader
-          activeCampaign={activeCampaign}
-          sessions={sessions}
-          selectedSessionId={selectedSessionId}
-          onChangeSession={setSelectedSessionId}
-          searchTerm={searchTerm}
-          onChangeSearch={setSearchTerm}
-          onCreate={modal.openCreate}
-          summary={summary}
-        />
+ // src/pages/exam/ExamRoomsPage.tsx
+<ShowIfCan permission="manage_rooms">
+  <div className="d-flex flex-column gap-4">
+    <RoomsHeader
+      activeCampaign={activeCampaign}
+      searchTerm={searchTerm}
+      onChangeSearch={setSearchTerm}
+      onCreate={modal.openCreate}
+      summary={summary}
+    />
 
-        <RoomsTable
-          selectedSessionLabel={selectedSessionLabel}
-          rooms={filteredRooms}
-          loading={loading}
-          onEdit={modal.openEdit}
-          onRemove={handleRemove}
-        />
+    <RoomsTable
+      rooms={filteredRooms}
+      loading={loading}
+      onEdit={modal.openEdit}
+      onRemove={handleRemove}
+    />
 
-        <RoomFormModal
-          open={modal.open}
-          sessions={sessions}
-          selectedSessionId={selectedSessionId}
-          editingRoom={modal.editingRoom}
-          loading={loading}
-          onSubmit={handleSubmit}
-          onClose={modal.close}
-        />
-      </div>
-    </ShowIfCan>
+    <RoomFormModal
+      open={modal.open}
+      campaignId={activeCampaign ? String(activeCampaign.id) : null}
+      editingRoom={modal.editingRoom}
+      loading={loading}
+      onSubmit={handleSubmit}
+      onClose={modal.close}
+    />
+  </div>
+</ShowIfCan>
+
   );
 }

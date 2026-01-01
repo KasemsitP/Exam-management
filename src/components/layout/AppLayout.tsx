@@ -65,7 +65,10 @@ export function AppLayout() {
       />
 
       {/* Main area */}
-      <div className="flex-grow-1 d-flex flex-column" style={{ backgroundColor: "#f9fafb" }}>
+      <div
+  className="flex-grow-1 d-flex flex-column"
+  style={{ backgroundColor: "#f9fafb", minWidth: 0 }}
+>
         <AppHeader
           activeCampaign={activeCampaign ?? null}
           onOpenCampaignModal={() => setModalOpen(true)}

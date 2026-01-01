@@ -40,7 +40,7 @@ export default function BagScoresPage() {
   const [loadingScores, setLoadingScores] = useState(false);
   const [errorScores, setErrorScores] = useState<string | null>(null);
 
-  // ⬅️ ใหม่: โหมดแสดงผลคะแนน / ชื่อผู้ตรวจ
+  // โหมดแสดงผลคะแนน / ชื่อผู้ตรวจ
   const [viewMode, setViewMode] = useState<ViewMode>("score");
 
   // -----------------------------
@@ -205,7 +205,7 @@ export default function BagScoresPage() {
   // Render
   // -----------------------------
   return (
-  <div className="container-fluid ">
+    <div className="container-fluid px-3 px-sm-4 py-3">
       {/* BAR ด้านบน: filter + เปลี่ยนถุง */}
       <div className="card border-0 shadow-sm mb-3">
         <div className="card-body py-2">
@@ -234,50 +234,56 @@ export default function BagScoresPage() {
               </span>
             </div>
 
-            {/* เลือกถุง + next / prev */}
-            <div className="d-flex align-items-center gap-2">
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                disabled={currentBagIndex <= 0}
-                onClick={() => handleNavigateBag("prev")}
-              >
-                <ChevronLeft size={16} />
-              </button>
+            {/* เลือกถุง + next / prev + โหมดแสดงผล */}
+  {/* เลือกถุง + next/prev + โหมดแสดงผล */}
+<div className="d-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end">
+  <button
+    type="button"
+    className="btn btn-sm btn-outline-secondary"
+    disabled={currentBagIndex <= 0}
+    onClick={() => handleNavigateBag("prev")}
+  >
+    <ChevronLeft size={16} />
+  </button>
 
-              <div className="d-flex align-items-center gap-1">
-                <span className="small text-muted">ถุง:</span>
-                <select
-                  className="form-select form-select-sm"
-                  style={{ width: 260 }}
-                  value={selectedBagId ?? ""}
-                  onChange={(e) => setSelectedBagId(Number(e.target.value))}
-                  disabled={filteredBags.length === 0}
-                >
-                  {filteredBags.map((b, idx) => (
-                    <option key={b.bagId} value={b.bagId}>
-                      {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} –{" "}
-                      {b.sessionLabel}
-                    </option>
-                  ))}
-                  {filteredBags.length === 0 && (
-                    <option value="">ไม่มีถุง</option>
-                  )}
-                </select>
-              </div>
+  <div className="d-flex align-items-center gap-1 flex-grow-1 flex-md-grow-0">
+    <span className="small text-muted">ถุง:</span>
+    <select
+      className="form-select form-select-sm w-100 w-md-auto"
+      value={selectedBagId ?? ""}
+      onChange={(e) => setSelectedBagId(Number(e.target.value))}
+      disabled={filteredBags.length === 0}
+    >
+      {filteredBags.map((b, idx) => (
+        <option key={b.bagId} value={b.bagId}>
+          {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} – {b.sessionLabel}
+        </option>
+      ))}
+      {filteredBags.length === 0 && <option value="">ไม่มีถุง</option>}
+    </select>
+  </div>
 
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                disabled={
-                  currentBagIndex === -1 ||
-                  currentBagIndex >= filteredBags.length - 1
-                }
-                onClick={() => handleNavigateBag("next")}
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+  <button
+    type="button"
+    className="btn btn-sm btn-outline-secondary"
+    disabled={currentBagIndex === -1 || currentBagIndex >= filteredBags.length - 1}
+    onClick={() => handleNavigateBag("next")}
+  >
+    <ChevronRight size={16} />
+  </button>
+
+  <button
+    type="button"
+    className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 w-100 w-md-auto"
+    onClick={() => setViewMode((m) => (m === "score" ? "grader" : "score"))}
+  >
+    <Users size={14} />
+    <span className="small">
+      {viewMode === "score" ? "แสดงชื่อผู้ตรวจ" : "แสดงคะแนนตัวเลข"}
+    </span>
+  </button>
+</div>
+
           </div>
         </div>
       </div>
@@ -310,35 +316,16 @@ export default function BagScoresPage() {
           <div className="card-header bg-white border-0 border-bottom">
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div>
-                <div className="d-flex align-items-center gap-2">
-                  <h5 className="mb-0">
-                    คะแนนตามรหัสสอบ – BAG{String(selectedBag.bagNo).padStart(3, "0")}
-                  </h5>
-                </div>
+                <h5 className="mb-0">
+                  คะแนนตามรหัสสอบ – BAG
+                  {String(selectedBag.bagNo).padStart(3, "0")}
+                </h5>
                 <div className="text-muted small mt-1 d-flex flex-wrap gap-3">
                   <span>วิชา: {selectedBag.subjectName || "-"}</span>
                   <span>รอบสอบ: {selectedBag.sessionLabel}</span>
                   <span>สถานะถุง: {selectedBag.status}</span>
                   <span>จำนวนชุดข้อสอบ: {selectedBag.scannedCount}</span>
                 </div>
-              </div>
-
-              {/* ⬅️ ปุ่มสลับโหมดคะแนน / ผู้ตรวจ มุมบนขวา */}
-              <div>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                  onClick={() =>
-                    setViewMode((m) => (m === "score" ? "grader" : "score"))
-                  }
-                >
-                  <Users size={14} />
-                  <span className="small">
-                    {viewMode === "score"
-                      ? "แสดงชื่อผู้ตรวจ"
-                      : "แสดงคะแนนตัวเลข"}
-                  </span>
-                </button>
               </div>
             </div>
           </div>
@@ -371,198 +358,215 @@ export default function BagScoresPage() {
               !errorScores &&
               bagScores &&
               bagScores.booklets.length > 0 && (
-                <div className="table-responsive">
-              
-  <table
-    className="table table-sm mb-0"
-    style={{
-      borderCollapse: "collapse",
-      fontSize: "0.8rem",
-      width: "100%",              // แนะนำเติม ให้มันฟิตกรอบ
-    }}
-  >
-  <thead>
-    {/* แถวที่ 1 : หัวข้อข้อสอบ + label */}
-    <tr>
-      <th
-        rowSpan={2}
-        className="align-middle text-center"
-        style={{
-          minWidth: 100,
-          border: "1px solid #dee2e6",
-          backgroundColor: "#f8fafc",
-          fontWeight: 600,
-        }}
-      >
-        รหัสสอบ
-      </th>
-
-      {headerQuestions.map((hq) => (
-        <th
-          key={hq.questionNo}
-          // 🟢 โหมด score = 3 คอลัมน์ย่อย, โหมด grader = 2 คอลัมน์ย่อย
-          colSpan={viewMode === "score" ? 3 : 2}
-          className="text-center"
-          style={{
-            minWidth: viewMode === "score" ? 140 : 140,
-            border: "1px solid #dee2e6",
-            backgroundColor: "#f8fafc",
-          }}
-        >
-          <div className="fw-semibold">ข้อ {hq.questionNo}</div>
-          <div
-            className="text-muted"
-            style={{ fontSize: "0.72rem", whiteSpace: "nowrap" }}
-          >
-            {hq.label}
-          </div>
-        </th>
-      ))}
-
-      <th
-        rowSpan={2}
-        className="align-middle text-center"
-        style={{
-          minWidth: 90,
-          border: "1px solid #dee2e6",
-          backgroundColor: "#e5f0ff",
-          fontWeight: 600,
-        }}
-      >
-        คะแนนรวม
-      </th>
-    </tr>
-
-    {/* แถวที่ 2 : หัวคอลัมน์ย่อย */}
-    <tr>
-      {headerQuestions.map((hq) => (
-        <React.Fragment key={`subhead-${hq.questionNo}`}>
-          <th
-            className="text-center"
-            style={{
-              border: "1px solid #dee2e6",
-              backgroundColor: "#fdfdfd",
-            }}
-          >
-            {viewMode === "score" ? "คะแนน 1" : "ผู้ตรวจ 1"}
-          </th>
-          <th
-            className="text-center"
-            style={{
-              border: "1px solid #dee2e6",
-              backgroundColor: "#fdfdfd",
-            }}
-          >
-            {viewMode === "score" ? "คะแนน 2" : "ผู้ตรวจ 2"}
-          </th>
-
-          {/* 🟢 แสดง "รวม(ข้อ)" เฉพาะโหมด score */}
-          {viewMode === "score" && (
-            <th
-              className="text-center"
-              style={{
-                border: "1px solid #dee2e6",
-                backgroundColor: "#fdfdfd",
-              }}
-            >
-              รวม(ข้อ)
-            </th>
-          )}
-        </React.Fragment>
-      ))}
-    </tr>
-  </thead>
-
-  <tbody>
-    {bagScores.booklets.map((bk) => (
-      <tr key={bk.bookletId}>
-        {/* รหัสสอบ */}
-        <td
-          className="text-start"
-          style={{
-            border: "1px solid #dee2e6",
-            fontWeight: 600,
-            backgroundColor: "#ffffff",
-          }}
-        >
-          {bk.examCode}
-        </td>
-
-        {/* รายข้อของเล่มนี้ */}
-        {headerQuestions.map((hq) => {
-          const q = bk.questions.find(
-            (qq) => qq.questionNo === hq.questionNo
-          );
-
-          const score1 = formatScore(q?.grader1Score ?? null);
-          const score2 = formatScore(q?.grader2Score ?? null);
-          const total = formatScore(q?.finalScore ?? null);
-
-          const name1 = q?.grader1Name || "-";
-          const name2 = q?.grader2Name || "-";
-
-          if (viewMode === "grader") {
-            // 🟢 โหมดแสดงผู้ตรวจ: มี 2 ช่องต่อข้อ (ชื่อผู้ตรวจ 1 / 2)
-            return (
-              <React.Fragment key={`${bk.bookletId}-${hq.questionNo}`}>
-                <td
-                  className="text-start"
-                  style={{ border: "1px solid #edeff2" }}
+                <div
+                  className="table-responsive"
+                  style={{
+                    maxHeight: "calc(100vh - 260px)",
+                    overflowX: "auto",
+                  }}
                 >
-                  {name1}
-                </td>
-                <td
-                  className="text-start"
-                  style={{ border: "1px solid #edeff2" }}
-                >
-                  {name2}
-                </td>
-              </React.Fragment>
-            );
-          }
+                  <table
+                    className="table table-sm mb-0"
+                    style={{
+                      borderCollapse: "collapse",
+                      fontSize: "0.8rem",
+                      width: "max-content",
+                      minWidth: "100%",
+                    }}
+                  >
+                    <thead>
+                      {/* แถวที่ 1 : หัวข้อข้อสอบ + label */}
+                      <tr>
+                        <th
+                          rowSpan={2}
+                          className="align-middle text-center"
+                          style={{
+                            border: "1px solid #dee2e6",
+                            backgroundColor: "#f8fafc",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          รหัสสอบ
+                        </th>
 
-          // 🟢 โหมดแสดงคะแนน: มี 3 ช่องต่อข้อ (คะแนน 1 / 2 / รวม(ข้อ))
-          return (
-            <React.Fragment key={`${bk.bookletId}-${hq.questionNo}`}>
-              <td
-                className="text-end"
-                style={{ border: "1px solid #edeff2" }}
-              >
-                {score1}
-              </td>
-              <td
-                className="text-end"
-                style={{ border: "1px solid #edeff2" }}
-              >
-                {score2}
-              </td>
-              <td
-                className="text-end fw-semibold"
-                style={{
-                  border: "1px solid #edeff2",
-                  backgroundColor: "#fafbff",
-                }}
-              >
-                {total}
-              </td>
-            </React.Fragment>
-          );
-        })}
+                        {headerQuestions.map((hq) => (
+                          <th
+                            key={hq.questionNo}
+                            colSpan={viewMode === "score" ? 3 : 2}
+                            className="text-center"
+                            style={{
+                              border: "1px solid #dee2e6",
+                              backgroundColor: "#f8fafc",
+                            }}
+                          >
+                            <div className="fw-semibold">
+                              ข้อ {hq.questionNo}
+                            </div>
+                            <div
+                              className="text-muted"
+                              style={{
+                                fontSize: "0.72rem",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {hq.label}
+                            </div>
+                          </th>
+                        ))}
 
-        {/* คะแนนรวมทั้งเล่ม (ยังโชว์เฉพาะตัวเลขเสมอ) */}
-        <td
-          className="text-end fw-bold"
-          style={{
-            border: "1px solid #dee2e6",
-            backgroundColor: "#e5f0ff",
-          }}
-        >
-          {formatScore(calcTotalForBooklet(bk))}
-        </td>
-      </tr>
-    ))}
-  </tbody>
-</table>
+                        <th
+                          rowSpan={2}
+                          className="align-middle text-center"
+                          style={{
+                            border: "1px solid #dee2e6",
+                            backgroundColor: "#e5f0ff",
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          คะแนนรวม
+                        </th>
+                      </tr>
+
+                      {/* แถวที่ 2 : หัวคอลัมน์ย่อย */}
+                      <tr>
+                        {headerQuestions.map((hq) => (
+                          <React.Fragment key={`subhead-${hq.questionNo}`}>
+                            <th
+                              className="text-center"
+                              style={{
+                                border: "1px solid #dee2e6",
+                                backgroundColor: "#fdfdfd",
+                              }}
+                            >
+                              {viewMode === "score" ? "คะแนน 1" : "ผู้ตรวจ 1"}
+                            </th>
+                            <th
+                              className="text-center"
+                              style={{
+                                border: "1px solid #dee2e6",
+                                backgroundColor: "#fdfdfd",
+                              }}
+                            >
+                              {viewMode === "score" ? "คะแนน 2" : "ผู้ตรวจ 2"}
+                            </th>
+
+                            {viewMode === "score" && (
+                              <th
+                                className="text-center"
+                                style={{
+                                  border: "1px solid #dee2e6",
+                                  backgroundColor: "#fdfdfd",
+                                }}
+                              >
+                                รวม(ข้อ)
+                              </th>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {bagScores.booklets.map((bk) => (
+                        <tr key={bk.bookletId}>
+                          {/* รหัสสอบ */}
+                          <td
+                            className="text-start"
+                            style={{
+                              border: "1px solid #dee2e6",
+                              fontWeight: 600,
+                              backgroundColor: "#ffffff",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {bk.examCode}
+                          </td>
+
+                          {/* รายข้อของเล่มนี้ */}
+                          {headerQuestions.map((hq) => {
+                            const q = bk.questions.find(
+                              (qq) => qq.questionNo === hq.questionNo
+                            );
+
+                            const score1 = formatScore(q?.grader1Score ?? null);
+                            const score2 = formatScore(q?.grader2Score ?? null);
+                            const total = formatScore(q?.finalScore ?? null);
+
+                            const name1 = q?.grader1Name || "-";
+                            const name2 = q?.grader2Name || "-";
+
+                            if (viewMode === "grader") {
+                              return (
+                                <React.Fragment
+                                  key={`${bk.bookletId}-${hq.questionNo}`}
+                                >
+                                  <td
+                                    className="text-start"
+                                    style={{
+                                      border: "1px solid #edeff2",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {name1}
+                                  </td>
+                                  <td
+                                    className="text-start"
+                                    style={{
+                                      border: "1px solid #edeff2",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {name2}
+                                  </td>
+                                </React.Fragment>
+                              );
+                            }
+
+                            return (
+                              <React.Fragment
+                                key={`${bk.bookletId}-${hq.questionNo}`}
+                              >
+                                <td
+                                  className="text-end"
+                                  style={{ border: "1px solid #edeff2" }}
+                                >
+                                  {score1}
+                                </td>
+                                <td
+                                  className="text-end"
+                                  style={{ border: "1px solid #edeff2" }}
+                                >
+                                  {score2}
+                                </td>
+                                <td
+                                  className="text-end fw-semibold"
+                                  style={{
+                                    border: "1px solid #edeff2",
+                                    backgroundColor: "#fafbff",
+                                  }}
+                                >
+                                  {total}
+                                </td>
+                              </React.Fragment>
+                            );
+                          })}
+
+                          {/* คะแนนรวมทั้งเล่ม */}
+                          <td
+                            className="text-end fw-bold"
+                            style={{
+                              border: "1px solid #dee2e6",
+                              backgroundColor: "#e5f0ff",
+                            }}
+                          >
+                            {formatScore(calcTotalForBooklet(bk))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
           </div>

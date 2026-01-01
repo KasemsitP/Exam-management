@@ -42,15 +42,17 @@ export const login = createAsyncThunk<
       "/api/auth/login",
       credentials
     );
-
+  //  console.log(response)
     if (isAuthUser(response.data)) {
       return response.data;
     }
+   
 
     const profile = await axios.get<AuthUser>("/api/auth/me");
     if (isAuthUser(profile.data)) {
       return profile.data;
     }
+    console.log(profile.data)
 
     throw new Error("Missing user payload");
 

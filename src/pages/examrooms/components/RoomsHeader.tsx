@@ -3,9 +3,6 @@ import { DoorOpen, Plus, Search } from "lucide-react";
 
 interface RoomsHeaderProps {
   activeCampaign: any;
-  sessions: any[];
-  selectedSessionId: string | null;
-  onChangeSession: (id: string) => void;
   searchTerm: string;
   onChangeSearch: (value: string) => void;
   onCreate: () => void;
@@ -17,9 +14,6 @@ interface RoomsHeaderProps {
 
 export default function RoomsHeader({
   activeCampaign,
-  sessions,
-  selectedSessionId,
-  onChangeSession,
   searchTerm,
   onChangeSearch,
   onCreate,
@@ -30,30 +24,15 @@ export default function RoomsHeader({
       <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
         <div>
           <h5 className="mb-1 d-flex align-items-center gap-2">
-            <DoorOpen className="text-primary" size={20} />
             จัดการห้องสอบ
           </h5>
           <small className="text-muted">
-            รวบรวมความจุห้องสอบสำหรับแต่ละรอบสอบของแคมเปญ{" "}
+            ความจุห้องสอบสำหรับแต่ละรอบสอบของแคมเปญ{" "}
             {activeCampaign?.name}
           </small>
         </div>
 
         <div className="d-flex flex-wrap align-items-center gap-2">
-          {/* Session select */}
-          <select
-            className="form-select"
-            style={{ width: 260 }}
-            value={selectedSessionId ?? ""}
-            onChange={(e) => onChangeSession(e.target.value)}
-          >
-            {sessions.map((s: any) => (
-              <option key={s.id} value={s.id}>
-                {s.label ?? s.title}
-              </option>
-            ))}
-          </select>
-
           {/* Search */}
           <div className="position-relative">
             <Search
