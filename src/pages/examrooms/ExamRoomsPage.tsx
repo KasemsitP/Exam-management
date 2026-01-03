@@ -29,34 +29,37 @@ export default function ExamRoomsPage() {
   }
 
   return (
- // src/pages/exam/ExamRoomsPage.tsx
-<ShowIfCan permission="manage_rooms">
-  <div className="d-flex flex-column gap-4">
-    <RoomsHeader
-      activeCampaign={activeCampaign}
-      searchTerm={searchTerm}
-      onChangeSearch={setSearchTerm}
-      onCreate={modal.openCreate}
-      summary={summary}
-    />
+    // src/pages/exam/ExamRoomsPage.tsx
+    <ShowIfCan permission="manage_rooms">
+      <div className="d-flex flex-column gap-4">
+        <RoomsHeader
+          activeCampaign={activeCampaign}
+          searchTerm={searchTerm}
+          onChangeSearch={setSearchTerm}
+          onCreate={modal.openCreate}
+          summary={summary}
+        />
 
-    <RoomsTable
-      rooms={filteredRooms}
-      loading={loading}
-      onEdit={modal.openEdit}
-      onRemove={handleRemove}
-    />
+        <RoomsTable
+          rooms={filteredRooms.map(r => ({
+            ...r,
+            campaign_id: String(r.campaign_id), 
+          }))}
+          loading={loading}
+          onEdit={modal.openEdit}
+          onRemove={handleRemove}
+        />
 
-    <RoomFormModal
-      open={modal.open}
-      campaignId={activeCampaign ? String(activeCampaign.id) : null}
-      editingRoom={modal.editingRoom}
-      loading={loading}
-      onSubmit={handleSubmit}
-      onClose={modal.close}
-    />
-  </div>
-</ShowIfCan>
+        <RoomFormModal
+          open={modal.open}
+          campaignId={activeCampaign ? String(activeCampaign.id) : null}
+          editingRoom={modal.editingRoom}
+          loading={loading}
+          onSubmit={handleSubmit}
+          onClose={modal.close}
+        />
+      </div>
+    </ShowIfCan>
 
   );
 }

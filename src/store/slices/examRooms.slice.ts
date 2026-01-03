@@ -1,9 +1,10 @@
 // src/store/slices/examRooms.slice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import {RootState } from "../index"
 import axios from "axios";
 
 export interface ExamRoom {
-  campaign_id: number;   // ถ้า backend ส่งเป็น number
+  campaign_id: number; 
   roomCode: string;
   capacity: number;
 }
@@ -26,11 +27,17 @@ export const fetchRoomsByCampaignThunk = createAsyncThunk<
   { rejectValue: string }
 >("examRooms/fetchByCampaign", async (campaignId, { rejectWithValue }) => {
   try {
-    const res = await axios.get<ExamRoom[]>(
+    const res = await axios.get(
       `/api/exam-rooms/campaign/${campaignId}`
     );
-    //console.log(res.data)
-    return res.data;
+  // console.log(res.data)
+const rooms = res.data.map((r: any) => ({
+  campaign_id: r.campaignId, 
+  roomCode: r.roomCode,
+  capacity: r.capacity,
+}));
+console.log(rooms)
+return rooms;
   } catch (err: any) {
     if (axios.isAxiosError(err)) {
       return rejectWithValue(err.response?.data?.message ?? "Fetch rooms failed");
@@ -88,7 +95,7 @@ const examRoomsSlice = createSlice({
       })
       .addCase(fetchRoomsByCampaignThunk.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.rooms = action.payload; // ⬅️ list ทั้งก้อน
+        state.rooms = action.payload; 
       })
       .addCase(fetchRoomsByCampaignThunk.rejected, (state, action) => {
         state.status = "failed";
@@ -138,5 +145,5 @@ const examRoomsSlice = createSlice({
   },
 });
 
-export const selectExamRoomsSlice = (state: any) => state.examRooms;
+export const selectExamRoomsSlice = (state: RootState) => state.examRooms;
 export {examRoomsSlice}

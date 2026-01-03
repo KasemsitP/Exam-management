@@ -22,15 +22,15 @@ export const importUsersThunk = createAsyncThunk<
   { rejectValue: string }
 >("users/import", async (payload, { rejectWithValue }) => {
   try {
-    // [ ⭐️ นี่คือส่วนที่แก้ไข ⭐️ ]
-    // แปลง ID ("camp-1") เป็นตัวเลข (1) ก่อนส่ง
+    // 
+    // 
     const numericCampaignId = parseCampaignId(payload.campaignId);
     if (isNaN(numericCampaignId)) {
       return rejectWithValue("Invalid Campaign ID format on client.");
     }
 
     const response = await axios.post<ImportResponse>(
-      `/api/import/campaign/${numericCampaignId}`, // 👈 (ส่ง ID ที่เป็นตัวเลข)
+      `/api/import/campaign/${numericCampaignId}`, // ส่ง ID ที่เป็นตัวเลข
       {
         rows: payload.rows,
       }

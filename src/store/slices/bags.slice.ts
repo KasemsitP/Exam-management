@@ -149,6 +149,7 @@ export const ScannedPayloadThunk = createAsyncThunk<
     "bags/ScannedCount",
     async ({ bagNo, campaignId, sessionId }, { rejectWithValue }) => {
         try {
+            console.log(bagNo, campaignId, sessionId)
             const response = await axios.get<BagPayloadRecord[]>(
                 `/api/bags/${bagNo}/booklets`,
                 {
@@ -181,7 +182,7 @@ export const finalizeAndLinkBagThunk = createAsyncThunk<
     }
 );
 
-// ⭐️ (2. THUNK ใหม่: DELETE) ⭐️
+
 export const deleteBagThunk = createAsyncThunk<
     { bagId: string; campaignId: string }, // (สิ่งที่ Return)
     { campaignId: string; bagId: string }, // (สิ่งที่รับ)

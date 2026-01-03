@@ -27,13 +27,7 @@ export const useExamRooms = () => {
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const sessions = useAppSelector(selectActiveCampaignSessions) ?? [];
 
-  const { rooms = [], status: roomStatus } = useAppSelector(
-    selectExamRoomsSlice
-  ) as {
-    rooms: Array<{ campaign_id: string; roomCode: string; capacity: number }>;
-    status: "idle" | "loading" | "succeeded" | "failed";
-  };
-
+  const { rooms = [], status: roomStatus } = useAppSelector(selectExamRoomsSlice);
   const [searchTerm, setSearchTerm] = useState("");
 
 
@@ -41,6 +35,10 @@ export const useExamRooms = () => {
     if (!activeCampaign) return;
     dispatch(fetchRoomsByCampaignThunk(Number(activeCampaign.id)));
   }, [dispatch, activeCampaign]);
+
+useEffect(() => {
+ // console.log("rooms raw:", rooms);
+}, [rooms]);
 
 
   const filteredRooms = useMemo(() => {
@@ -50,7 +48,7 @@ export const useExamRooms = () => {
       list = list.filter(
         (r) => Number(r.campaign_id) === Number(campaignId)
       );
-    
+
     }
     console.log(list)
 
@@ -64,7 +62,6 @@ export const useExamRooms = () => {
     );
   }, [rooms, activeCampaign, searchTerm]);
 
-  // summary ง่าย ๆ
   const summary = useMemo(() => {
     const totalRooms = filteredRooms.length;
     const totalCapacity = filteredRooms.reduce(
@@ -148,6 +145,8 @@ export const useExamRooms = () => {
         title: editingRoom ? "บันทึกห้องสอบเรียบร้อย" : "เพิ่มห้องสอบสำเร็จ",
         description: `${roomCode} รองรับ ${capacity.toLocaleString()} คน`,
       });
+
+      dispatch(fetchRoomsByCampaignThunk(Number(activeCampaign.id)));
 
       closeDialog();
     } catch (error: any) {
