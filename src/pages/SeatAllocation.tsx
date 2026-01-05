@@ -1,356 +1,802 @@
-import { useEffect, useMemo, useState } from "react";
-import { DownloadCloud, PlayCircle, RotateCcw, Loader2, AlertTriangle, Search, Info } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+// src/pages/SeatAllocationPage.tsx
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { selectCurrentSession } from "@/store/slices/sessions.slice";
-
-// ⭐️ (1) seats.slice
-import {
-  seatAssignmentsCleared,
-  selectSeatAllocationMeta,
-  selectSeatAssignments,
-  selectSeatViolations,
-  seatAllocationStarted,
-  seatAllocationFinished,
-  fetchSeatAllocationThunk,
-  saveSeatAllocationThunk,
-} from "@/store/slices/seats.slice";
-
-import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
-
-// ⭐️ (2) usercampaign + roomseat selectors
 import {
-  fetchUserCampaignsThunk,
-  selectUserCampaignsForCampaign,
-} from "@/store/slices/usercampaign.slice";
-import {
-  fetchRoomSeatsThunk,
-  selectRoomSeatsForSite,
-  selectRoomSeatsMeta,
-} from "@/store/slices/roomseat.slice";
+  selectExamRoomsSlice,
+  fetchRoomsByCampaignThunk,
+} from "@/store/slices/examRooms.slice";
+import axios from "axios";
+import Swal from "sweetalert2";
 
-// ⭐️ (3) allocator + detector
-import { ExamSeatAllocator, type Student } from "../lib/allocationAlgorithm";
-import { detectFamilyViolations, type Violation, type AllocationWithSeatCode } from "../lib/seatviloation";
-
-// ----------------------------------------------
-// Small helpers / components
-// ----------------------------------------------
-const SectionHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
-  <div className="card shadow-sm mb-3">
-    <div className="card-body d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center justify-content-lg-between">
-      <div>
-        <h5 className="card-title mb-1">{title}</h5>
-        {subtitle && <p className="card-text text-muted mb-0 small">{subtitle}</p>}
-      </div>
-    </div>
-  </div>
-);
-
-const StatChip = ({ label, value, tone = "light" }: { label: string; value: string | number; tone?: "light" | "success" | "danger" | "warning" }) => (
-  <span className={`badge text-bg-${tone} d-inline-flex align-items-center gap-1 px-2 py-1`}>{value} <span className="text-uppercase text-muted small" style={{ letterSpacing: ".5px" }}>{label}</span></span>
-);
-
-const Legend = () => (
-  <div className="d-flex flex-wrap align-items-center gap-2 small">
-    <div className="d-flex align-items-center gap-2">
-      <span className="legend-swatch swatch-empty" /> ว่าง
-    </div>
-    <div className="d-flex align-items-center gap-2">
-      <span className="legend-swatch swatch-occupied" /> มีผู้สอบ
-    </div>
-    <div className="d-flex align-items-center gap-2">
-      <span className="legend-swatch swatch-violation" /> ฝ่าฝืน (ครอบครัวติดกัน)
-    </div>
-  </div>
-);
-
-// ----------------------------------------------
-// Seating Grid
-// ----------------------------------------------
-
-type SeatingProps = {
-  assignments: AllocationWithSeatCode[];
-  violations: Violation[];
-  roomSeats: any[];
-  columns: number;
-  filterText: string;
-  showViolationsOnly: boolean;
+type SeatCell = {
+  seatNo: number;
+  user_code: string;
+  fullName: string;
+  lastNameKey?: string;
 };
 
-function SeatingGrid({ assignments, violations, roomSeats, columns, filterText, showViolationsOnly }: SeatingProps) {
-  const totalSeats = roomSeats.length;
-  const rows = Math.ceil(totalSeats / columns);
+type RoomLike = {
+  roomCode: string;
+  capacity: number;
+};
 
-  const violationSet = useMemo(() => {
-    const set = new Set<string>();
-    violations.forEach(v => set.add(`${v.row}-${v.col}`));
-    return set;
-  }, [violations]);
+type SeatApiResponse = {
+  campaignId: string;
+  roomCode: string;
+  seatsPerRow: number;
+  seats: Array<{
+    rowIndex: number;
+    colIndex: number;
+    user_id: number;
+    user_code: string;
+    full_name: string;
+    last_name: string;
+  }>;
+};
 
-  // Build grid from physical layout (roomSeats)
-  const grid: (any)[][] = useMemo(() => {
-    const g: any[][] = Array.from({ length: rows }, () => Array(columns).fill(null));
-    roomSeats.forEach(seat => {
-      if (seat.row_no < rows && seat.col_no < columns) g[seat.row_no][seat.col_no] = seat;
-    });
-    return g;
-  }, [rows, columns, roomSeats]);
-
-  // Map for quick lookup by seat code
-  const assignmentMap = useMemo(() => {
-    const map = new Map<string, AllocationWithSeatCode>();
-    assignments.forEach(a => map.set(a.seatCode, a));
-    return map;
-  }, [assignments]);
-
-  const filtered = (seat: any, r: number, c: number) => {
-    const seatCode: string = seat?.seat_code ?? "";
-    const a = seat ? assignmentMap.get(seatCode) : undefined;
-    const occupied = Boolean(a);
-    const isViolation = violationSet.has(`${r}-${c}`);
-    if (showViolationsOnly && !isViolation) return false;
-    if (filterText) {
-      const f = filterText.toLowerCase();
-      const hit = seatCode.toLowerCase().includes(f) || (occupied && `${a!.studentId}`.includes(f)) || (occupied && `${a!.familyGroup}`.toLowerCase().includes(f));
-      if (!hit) return false;
-    }
-    return true;
-  };
-
-  return (
-    <div className="seating-grid" style={{ gridTemplateColumns: `repeat(${columns}, minmax(88px, 1fr))` }}>
-      {grid.map((row, r) => (
-        row.map((seat, c) => {
-          if (!seat) return <div key={`gap-${r}-${c}`} className="seat seat-gap" aria-hidden />; // physical gap
-          if (!filtered(seat, r, c)) return null;
-
-          const seatCode: string = seat.seat_code;
-          const a = assignmentMap.get(seatCode);
-          const occupied = Boolean(a);
-          const isViolation = violationSet.has(`${r}-${c}`);
-
-          let seatClass = "seat seat-empty";
-          if (occupied) seatClass = "seat seat-occupied";
-          if (isViolation) seatClass = "seat seat-violation";
-
-          return (
-            <div key={`${r}-${c}`} className={seatClass} title={isViolation ? `ผิดพลาด: ครอบครัวติดกันที่ (${r}, ${c})` : `Seat ${seatCode} (r${r} c${c})`}>
-              <div className="seat-code">{seatCode}</div>
-              <div className="seat-sub">{occupied ? `ID: ${a!.studentId}` : "ว่าง"}</div>
-              {occupied && <div className="seat-meta">Fam: {a!.familyGroup}</div>}
-            </div>
-          );
-        })
-      ))}
-    </div>
-  );
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
 }
-
-// ----------------------------------------------
-// Page
-// ----------------------------------------------
 
 export default function SeatAllocationPage() {
   const dispatch = useAppDispatch();
-  const { toast } = useToast();
+  const campaign = useAppSelector(selectActiveCampaign);
+  const roomsState = useAppSelector(selectExamRoomsSlice);
 
-  const activeCampaign = useAppSelector(selectActiveCampaign);
-  const currentSession = useAppSelector(selectCurrentSession);
+  // cache layout แต่ละห้อง: key = roomCode
+  const [roomSeats, setRoomSeats] = useState<Record<string, SeatCell[]>>({});
 
-  const userCampaigns = useAppSelector((state) => selectUserCampaignsForCampaign(activeCampaign?.id ?? null)(state));
-  const roomSeats = useAppSelector((state) => selectRoomSeatsForSite(currentSession?.site_id ?? null)(state));
-  const { columns, totalSeats } = useAppSelector(selectRoomSeatsMeta(currentSession?.site_id ?? null));
+  const rooms: RoomLike[] = (roomsState?.rooms ?? []) as any;
 
-  const assignments = useAppSelector(selectSeatAssignments);
-  const violations = useAppSelector(selectSeatViolations);
-  const meta = useAppSelector(selectSeatAllocationMeta);
+  const roomsTotal = useMemo(() => {
+    if (!rooms.length) return 0;
+    return rooms.map((r) => r.capacity).reduce((a, b) => a + b, 0);
+  }, [rooms]);
 
-  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 10_000));
-  const [filterText, setFilterText] = useState("");
-  const [showViolationsOnly, setShowViolationsOnly] = useState(false);
+  // preview (global setting เผื่อใช้ทีหลัง)
+  const [seatsPerColumn, setSeatsPerColumn] = useState(30);
+  const [inputSeatsPerColumn, setInputSeatsPerColumn] =
+    useState<number>(seatsPerColumn);
 
-  // Fetch
+  // pagination ห้อง
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil((rooms?.length || 0) / itemsPerPage)),
+    [rooms?.length]
+  );
+
+  const currentRooms = useMemo(() => {
+    const indexOfLastRoom = currentPage * itemsPerPage;
+    const indexOfFirstRoom = indexOfLastRoom - itemsPerPage;
+    return rooms.slice(indexOfFirstRoom, indexOfLastRoom);
+  }, [rooms, currentPage]);
+
+  // ===== Modal state =====
+  const [selectedRoom, setSelectedRoom] = useState<RoomLike | null>(null);
+  const [modalSearch, setModalSearch] = useState("");
+  const [modalColsPerPage, setModalColsPerPage] = useState(6);
+  const [modalPage, setModalPage] = useState(1);
+  const [modalSeatsPerRow, setModalSeatsPerRow] = useState(30);
+
+  const handleSetSeatsPerColumn = () => {
+    const value = Number(inputSeatsPerColumn);
+    if (Number.isFinite(value) && value > 0) {
+      setSeatsPerColumn(value);
+    } else {
+      alert("จำนวนที่นั่งต่อคอลัมน์ต้องมากกว่า 0");
+    }
+  };
+
   useEffect(() => {
-    if (activeCampaign) {
-      dispatch(fetchUserCampaignsThunk(activeCampaign.id));
-      dispatch(fetchSeatAllocationThunk(activeCampaign.id));
+    if (campaign?.id) {
+      dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
     }
-    if (currentSession?.site_id) {
-      dispatch(fetchRoomSeatsThunk(currentSession.site_id));
-    }
-  }, [activeCampaign, currentSession?.site_id, dispatch]);
+  }, [campaign?.id, dispatch]);
 
-  const seatsAssigned = useMemo(() => assignments.filter((a) => a.studentId != null).length, [assignments]);
+  useEffect(() => {
+    setModalPage(1);
+  }, [modalSearch, selectedRoom]);
 
-  // Allocate (inline)
-  const handleAllocateInline = () => {
-    if (!activeCampaign || !currentSession) {
-      toast({ title: "กรุณาเลือก Campaign และ Session", variant: "destructive" });
-      return;
+  // ใช้ layout ตามห้อง (ทั้ง summary + modal)
+  const getRoomSeatCells = (room: RoomLike | null): SeatCell[] => {
+    if (!room) return [];
+    const fromApi = roomSeats[room.roomCode];
+    return fromApi && fromApi.length > 0 ? fromApi : [];
+  };
+
+  const buildColumns = (cells: SeatCell[], perCol: number): SeatCell[][] => {
+    if (!cells || cells.length === 0 || perCol <= 0) return [];
+    const totalColumns = Math.ceil(cells.length / perCol);
+    const columns: SeatCell[][] = Array.from(
+      { length: totalColumns },
+      () => []
+    );
+    for (let i = 0; i < cells.length; i++) {
+      const colIdx = Math.floor(i / perCol);
+      columns[colIdx].push(cells[i]);
     }
+    return columns;
+  };
+
+  const modalCellStyle: CSSProperties = {
+    width: 140,
+    height: 64,
+    padding: "8px 8px",
+    lineHeight: 1.1,
+    fontSize: 12,
+    userSelect: "none",
+  };
+
+  // cells ที่ใช้ใน modal = layout ของ selectedRoom + filter
+  const modalCells = useMemo(() => {
+    if (!selectedRoom) return [];
+
+    const all = getRoomSeatCells(selectedRoom);
+    const k = modalSearch.trim().toLowerCase();
+    if (!k) return all;
+
+    return all.filter(
+      (x) =>
+        String(x.user_code).toLowerCase().includes(k) ||
+        x.fullName.toLowerCase().includes(k)
+    );
+  }, [selectedRoom, modalSearch, roomSeats]);
+
+  const modalColumns = useMemo(
+    () => buildColumns(modalCells, modalSeatsPerRow),
+    [modalCells, modalSeatsPerRow]
+  );
+
+  const totalModalPages = useMemo(
+    () => Math.max(1, Math.ceil(modalColumns.length / modalColsPerPage)),
+    [modalColumns.length, modalColsPerPage]
+  );
+
+  const modalColumnsPage = useMemo(() => {
+    const start = (modalPage - 1) * modalColsPerPage;
+    const end = start + modalColsPerPage;
+    return modalColumns.slice(start, end);
+  }, [modalColumns, modalPage, modalColsPerPage]);
+
+  const mapApiSeatsToCells = (data: SeatApiResponse): SeatCell[] => {
+    return data.seats.map((s) => ({
+      seatNo: s.rowIndex * data.seatsPerRow + s.colIndex + 1,
+      user_code: s.user_code,
+      fullName: s.full_name,
+      lastNameKey: s.last_name,
+    }));
+  };
+
+  // ===== เปิด modal + โหลด layout เฉพาะห้องที่กด =====
+  const handleOpenRoom = async (room: RoomLike) => {
+    if (!campaign?.id) return;
+
+    // เปิด modal + reset เฉพาะของ modal
+    setSelectedRoom(room);
+    setModalSearch("");
+    setModalPage(1);
+    setModalSeatsPerRow(30);
 
     try {
-      dispatch(seatAllocationStarted({ seed }));
+      const committedRes = await axios.get<SeatApiResponse>(
+        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
+          room.roomCode
+        )}`,
+        { params: { _t: Date.now() } }
+      );
 
-      const students: Student[] = userCampaigns.map((u: any) => ({ id: u.user_id, familyGroup: u.family_group_id ?? `FG-${u.user_id}` }));
+      const committed = committedRes.data;
+      console.log(committed)
 
-      if (students.length === 0) throw new Error("ไม่พบข้อมูลผู้สอบสำหรับ Campaign นี้");
-      if (roomSeats.length === 0) throw new Error("ไม่พบข้อมูลแผนผังที่นั่งของ Site นี้");
-      if (students.length > totalSeats) throw new Error(`ผู้สอบ (${students.length}) มากกว่าที่นั่ง (${totalSeats})`);
+      if (committed.seats && committed.seats.length > 0) {
+        console.log("gy")
+        const seatCells = mapApiSeatsToCells(committed);
 
-      const allocator = new ExamSeatAllocator(seed, [17, 43, 100]);
-      const allocs = allocator.allocateSeats(students, totalSeats, columns);
-      const vios = detectFamilyViolations(allocs, totalSeats, columns);
+        setRoomSeats((prev) => ({
+          ...prev,
+          [room.roomCode]: seatCells,
+        }));
 
-      // map row/col -> seat_code
-      const seatMap = new Map<string, string>();
-      roomSeats.forEach((seat) => seatMap.set(`${seat.row_no}-${seat.col_no}`, seat.seat_code));
+        if (committed.seatsPerRow && committed.seatsPerRow > 0) {
+          setModalSeatsPerRow(committed.seatsPerRow);
+        }
 
-      const finalAssignments: AllocationWithSeatCode[] = allocs.map((a) => ({
-        ...a,
-        seatCode: seatMap.get(`${a.row}-${a.col}`) ?? "UNKNOWN",
-        roomCode: roomSeats[0]?.room_code ?? "A101", // TODO: handle multi-room grouping if needed
+        return; // ไม่ต้องไป preview
+      }
+
+      // 2) ถ้ายังไม่มีใน DB → preview
+      const initialSeatsPerRow = 30;
+      const previewRes = await axios.get<SeatApiResponse>(
+        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
+          room.roomCode
+        )}/preview`,
+        {
+          params: {
+            seatsPerRow: initialSeatsPerRow,
+            _t: Date.now(),
+          },
+        }
+      );
+      
+
+      const data = previewRes.data;
+      console.log(data)
+      const seatCells = mapApiSeatsToCells(data);
+
+      setRoomSeats((prev) => ({
+        ...prev,
+        [room.roomCode]: seatCells,
       }));
 
-      dispatch(seatAllocationFinished({ assignments: finalAssignments, violations: vios }));
-      toast({ title: "จัดที่นั่ง (Inline) สำเร็จ", description: `จัดแล้ว ${allocs.length} ที่นั่ง | พบ ${vios.length} ข้อผิดพลาด` });
-    } catch (e: any) {
-      toast({ title: "เกิดข้อผิดพลาด (Inline)", description: e?.message ?? "ไม่สามารถจัดที่นั่งได้", variant: "destructive" });
-      dispatch(seatAllocationFinished({ assignments: [], violations: [] }));
+      setModalSeatsPerRow(data.seatsPerRow || initialSeatsPerRow);
+    } catch (err) {
+      console.error("fetch seat layout error", err);
+
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถเปิดได้",
+        text: "ไม่สามารถเชื่อมต่อ API ได้",
+        confirmButtonText: "ตกลง",
+      }).then(() => {
+        setSelectedRoom(null);
+      });
     }
   };
 
-  const handleReset = () => {
-    dispatch(seatAssignmentsCleared());
-    toast({ title: "ล้างการจัดที่นั่งแล้ว" });
-  };
+  // ===== จัดใหม่ (Preview) สำหรับห้องที่เปิดอยู่ =====
+  const handleApplySeatsPerRow = async () => {
+    if (!campaign?.id || !selectedRoom) return;
 
-  const handleSaveToDB = () => {
-    if (!activeCampaign) return;
-    if (violations.length > 0) {
-      if (!window.confirm(`พบ ${violations.length} ข้อผิดพลาด. ยืนยันการบันทึก?`)) return;
+    try {
+      const seatsPerRow = modalSeatsPerRow || 30;
+
+      const res = await axios.get<SeatApiResponse>(
+        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
+          selectedRoom.roomCode
+        )}/preview`,
+        {
+          params: {
+            seatsPerRow,
+            _t: Date.now(),
+          },
+        }
+      );
+
+      const data = res.data;
+      const seatCells = mapApiSeatsToCells(data);
+
+      setModalSeatsPerRow(data.seatsPerRow || seatsPerRow);
+
+      setRoomSeats((prev) => ({
+        ...prev,
+        [selectedRoom.roomCode]: seatCells,
+      }));
+
+      Swal.fire({
+        icon: "success",
+        title: "จัดที่นั่งใหม่ (Preview) แล้ว",
+        showConfirmButton: false,
+        timer: 1200,
+      });
+    } catch (err) {
+      console.error("re-allocate seat error", err);
+      Swal.fire({
+        icon: "error",
+        title: "จัดที่นั่งไม่สำเร็จ",
+        text: "กรุณาลองใหม่อีกครั้ง",
+      });
     }
-    dispatch(saveSeatAllocationThunk({ campaignId: activeCampaign.id, assignments }))
-      .unwrap()
-      .then(() => toast({ title: "บันทึกการจัดที่นั่งสำเร็จ" }))
-      .catch((err) => toast({ title: "บันทึกล้มเหลว", description: err.message, variant: "destructive" }));
   };
 
-  // Derived UI states
-  const hasData = roomSeats.length > 0 && userCampaigns.length > 0;
-  const showEmpty = !hasData && !meta.allocating;
+  // ===== ยืนยันจัดสรร (commit) =====
+  const handleConfirmSeatAllocation = async () => {
+    if (!campaign?.id || !selectedRoom) return;
+
+    try {
+      await axios.post(
+        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
+          selectedRoom.roomCode
+        )}/confirm`,
+        {
+          seatsPerRow: modalSeatsPerRow,
+        }
+      );
+
+      const committedRes = await axios.get<SeatApiResponse>(
+        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
+          selectedRoom.roomCode
+        )}`,
+        { params: { _t: Date.now() } }
+      );
+
+      const committed = committedRes.data;
+
+      if (committed.seats && committed.seats.length > 0) {
+        const seatCells = mapApiSeatsToCells(committed);
+
+        setRoomSeats((prev) => ({
+          ...prev,
+          [selectedRoom.roomCode]: seatCells,
+        }));
+
+        setModalSeatsPerRow(
+          committed.seatsPerRow || modalSeatsPerRow || 30
+        );
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: "ยืนยันการจัดสรรเรียบร้อยแล้ว",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+
+      setSelectedRoom(null);
+
+      // reload summary (allocatedCount ฯลฯ)
+      dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
+    } catch (err) {
+      console.error("confirm seat allocation error", err);
+      Swal.fire({
+        icon: "error",
+        title: "ยืนยันไม่สำเร็จ",
+        text: "กรุณาลองใหม่อีกครั้ง",
+      });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setSelectedRoom(null);
+    setModalSearch("");
+    setModalPage(1);
+  };
 
   return (
-    <div className="container py-4">
-      <style>{`
-        .toolbar-sticky { position: sticky; top: 0; z-index: 1020; backdrop-filter: blur(6px); }
-        .legend-swatch { width: 16px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid rgba(0,0,0,.1); }
-        .swatch-empty { background: var(--bs-tertiary-bg,#f8f9fa); }
-        .swatch-occupied { background: rgba(25,135,84,.15); border-color: rgba(25,135,84,.35); }
-        .swatch-violation { background: rgba(220,53,69,.15); border-color: rgba(220,53,69,.35); }
-        .seating-grid { display: grid; gap: .5rem; margin-top: .75rem; }
-        .seat { border: 1px solid var(--bs-border-color, #dee2e6); border-radius: .5rem; padding: .4rem .5rem; min-height: 64px; position: relative; background: var(--bs-body-bg,#fff); }
-        .seat-empty { background: var(--bs-tertiary-bg,#f8f9fa); }
-        .seat-occupied { background: rgba(25,135,84,.1); border-color: rgba(25,135,84,.35); }
-        .seat-violation { background: rgba(220,53,69,.1); border-color: rgba(220,53,69,.45); box-shadow: inset 0 0 0 2px rgba(220,53,69,.2); }
-        .seat-code { font-weight: 600; font-size: .95rem; }
-        .seat-sub { font-size: .8rem; color: var(--bs-secondary-color,#6c757d); }
-        .seat-meta { position: absolute; right: .35rem; bottom: .25rem; font-size: .7rem; color: var(--bs-secondary-color,#6c757d); }
-        .empty-state { border: 1px dashed var(--bs-border-color,#dee2e6); border-radius: .75rem; padding: 1.25rem; text-align: center; }
-      `}</style>
-
-      {/* Header */}
-      <SectionHeader
-        title="การจัดที่นั่งสอบ "
-        subtitle={`Campaign: ${activeCampaign?.name ?? "N/A"}`}
-      />
-
-      {/* Toolbar */}
-      <div className="card toolbar-sticky shadow-sm mb-3">
-        <div className="card-body d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center justify-content-lg-between">
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            <StatChip label="seed" value={meta.lastSeed ?? "—"} />
-            <StatChip label="จัดแล้ว" value={`${seatsAssigned}/${totalSeats}`} tone="success" />
-            <StatChip label="ผิดพลาด" value={violations.length} tone={violations.length ? "danger" : "light"} />
+    <div className="container-fluid px-0">
+      <div className="d-flex flex-column gap-4">
+        {/* ===== Header ===== */}
+        <div className="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-2">
+          <div>
+            <h4 className="mb-1">จัดการที่นั่งสอบ</h4>
+            <div className="text-muted">
+              แสดงรายการห้องสอบและสถานะการจัดที่นั่ง (กด “เปิดดู” เพื่อดูผังเต็ม)
+            </div>
           </div>
 
           <div className="d-flex flex-wrap align-items-center gap-2">
-            <div className="input-group" style={{ maxWidth: 320 }}>
-              <span className="input-group-text bg-white"><Search size={16} /></span>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="ค้นหา seat / ID / family"
-                value={filterText}
-                onChange={(e) => setFilterText(e.target.value)}
-              />
-            </div>
-            <div className="form-check form-switch">
-              <input className="form-check-input" type="checkbox" id="violationsOnly" checked={showViolationsOnly} onChange={(e) => setShowViolationsOnly(e.target.checked)} />
-              <label className="form-check-label small" htmlFor="violationsOnly">แสดงเฉพาะที่ผิดพลาด</label>
-            </div>
-          </div>
-
-          <div className="d-flex flex-wrap gap-2">
-            <div className="d-flex align-items-center gap-2">
-              <label htmlFor="seed" className="form-label mb-0 small text-muted">ค่า seed</label>
-              <input id="seed" type="number" className="form-control" style={{ width: "8rem" }} value={seed} onChange={(e) => setSeed(Number(e.target.value))} />
-              <button type="button" className="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center" onClick={() => setSeed(Math.floor(Math.random() * 9999))} aria-label="สุ่มค่า seed">
-                <RotateCcw size={16} />
-              </button>
-            </div>
-
-            <ShowIfCan permission="allocate_seats">
-              <button type="button" onClick={handleAllocateInline} className="btn btn-primary d-inline-flex align-items-center gap-2" disabled={meta.allocating || userCampaigns.length === 0 || roomSeats.length === 0}>
-                {meta.allocating ? <Loader2 size={16} className="spin-animation" /> : <PlayCircle size={16} />}
-                {meta.allocating ? "กำลังจัดที่นั่ง..." : `เริ่มจัดที่นั่ง (${userCampaigns.length} คน)`}
-              </button>
-            </ShowIfCan>
-
-            <button type="button" className="btn btn-outline-secondary" onClick={handleReset}>รีเซ็ต</button>
-            <button type="button" className="btn btn-success d-inline-flex align-items-center gap-2" onClick={handleSaveToDB} disabled={meta.allocating || assignments.length === 0}>
-              <DownloadCloud size={16} />{meta.allocating ? "กำลังบันทึก..." : "บันทึกลงฐานข้อมูล"}
-            </button>
+            <span className="badge text-bg-light border">
+              Campaign: {campaign?.code ?? campaign?.id ?? "-"}
+            </span>
+            <span className="badge text-bg-light border">
+              Rooms: {rooms.length}
+            </span>
+            <span className="badge text-bg-light border">
+              Total capacity: {roomsTotal}
+            </span>
           </div>
         </div>
 
-        <div className="card-footer bg-white d-flex flex-wrap align-items-center gap-3">
-          <Legend />
-          <span className="text-muted small d-flex align-items-center gap-1"><Info size={14}/> เคล็ดลับ: พิมพ์ "FG-" เพื่อค้นหากลุ่มครอบครัว</span>
-        </div>
-      </div>
+        {/* ===== Summary cards ===== */}
+        <div className="row g-3">
+          <div className="col-md-6 col-xl-3">
+            <div className="card shadow-sm h-100">
+              <div className="card-body">
+                <div className="text-uppercase small text-muted mb-1">
+                  จำนวนห้องสอบในรอบนี้
+                </div>
+                <div className="display-6 mb-0">{rooms.length}</div>
+              </div>
+            </div>
+          </div>
 
-      {/* Content */}
-      {showEmpty && (
-        <div className="empty-state">
-          <div className="d-flex flex-column align-items-center gap-2">
-            <AlertTriangle className="text-warning" />
-            <div className="fw-semibold">ยังไม่มีข้อมูลให้แสดง</div>
-            <div className="text-muted small">ดึงผู้สอบของแคมเปญและแผนผังที่นั่งของไซต์ก่อน</div>
+          <div className="col-md-6 col-xl-3">
+            <div className="card shadow-sm h-100">
+              <div className="card-body">
+                <div className="text-uppercase small text-muted mb-1">
+                  ความจุรวม (คน)
+                </div>
+                <div className="display-6 mb-0">{roomsTotal}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-xl-6">
+            <div className="card shadow-sm h-100">
+              <div className="card-body">
+                <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+                  <div>
+                    <div className="text-uppercase small text-muted mb-1">
+                      ตั้งค่าการแสดงผล (ใช้ตอนทำ preview ต่อคอลัมน์ในอนาคต)
+                    </div>
+                    <div className="fw-semibold">
+                      จำนวนที่นั่งต่อคอลัมน์ (แนวตั้ง)
+                      <span className="badge text-bg-primary ms-2">
+                        {seatsPerColumn}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ minWidth: 340 }}>
+                    <div className="input-group">
+                      <span className="input-group-text">ที่นั่ง/คอลัมน์</span>
+                      <input
+                        type="number"
+                        className="form-control"
+                        min={1}
+                        value={inputSeatsPerColumn}
+                        onChange={(e) =>
+                          setInputSeatsPerColumn(Number(e.target.value))
+                        }
+                      />
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleSetSeatsPerColumn}
+                      >
+                        ใช้ค่า
+                      </button>
+                    </div>
+                    <div className="small text-muted mt-1">แนะนำ: 20–40</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      )}
 
-      {hasData && (
+        {/* ===== Rooms grid ===== */}
         <div className="card shadow-sm">
-          <div className="card-header bg-white d-flex justify-content-between align-items-center">
-            <div className="fw-semibold">แผนผังที่นั่ง</div>
-            <div className="text-muted small">Site: {currentSession?.site_id ?? "—"} · Columns: {columns} · Total seats: {totalSeats}</div>
+          <div className="card-header bg-white">
+            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+              <div>
+                <div className="fw-semibold">รายการห้องสอบ</div>
+                <div className="text-muted small">
+                  ดูสถานะการจัดสรรแบบรวม แล้วกด “เปิดดู” เพื่อเรียก API ผังที่นั่งของห้องนั้น ๆ
+                </div>
+              </div>
+              <div className="text-muted small">
+                หน้า {currentPage} / {totalPages}
+              </div>
+            </div>
           </div>
+
           <div className="card-body">
-            <SeatingGrid
-              assignments={assignments}
-              violations={violations}
-              roomSeats={roomSeats}
-              columns={columns}
-              filterText={filterText}
-              showViolationsOnly={showViolationsOnly}
-            />
+            <div className="table-responsive">
+              <table className="table table-hover align-middle mb-0">
+                <thead className="table-light">
+                  <tr>
+                    <th style={{ width: "20%" }}>ห้องสอบ</th>
+                    <th style={{ width: "10%" }}>ความจุ (ที่นั่ง)</th>
+                    <th style={{ width: "20%" }}>สถานะการจัดสรร</th>
+                    <th style={{ width: "20%" }}>จัดแล้ว / ความจุ</th>
+                    <th className="text-end" style={{ width: "15%" }}>
+                      การจัดการ
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentRooms.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="text-center text-muted py-4">
+                        ไม่มีห้องสอบในหน้านี้
+                      </td>
+                    </tr>
+                  )}
+
+                  {currentRooms.map((room) => {
+                    const cells = getRoomSeatCells(room);
+                    const anyRoom = room as any;
+                    const allocatedCount = Number(
+                      anyRoom.allocatedCount ?? cells.length ?? 0
+                    );
+
+                    let statusBadge: React.ReactNode;
+                    if (allocatedCount <= 0) {
+                      statusBadge = (
+                        <span className="badge text-bg-danger">
+                          ยังไม่จัดสรร
+                        </span>
+                      );
+                    } else if (allocatedCount < room.capacity) {
+                      statusBadge = (
+                        <span className="badge text-bg-warning">
+                          จัดสรรบางส่วน
+                        </span>
+                      );
+                    } else {
+                      statusBadge = (
+                        <span className="badge text-bg-success">
+                          จัดสรรครบ
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <tr key={room.roomCode}>
+                        <td>
+                          <strong>{room.roomCode}</strong>
+                        </td>
+                        <td>{room.capacity}</td>
+                        <td>{statusBadge}</td>
+                        <td>
+                          {allocatedCount} / {room.capacity} คน
+                        </td>
+                        <td className="text-end">
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => handleOpenRoom(room)}
+                          >
+                            เปิดดู
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <nav className="mt-3">
+              <ul className="pagination justify-content-center mb-0">
+                <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                  <button
+                    className="page-link"
+                    onClick={() =>
+                      setCurrentPage((p) => clamp(p - 1, 1, totalPages))
+                    }
+                  >
+                    Previous
+                  </button>
+                </li>
+
+                {Array.from({ length: totalPages }).map((_, idx) => (
+                  <li
+                    key={idx}
+                    className={`page-item ${
+                      currentPage === idx + 1 ? "active" : ""
+                    }`}
+                  >
+                    <button
+                      className="page-link"
+                      onClick={() => setCurrentPage(idx + 1)}
+                    >
+                      {idx + 1}
+                    </button>
+                  </li>
+                ))}
+
+                <li
+                  className={`page-item ${
+                    currentPage === totalPages ? "disabled" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() =>
+                      setCurrentPage((p) => clamp(p + 1, 1, totalPages))
+                    }
+                  >
+                    Next
+                  </button>
+                </li>
+              </ul>
+            </nav>
           </div>
         </div>
-      )}
+
+        {/* ===== Modal: ผังที่นั่ง ===== */}
+        {selectedRoom && (
+          <div
+            className="modal d-block"
+            tabIndex={-1}
+            role="dialog"
+            style={{ background: "rgba(0,0,0,.35)" }}
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget) handleCloseModal();
+            }}
+          >
+            <div
+              className="modal-dialog modal-xl modal-dialog-scrollable"
+              role="document"
+            >
+              <div className="modal-content">
+                <div className="modal-header">
+                  <div>
+                    <h5 className="modal-title mb-1">
+                      ห้อง {selectedRoom.roomCode}
+                    </h5>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn-close"
+                    aria-label="Close"
+                    onClick={handleCloseModal}
+                  />
+                </div>
+
+                <div className="modal-body">
+                  <div className="row g-3 align-items-end mb-3">
+                    <div className="col-md-5">
+                      <label className="form-label">
+                        ค้นหา (userId / ชื่อ)
+                      </label>
+                      <input
+                        className="form-control"
+                        placeholder="นายทดสอบ"
+                        value={modalSearch}
+                        onChange={(e) => setModalSearch(e.target.value)}
+                      />
+                    </div>
+
+                    <div className="col-12 col-md-5 d-flex flex-column flex-md-row align-items-end gap-2">
+                      <div className="flex-grow-1">
+                        <label className="form-label">ที่นั่งต่อแถว</label>
+                        <input
+                          type="number"
+                          className="form-control"
+                          min={5}
+                          max={60}
+                          value={modalSeatsPerRow}
+                          onChange={(e) =>
+                            setModalSeatsPerRow(
+                              clamp(Number(e.target.value), 5, 60)
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div className="mt-2 mt-md-0">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={handleApplySeatsPerRow}
+                        >
+                          จัดที่นั่งใหม่
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="col-md-4 d-flex gap-2 justify-content-md-end">
+                      <span className="badge text-bg-light border align-self-center">
+                        capacity: {selectedRoom.capacity}
+                      </span>
+                      <span className="badge text-bg-light border align-self-center">
+                        show: {modalCells.length}
+                      </span>
+                      <button
+                        className="btn btn-outline-secondary"
+                        onClick={() => setModalSearch("")}
+                      >
+                        ล้างค้นหา
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border rounded-3 p-2 bg-light">
+                    <div
+                      className="overflow-auto"
+                      style={{ maxWidth: "100%", maxHeight: 600 }}
+                    >
+                      <div className="d-inline-flex gap-2 pe-2">
+                        {modalColumnsPage.map((col, colIdx) => (
+                          <div
+                            key={colIdx}
+                            className="d-flex flex-column gap-2 flex-shrink-0"
+                          >
+                            <div className="small text-muted text-center">
+                              แถวที่{" "}
+                              {(modalPage - 1) * modalColsPerPage +
+                                colIdx +
+                                1}
+                            </div>
+
+                            {col.map((cell) => (
+                              <div
+                                key={`${selectedRoom.roomCode}-${cell.seatNo}-${cell.user_code}`}
+                                className="border rounded-3 bg-white d-flex flex-column justify-content-between"
+                                style={modalCellStyle}
+                                title={`${cell.user_code} - ${cell.fullName}`}
+                              >
+                                <div className="d-flex justify-content-between align-items-center">
+                                  <span className="badge text-bg-light border">
+                                    ลำดับที่ {cell.seatNo}
+                                  </span>
+                                  <span className="fw-semibold">
+                                    {cell.user_code}
+                                  </span>
+                                </div>
+
+                                <div className="text-truncate">
+                                  {cell.fullName}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
+                    <div className="d-flex gap-2 align-items-center">
+                      <span className="text-muted small">Cols/หน้า</span>
+                      <select
+                        className="form-select form-select-sm"
+                        style={{ width: 120 }}
+                        value={modalColsPerPage}
+                        onChange={(e) => {
+                          setModalColsPerPage(Number(e.target.value));
+                          setModalPage(1);
+                        }}
+                      >
+                        {[3, 4, 6, 8, 10, 12].map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+
+                      <span className="text-muted small">
+                        หน้า {modalPage}/{totalModalPages} (ทั้งหมด{" "}
+                        {modalColumns.length} คอลัมน์)
+                      </span>
+                    </div>
+
+                    <div className="btn-group">
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={modalPage <= 1}
+                        onClick={() =>
+                          setModalPage((p) => Math.max(1, p - 1))
+                        }
+                      >
+                        Previous
+                      </button>
+                      <button
+                        className="btn btn-outline-secondary btn-sm"
+                        disabled={modalPage >= totalModalPages}
+                        onClick={() =>
+                          setModalPage((p) =>
+                            Math.min(totalModalPages, p + 1)
+                          )
+                        }
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={handleCloseModal}
+                  >
+                    ปิด
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-success"
+                    onClick={handleConfirmSeatAllocation}
+                  >
+                    ยืนยันการจัดสรร
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
