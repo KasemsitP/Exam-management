@@ -18,6 +18,7 @@ import { roomSeatsSlice} from "./slices/roomseat.slice"
 import { examRoomsSlice } from "./slices/examRooms.slice";
 import { qrSlice } from "./slices/qrscanner.slice";
 import { subjectsSlice } from "./slices/subjects.slice";
+import { dashboardSlice } from "./slices/dashboard.slice";
 export const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
@@ -38,7 +39,8 @@ export const store = configureStore({
     roomSeats : roomSeatsSlice.reducer,
     qr: qrSlice.reducer,
     bagHandover: bagHandoverSlice.reducer,
-    subjects: subjectsSlice.reducer
+    subjects: subjectsSlice.reducer,
+    dashboard:dashboardSlice.reducer
 
   },
   middleware: (getDefaultMiddleware) =>

@@ -17,11 +17,12 @@ export default function KeyManagementPage() {
     prerequisites,
     encryptionStatus,
     lastBulkEncryptionStats,
-
+    myKeyId,
+    IshasKey,
     keyInput,
     setKeyInput,
     selectedSessionId,
-
+    headerSummary,
     isLoading,
     canGenerate,
     isEncryptionLoading,
@@ -36,24 +37,31 @@ export default function KeyManagementPage() {
   return (
     <ShowIfCan anyOf={["manage_keys"]}>
       <div className="container-fluid px-3 px-sm-4 py-4">
-        <KeyHeader activeCampaign={activeCampaign} />
+        <KeyHeader activeCampaign={activeCampaign}
+          headerSummary={headerSummary}
+        />
+
 
         <KeyCreateCard
+          activeKeys={activeKeys}
+          IsHasKey={IshasKey}
+          myKeyId={myKeyId}
           keyInput={keyInput}
           onKeyInputChange={setKeyInput}
+          onDeleteKey={handleDeleteKey}
           canGenerate={canGenerate}
           isLoading={isLoading}
           hasActiveCampaign={!!activeCampaign}
           activeKeyCount={activeKeys.length}
           onSaveKey={handleSaveKey}
         />
-
+        {/* 
         <ActiveKeysCard
           activeKeys={activeKeys}
           keyStatus={keyStatus}
           isLoading={isLoading}
           onDeleteKey={handleDeleteKey}
-        />
+        /> */}
 
         <EncryptionCard
           activeKeysCount={activeKeys.length}
@@ -69,6 +77,9 @@ export default function KeyManagementPage() {
           onRunBulkEncryption={handleRunBulkEncryption}
         />
       </div>
+
+
     </ShowIfCan>
   );
 }
+

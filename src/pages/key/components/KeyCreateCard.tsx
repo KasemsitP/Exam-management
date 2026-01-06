@@ -1,9 +1,13 @@
 // components/KeyCreateCard.tsx
-import { Loader2, Plus, ShieldCheck } from "lucide-react";
+import { Lightbulb, Loader2, Minus, Plus, ShieldCheck } from "lucide-react";
 
 interface KeyCreateCardProps {
+  activeKeys: any[];
+  myKeyId: number | null;
+  IsHasKey: boolean
   keyInput: string;
   onKeyInputChange: (value: string) => void;
+  onDeleteKey: (id: number) => void;
   canGenerate: boolean;
   isLoading: boolean;
   hasActiveCampaign: boolean;
@@ -12,8 +16,12 @@ interface KeyCreateCardProps {
 }
 
 export default function KeyCreateCard({
+  activeKeys,
+  myKeyId,
+  IsHasKey,
   keyInput,
   onKeyInputChange,
+  onDeleteKey,
   canGenerate,
   isLoading,
   hasActiveCampaign,
@@ -21,15 +29,15 @@ export default function KeyCreateCard({
   onSaveKey,
 }: KeyCreateCardProps) {
   return (
-    <div className="card shadow-sm mb-4">
+    <div className="card shadow-sm mb-4 mt-4">
       <div className="card-header bg-white">
-        <h6 className="mb-0">1. เพิ่มคีย์ (สูงสุด 2 คีย์)</h6>
+        <h6 className="mb-0">1.ลงทะเบียนคีย์เข้ารหัส</h6>
       </div>
       <div className="card-body">
         <div className="row g-3">
           <div className="col-lg-8">
             <label htmlFor="key-input" className="form-label">
-              คีย์ลับ (Key / Secret)
+              คีย์สำหรับการเข้ารหัส
             </label>
             <input
               id="key-input"
@@ -38,14 +46,14 @@ export default function KeyCreateCard({
               placeholder="กรอกคีย์ลับที่ต้องการบันทึก"
               value={keyInput}
               onChange={(e) => onKeyInputChange(e.target.value)}
-              disabled={!canGenerate}
+              disabled={!canGenerate || IsHasKey}
             />
           </div>
-          <div className="col-lg-4 d-flex align-items-end">
+          <div className="col-lg-4 d-flex align-items-end gap-3">
             <button
               className="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2"
               onClick={onSaveKey}
-              disabled={!canGenerate || !hasActiveCampaign || !keyInput.trim()}
+              disabled={!canGenerate || !hasActiveCampaign || !keyInput.trim() || IsHasKey}
             >
               {isLoading ? (
                 <Loader2 size={16} className="spin-animation" />
@@ -54,6 +62,31 @@ export default function KeyCreateCard({
               )}
               สร้างคีย์ใหม่
             </button>
+            <button
+              className="btn btn-danger w-100 d-inline-flex align-items-center justify-content-center gap-2"
+              onClick={() => myKeyId && onDeleteKey(myKeyId)}
+              disabled={!IsHasKey || !myKeyId}
+            >
+              {isLoading ? (
+                <Loader2 size={16} className="spin-animation" />
+              ) : (
+                <Minus size={16} />
+              )}
+              ลบคีย์
+            </button>
+            <button
+              className="btn btn-secondary w-100 d-inline-flex align-items-center justify-content-center gap-2"
+              onClick={onSaveKey}
+              disabled={!IsHasKey}
+            >
+              {isLoading ? (
+                <Loader2 size={16} className="spin-animation" />
+              ) : (
+                <Lightbulb size={16} />
+              )}
+              ลืมคีย์
+            </button>
+
           </div>
         </div>
 

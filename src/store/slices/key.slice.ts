@@ -2,10 +2,6 @@ import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from "../index";
 
-// (ใช้ { keyManagement: KeyManagementState } เพื่อหลีกเลี่ยง Circular Import)
-type LocalRootState = { keyManagement: KeyManagementState };
-
-// --- 1. Interfaces ---
 
 export interface CampaignKey {
   id: number;
@@ -42,13 +38,11 @@ export interface KeyManagementState {
   error: string | null;
   prerequisites: PrerequisiteStatus | null;
   officialCiphertext: string | null;
-  lastBulkEncryptionStats: BulkEncryptionResponse | null; 
+  lastBulkEncryptionStats: BulkEncryptionResponse | null;
   encryptionStatus: "idle" | "loading" | "succeeded" | "failed";
 }
 
-// --- 2. Thunks (เรียก API) ---
 
-// (fetchKeysForCampaign, saveNewKey, deleteKey - สมมติว่ามีอยู่)
 export const fetchKeysForCampaign = createAsyncThunk<
   CampaignKey[],
   number,
@@ -71,21 +65,45 @@ export const fetchKeysForCampaign = createAsyncThunk<
     }
   }
 );
+
+export const fetchKeysForCampaignByManager = createAsyncThunk<
+  CampaignKey[],
+  { campaignId: number, AccountId: number },
+  { rejectValue: string }
+>(
+  "keyManagementManagers/fetchKeys",
+  async ({ campaignId, AccountId }, { rejectWithValue }) => {
+    console.log(campaignId, AccountId)
+    try {
+      const response = await axios.get<CampaignKey[]>(
+        `/api/keys/campaign/${campaignId}/${AccountId}`
+      );
+      console.log(response.data)
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(
+          error.response?.data?.message ?? "Failed to fetch keys"
+        );
+      }
+      return rejectWithValue("Failed to fetch keys");
+    }
+  }
+);
 export const saveNewKey = createAsyncThunk<
   CampaignKey,
-  { campaignId: number; key: string },
+  { campaignId: number; key: string; account_id : number },
   { rejectValue: string }
 >(
   "keyManagement/saveNewKey",
-  async ({ campaignId, key }, { rejectWithValue }) => {
+  async ({ campaignId, key, account_id }, { rejectWithValue }) => {
     try {
       const response = await axios.post<CampaignKey>(
         "/api/keys",
-        { campaignId, key }
+        { campaignId, key , account_id }
       );
       return response.data;
     } catch (error: unknown) {
-      // ... (error handling)
       return rejectWithValue("Failed to save key");
     }
   }
@@ -101,15 +119,12 @@ export const deleteKey = createAsyncThunk<
       await axios.delete(`/api/keys/${keyId}`);
       return keyId;
     } catch (error: unknown) {
-      // ... (error handling)
       return rejectWithValue("Failed to delete key");
     }
   }
 );
 
-/**
- * [GET] ตรวจสอบเงื่อนไข (คีย์ครบ 2, Import แล้ว)
- */
+
 export const checkEncryptionPrerequisites = createAsyncThunk<
   PrerequisiteStatus,
   number,
@@ -133,20 +148,17 @@ export const checkEncryptionPrerequisites = createAsyncThunk<
   }
 );
 
-/**
- * [ ⭐️ นี่คือ Thunk ที่คุณถามถึง ⭐️ ]
- * [POST] สั่งให้ Server เข้ารหัส
- */
+
 export const runBulkEncryptionForSession = createAsyncThunk<
   BulkEncryptionResponse,
   BulkEncryptionPayload,
   { rejectValue: string }
 >(
-  "keyManagement/runBulkEncryption", // 👈 (เปลี่ยนชื่อ)
+  "keyManagement/runBulkEncryption",
   async (payload, { rejectWithValue }) => {
     try {
       const response = await axios.post<BulkEncryptionResponse>(
-        "/api/keys/encrypt-session-bulk", // 👈 (Endpoint ใหม่)
+        "/api/keys/encrypt-session-bulk",
         payload
       );
       return response.data;
@@ -161,18 +173,17 @@ export const runBulkEncryptionForSession = createAsyncThunk<
   }
 );
 
-// --- 3. State ---
+
 const initialState: KeyManagementState = {
   status: "idle",
   keys: [],
   error: null,
   prerequisites: null,
   officialCiphertext: null,
-  lastBulkEncryptionStats: null, // 👈 (แก้)
+  lastBulkEncryptionStats: null,
   encryptionStatus: "idle",
 };
 
-// --- 4. Slice ---
 const keyManagementSlice = createSlice({
   name: "keyManagement",
   initialState,
@@ -192,7 +203,6 @@ const keyManagementSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // (Fetch, Save, Delete Keys - ... )
       .addCase(fetchKeysForCampaign.pending, (state) => {
         state.status = "loading";
         state.error = null;
@@ -206,6 +216,19 @@ const keyManagementSlice = createSlice({
         state.status = "failed";
         state.error = action.payload ?? "Failed to fetch keys";
       })
+      .addCase(fetchKeysForCampaignByManager.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+        state.keys = [];
+      })
+      .addCase(fetchKeysForCampaignByManager.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.keys = action.payload;
+      })
+      .addCase(fetchKeysForCampaignByManager.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed to fetch keys";
+      })
       .addCase(saveNewKey.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.keys.push(action.payload);
@@ -215,23 +238,20 @@ const keyManagementSlice = createSlice({
         state.keys = state.keys.filter((key) => key.id !== action.payload);
       })
 
-      // (Check Prerequisites)
       .addCase(checkEncryptionPrerequisites.pending, (state) => {
         state.prerequisites = null;
       })
       .addCase(checkEncryptionPrerequisites.fulfilled, (state, action) => {
         state.prerequisites = action.payload;
       })
-      
-      // [ ⭐️ นี่คือการอัปเดต State ⭐️ ]
-      // (Run Encryption)
+
       .addCase(runBulkEncryptionForSession.pending, (state) => {
         state.encryptionStatus = "loading";
         state.lastBulkEncryptionStats = null;
       })
       .addCase(runBulkEncryptionForSession.fulfilled, (state, action) => {
         state.encryptionStatus = "succeeded";
-        state.lastBulkEncryptionStats = action.payload; // 👈 (เก็บ Stats)
+        state.lastBulkEncryptionStats = action.payload;
       })
       .addCase(runBulkEncryptionForSession.rejected, (state, action) => {
         state.encryptionStatus = "failed";
@@ -243,10 +263,6 @@ const keyManagementSlice = createSlice({
 export const { clearActiveKeys, clearEncryptionResult } =
   keyManagementSlice.actions;
 export { keyManagementSlice };
-
-// --- 5. Selectors ---
-// --- 5. Selectors ---
-// ใช้ RootState จาก store โดยตรง
 
 export const selectKeyManagementStatus = (state: RootState) =>
   state.keyManagement.status;
