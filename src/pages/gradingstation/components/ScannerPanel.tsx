@@ -60,8 +60,8 @@ export default function ScannerPanel({
     <div className="card shadow-sm border-0">
       <div className="card-header bg-white d-flex align-items-center justify-content-between">
         <div className="d-flex align-items-center gap-2">
-          <Scan className="text-primary" size={18} />
-          <span className="fw-semibold">สแกน & บันทึกคะแนน</span>
+          {/* <Scan className="text-primary" size={18} /> */}
+          <span className="fw-semibold">สแกนคิวอาร์โค้ดและบันทึกคะแนน</span>
         </div>
 
         <div className="small text-muted">
@@ -223,7 +223,7 @@ export default function ScannerPanel({
         {/* Manual input */}
         <div className="mt-3">
           <label className="form-label small d-flex align-items-center gap-2">
-            <Keyboard size={16} /> กรอก/วาง QR Payload (สำรอง)
+            วางคิวอาร์โค้ด
           </label>
           <div className="input-group">
             <input
@@ -239,9 +239,9 @@ export default function ScannerPanel({
               ตรวจสอบ
             </button>
           </div>
-          <div className="form-text">
+          {/* <div className="form-text">
             ใช้เมื่อกล้องอ่านไม่ติด หรือรับข้อมูลจากช่องทางอื่น
-          </div>
+          </div> */}
         </div>
 
         {/* Score form */}

@@ -10,7 +10,7 @@ export default function RecentScoresCard({ recent }: RecentScoresCardProps) {
   return (
     <div className="card shadow-sm">
       <div className="card-header bg-white d-flex align-items-center gap-2">
-        <Timer className="text-primary" size={16} />
+        {/* <Timer className="text-primary" size={16} /> */}
         <h6 className="mb-0">รายการล่าสุด</h6>
       </div>
       <div className="card-body">

@@ -390,10 +390,10 @@ export default function BagHandoverPage() {
         </div>
       ) : (
         <div className="d-flex flex-column gap-4">
-          <BagHandoverHeader
+          {/* <BagHandoverHeader
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
-          />
+          /> */}
 
           <BagHandoverCheckinCard
             form={form}
@@ -410,6 +410,8 @@ export default function BagHandoverPage() {
             onReturn={handleReturnBag}
             setFilterSessionId={setFilterSessionId}
             setSelectedBagId={setSelectedBagId}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
           />
 
           <div className="row g-4">

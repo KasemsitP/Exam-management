@@ -226,7 +226,7 @@ export default function ComposeBagModal({
                                   tracker: boundingBox,
                                 }}
                                 allowMultiple={false}
-                                scanDelay={1000}
+                                scanDelay={0}
                               />
                             ) : (
                               <div

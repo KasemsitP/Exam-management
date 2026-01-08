@@ -10,6 +10,8 @@ interface AccountsTableProps {
 
   onEdit: (account: Account) => void;
   onDelete: (account: Account) => void;
+  onRevoke: (account: Account) => void;
+  onUnrevoke: (account: Account) => void;
 }
 
 export default function AccountsTable({
@@ -18,6 +20,8 @@ export default function AccountsTable({
   status,
   onEdit,
   onDelete,
+  onRevoke,
+  onUnrevoke,
 }: AccountsTableProps) {
   const roleName = (id: number) =>
     roles.find((r) => r.id === id)?.name ?? `Role#${id}`;
@@ -63,6 +67,7 @@ export default function AccountsTable({
                   </td>
                   <td className="text-end">
                     <div className="d-flex justify-content-end gap-2">
+                      {/* ปุ่มแก้ไข */}
                       <button
                         className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
                         onClick={() => onEdit(acc)}
@@ -70,13 +75,28 @@ export default function AccountsTable({
                       >
                         <Edit size={14} /> แก้ไข
                       </button>
-                      <button
-                        className="btn btn-outline-dark btn-sm d-inline-flex align-items-center gap-1"
-                        onClick={() => onEdit(acc)}
-                        title="ถอนสิทธิ์"
-                      >
-                        <X size={14} /> ถอนสิทธิ์
-                      </button>
+
+                      {/* ถ้า active = true → แสดงปุ่ม Revoke */}
+                      {acc.active ? (
+                        <button
+                          className="btn btn-outline-dark btn-sm d-inline-flex align-items-center gap-1"
+                          onClick={() => onRevoke(acc)}
+                          title="ถอนสิทธิ์"
+                        >
+                          <X size={14} /> ถอนสิทธิ์
+                        </button>
+                      ) : (
+                        // ถ้า active = false → แสดงปุ่มคืนสิทธิ์
+                        <button
+                          className="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1"
+                          onClick={() => onUnrevoke(acc)}
+                          title="คืนสิทธิ์"
+                        >
+                          <CheckCircle2 size={14} /> คืนสิทธิ์
+                        </button>
+                      )}
+
+                      {/* ปุ่มลบ (เฉพาะคนมี permission) */}
                       <ShowIfCan permission="manage_accounts">
                         <button
                           className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
@@ -88,6 +108,7 @@ export default function AccountsTable({
                       </ShowIfCan>
                     </div>
                   </td>
+
                 </tr>
               ))}
 

@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
+import Swal from "sweetalert2";
 
 import {
   selectAccountsSlice,
@@ -12,7 +13,9 @@ import {
   createAccountThunk,
   updateAccountThunk,
   deleteAccountThunk,
-  fetchAccountsGradersThunk
+  fetchAccountsGradersThunk,
+  RevokeAccountThunk,
+  UnrevokeAccountThunk
 } from "@/store/slices/account.slice";
 import GradersHeader from "./components/GradersHeader";
 import GradersToolbar from "./components/GradersToolbar";
@@ -24,6 +27,7 @@ import { selectActiveCampaign } from "@/store/slices/examData.slice";
 import { createGraderAssignmentsThunk } from "@/store/slices/graders.slice";
 import { showSuccess } from "@/components/ui/successAlert"
 import { showError } from "@/components/ui/ErrorAlert";
+import { confirmAction } from "@/components/ui/comfirmaction";
 
 import type {
   Account,
@@ -127,41 +131,46 @@ export default function AccountsPage() {
           full_name: data.full_name,
           email: data.email,
           role: data.role_id,
+          campaignId: Number(camp.id)
         })
       ).unwrap();
-
-      const accountId = created.id;
-      const campaignId = Number(camp?.id);
-      console.log("lnw", accountId)
-
 
       const assignments = (data.assignments ?? [])
         .filter(a => a.sessionId > 0 && a.subjectId > 0 && a.questionNo > 0)
         .map(a => ({
-          campaignId,
-          accountId: accountId,
+          campaignId: Number(camp?.id),
+          accountId: created.id,
           sessionId: a.sessionId,
           subjectId: a.subjectId,
           questionNo: a.questionNo,
         }));
-      console.log(assignments)
+
       if (assignments.length > 0) {
         await dispatch(
           createGraderAssignmentsThunk({ assignments })
         ).unwrap();
       }
+    await dispatch(fetchAccountsThunk()).unwrap();
+    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+    await dispatch(fetchRolesThunk()).unwrap();
 
+      await Swal.fire({
+        icon: "success",
+        title: "สร้างผู้ตรวจสำเร็จ",
+        timer: 1500,
+        showConfirmButton: false,
+      });
 
-      dispatch(fetchAccountsThunk())
-      showSuccess(
-        "สร้างผู้ตรวจสำเร็จ",
-        ""
-      )
       setCreateOpen(false);
     } catch (err: any) {
-      showError("ไม่สามารถสร้างผู้ตรวจได้", err)
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถสร้างผู้ตรวจได้",
+        text: err?.message ?? "",
+      });
     }
   };
+
 
   const handleUpdate = async (id: number, data: UpdateAccountFormValues) => {
     try {
@@ -175,38 +184,128 @@ export default function AccountsPage() {
           newPassword: data.newPassword || undefined,
         })
       ).unwrap();
-      const acc = accounts.find((a) => a.id === id);
-      toast({
+
+      await dispatch(fetchAccountsThunk());
+
+      await Swal.fire({
+        icon: "success",
         title: "บันทึกการแก้ไขแล้ว",
-        description: acc?.username ?? "",
+        timer: 1200,
+        showConfirmButton: false,
       });
       setEditingAccount(null);
+    await dispatch(fetchAccountsThunk()).unwrap();
+    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+    await dispatch(fetchRolesThunk()).unwrap();
+
     } catch (err: any) {
-      toast({
+      await Swal.fire({
+        icon: "error",
         title: "อัปเดตล้มเหลว",
-        description: err?.message ?? "ไม่สามารถอัปเดตบัญชีได้",
-        variant: "destructive",
+        text: err?.message ?? "ไม่สามารถอัปเดตบัญชีได้",
       });
     }
   };
 
-  const handleDelete = async (acc: Account) => {
-    if (!window.confirm(`ยืนยันการลบผู้ใช้: ${acc.username}?`)) return;
+
+  const handleRevoke = async (acc: Account) => {
+    const ok = await confirmAction({
+      title: "ระงับบัญชี?",
+      text: `ต้องการ Revoke ผู้ใช้ ${acc.username} ใช่หรือไม่`,
+      confirmText: "Revoke",
+      confirmColor: "#DC2626",
+    });
+    if (!ok) return;
+
     try {
-      await dispatch(deleteAccountThunk(acc.id)).unwrap();
-      toast({
-        title: "ลบผู้ใช้แล้ว",
-        description: acc.username,
-        variant: "destructive",
+      await dispatch(RevokeAccountThunk(acc.id)).unwrap();
+
+      await Swal.fire({
+        icon: "success",
+        title: "Revoke สำเร็จ",
+        text: acc.username,
+        timer: 1200,
+        showConfirmButton: false,
       });
+      setEditingAccount(null);
+    await dispatch(fetchAccountsThunk()).unwrap();
+    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+    await dispatch(fetchRolesThunk()).unwrap();
+
     } catch (err: any) {
-      toast({
-        title: "ลบล้มเหลว",
-        description: err?.message ?? "ไม่สามารถลบผู้ใช้ได้",
-        variant: "destructive",
+      await Swal.fire({
+        icon: "error",
+        title: "ดำเนินการล้มเหลว",
+        text: err?.message ?? "",
       });
     }
   };
+
+  const handleUnrevoke = async (acc: Account) => {
+    const ok = await confirmAction({
+      title: "คืนสิทธิ์ผู้ใช้?",
+      text: `ต้องการ Un-Revoke ผู้ใช้ ${acc.username} ใช่หรือไม่`,
+      confirmText: "Un-Revoke",
+    });
+    if (!ok) return;
+
+    try {
+      await dispatch(UnrevokeAccountThunk(acc.id)).unwrap();
+
+      await Swal.fire({
+        icon: "success",
+        title: "คืนสิทธิ์สำเร็จ",
+        text: acc.username,
+        timer: 1200,
+        showConfirmButton: false,
+      });
+      setEditingAccount(null);
+    await dispatch(fetchAccountsThunk()).unwrap();
+    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+    await dispatch(fetchRolesThunk()).unwrap();
+
+    } catch (err: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "ดำเนินการล้มเหลว",
+        text: err?.message ?? "",
+      });
+    }
+  };
+
+
+
+  const handleDelete = async (acc: Account) => {
+    const ok = await confirmAction({
+      title: "ลบผู้ใช้?",
+      text: `ยืนยันการลบผู้ใช้ ${acc.username}`,
+      confirmText: "ลบ",
+      confirmColor: "#DC2626",
+    });
+    if (!ok) return;
+
+    try {
+      await dispatch(deleteAccountThunk(acc.id)).unwrap();
+
+      await Swal.fire({
+        icon: "success",
+        title: "ลบผู้ใช้แล้ว",
+        text: acc.username,
+        timer: 1200,
+        showConfirmButton: false,
+      });
+    await dispatch(fetchAccountsThunk()).unwrap();
+    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+    await dispatch(fetchRolesThunk()).unwrap();
+    } catch (err: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "ลบล้มเหลว",
+        text: err?.message ?? "",
+      });
+    }
+  };
+
 
   return (
     <div className="d-flex flex-column gap-4">
@@ -229,6 +328,8 @@ export default function AccountsPage() {
         status={accountStatus}
         onEdit={setEditingAccount}
         onDelete={handleDelete}
+        onRevoke={handleRevoke}       // <<-- ส่งเป็นฟังก์ชันที่รับ Account
+        onUnrevoke={handleUnrevoke}   // <<-- ส่งเป็นฟังก์ชันที่รับ Account
       />
 
       <GradersCreateModal

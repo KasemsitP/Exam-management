@@ -92,6 +92,7 @@ interface CreateAccountPayload {
   full_name: string;
   email: string;
   role: number; // role_id
+  campaignId? : number
 }
 
 export const createAccountThunk = createAsyncThunk<
@@ -110,6 +111,7 @@ export const createAccountThunk = createAsyncThunk<
       email: payload.email ?? "",
       role_id: payload.role,
       active: true,
+      campaign_id: payload.campaignId
     };
 
     return account;
@@ -120,6 +122,45 @@ export const createAccountThunk = createAsyncThunk<
     return rejectWithValue("Create failed");
   }
 });
+
+export const RevokeAccountThunk = createAsyncThunk<
+  Account,
+  number,                  
+  { rejectValue: string }
+>(
+  "accounts/revoke",          
+  async (accountId, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`/api/auth/accounts/${accountId}/revoke`);
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "revoke failed");
+      }
+      return rejectWithValue("revoke failed");
+    }
+  }
+);
+
+
+export const UnrevokeAccountThunk = createAsyncThunk<
+  Account,
+  number,
+  { rejectValue: string }
+>(
+  "accounts/unrevoke",
+  async (accountId, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`/api/auth/accounts/${accountId}/unrevoke`);
+      return response.data;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "unrevoke failed");
+      }
+      return rejectWithValue("unrevoke failed");
+    }
+  }
+);
 
 interface UpdateAccountPayload {
   id: number;

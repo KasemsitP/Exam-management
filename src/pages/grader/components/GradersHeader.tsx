@@ -14,7 +14,7 @@ export default function AccountsHeader({ stats }: AccountsHeaderProps) {
           <div>
             <h5 className="mb-1">จัดการบัญชีผู้ใช้</h5>
             <small className="text-muted">
-              เพิ่ม ลบ แก้ไข และกำหนดสิทธิ์ผู้ใช้งานระบบ
+              เพิ่ม ลบ แก้ไข และกำหนดข้อสำหรับผู้ตรวจ
             </small>
           </div>
 

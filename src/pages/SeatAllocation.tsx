@@ -225,7 +225,7 @@ export default function SeatAllocationPage() {
           },
         }
       );
-      
+
 
       const data = previewRes.data;
       console.log(data)
@@ -363,103 +363,58 @@ export default function SeatAllocationPage() {
     <div className="container-fluid px-0">
       <div className="d-flex flex-column gap-4">
         {/* ===== Header ===== */}
-        <div className="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-2">
-          <div>
-            <h4 className="mb-1">จัดการที่นั่งสอบ</h4>
-            <div className="text-muted">
-              แสดงรายการห้องสอบและสถานะการจัดที่นั่ง (กด “เปิดดู” เพื่อดูผังเต็ม)
+        <div className="card shadow-sm">
+          {/* Card Header */}
+          <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            <div>
+              <h5 className="mb-1 d-flex align-items-center gap-2">จัดการที่นั่งสอบ</h5>
             </div>
           </div>
 
-          <div className="d-flex flex-wrap align-items-center gap-2">
-            <span className="badge text-bg-light border">
-              Campaign: {campaign?.code ?? campaign?.id ?? "-"}
-            </span>
-            <span className="badge text-bg-light border">
-              Rooms: {rooms.length}
-            </span>
-            <span className="badge text-bg-light border">
-              Total capacity: {roomsTotal}
-            </span>
-          </div>
-        </div>
-
-        {/* ===== Summary cards ===== */}
-        <div className="row g-3">
-          <div className="col-md-6 col-xl-3">
-            <div className="card shadow-sm h-100">
-              <div className="card-body">
-                <div className="text-uppercase small text-muted mb-1">
-                  จำนวนห้องสอบในรอบนี้
-                </div>
-                <div className="display-6 mb-0">{rooms.length}</div>
-              </div>
+          {/* Card Body */}
+          <div className="card-body">
+            <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+              <span className="badge text-bg-light border">
+                Campaign: {campaign?.name ?? campaign?.id ?? "-"}
+              </span>
             </div>
-          </div>
 
-          <div className="col-md-6 col-xl-3">
-            <div className="card shadow-sm h-100">
-              <div className="card-body">
-                <div className="text-uppercase small text-muted mb-1">
-                  ความจุรวม (คน)
-                </div>
-                <div className="display-6 mb-0">{roomsTotal}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="col-xl-6">
-            <div className="card shadow-sm h-100">
-              <div className="card-body">
-                <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-                  <div>
+            {/* Optional stats row (เหมือน card ย่อยข้างบน) */}
+            <div className="row g-3">
+              <div className="col-sm-6 col-lg-4">
+                <div className="card shadow-none border">
+                  <div className="card-body">
                     <div className="text-uppercase small text-muted mb-1">
-                      ตั้งค่าการแสดงผล (ใช้ตอนทำ preview ต่อคอลัมน์ในอนาคต)
+                      จำนวนห้องสอบ
                     </div>
-                    <div className="fw-semibold">
-                      จำนวนที่นั่งต่อคอลัมน์ (แนวตั้ง)
-                      <span className="badge text-bg-primary ms-2">
-                        {seatsPerColumn}
-                      </span>
-                    </div>
+                    <div className="h3 mb-0">{rooms.length}</div>
                   </div>
-
-                  <div style={{ minWidth: 340 }}>
-                    <div className="input-group">
-                      <span className="input-group-text">ที่นั่ง/คอลัมน์</span>
-                      <input
-                        type="number"
-                        className="form-control"
-                        min={1}
-                        value={inputSeatsPerColumn}
-                        onChange={(e) =>
-                          setInputSeatsPerColumn(Number(e.target.value))
-                        }
-                      />
-                      <button
-                        className="btn btn-primary"
-                        onClick={handleSetSeatsPerColumn}
-                      >
-                        ใช้ค่า
-                      </button>
+                </div>
+              </div>
+              <div className="col-sm-6 col-lg-4">
+                <div className="card shadow-none border">
+                  <div className="card-body">
+                    <div className="text-uppercase small text-muted mb-1">
+                      ความจุรวม (คน)
                     </div>
-                    <div className="small text-muted mt-1">แนะนำ: 20–40</div>
+                    <div className="h3 mb-0">{roomsTotal}</div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* เพิ่ม list ห้องสอบ หรือ grid ของที่นั่งสอบตรงนี้ */}
           </div>
         </div>
 
+
+     
         {/* ===== Rooms grid ===== */}
         <div className="card shadow-sm">
           <div className="card-header bg-white">
             <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
               <div>
                 <div className="fw-semibold">รายการห้องสอบ</div>
-                <div className="text-muted small">
-                  ดูสถานะการจัดสรรแบบรวม แล้วกด “เปิดดู” เพื่อเรียก API ผังที่นั่งของห้องนั้น ๆ
-                </div>
               </div>
               <div className="text-muted small">
                 หน้า {currentPage} / {totalPages}
@@ -545,7 +500,7 @@ export default function SeatAllocationPage() {
 
             {/* Pagination */}
             <nav className="mt-3">
-              <ul className="pagination justify-content-center mb-0">
+              <ul className="pagination justify-content-end mb-0">
                 <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
                   <button
                     className="page-link"
@@ -553,16 +508,15 @@ export default function SeatAllocationPage() {
                       setCurrentPage((p) => clamp(p - 1, 1, totalPages))
                     }
                   >
-                    Previous
+                    ก่อนหน้า
                   </button>
                 </li>
 
                 {Array.from({ length: totalPages }).map((_, idx) => (
                   <li
                     key={idx}
-                    className={`page-item ${
-                      currentPage === idx + 1 ? "active" : ""
-                    }`}
+                    className={`page-item ${currentPage === idx + 1 ? "active" : ""
+                      }`}
                   >
                     <button
                       className="page-link"
@@ -574,9 +528,8 @@ export default function SeatAllocationPage() {
                 ))}
 
                 <li
-                  className={`page-item ${
-                    currentPage === totalPages ? "disabled" : ""
-                  }`}
+                  className={`page-item ${currentPage === totalPages ? "disabled" : ""
+                    }`}
                 >
                   <button
                     className="page-link"
@@ -584,7 +537,7 @@ export default function SeatAllocationPage() {
                       setCurrentPage((p) => clamp(p + 1, 1, totalPages))
                     }
                   >
-                    Next
+                    ต่อไป
                   </button>
                 </li>
               </ul>
@@ -751,7 +704,7 @@ export default function SeatAllocationPage() {
                       </span>
                     </div>
 
-                    <div className="btn-group">
+                    <div className="btn-group ">
                       <button
                         className="btn btn-outline-secondary btn-sm"
                         disabled={modalPage <= 1}
@@ -759,7 +712,7 @@ export default function SeatAllocationPage() {
                           setModalPage((p) => Math.max(1, p - 1))
                         }
                       >
-                        Previous
+                        ก่อนหน้า
                       </button>
                       <button
                         className="btn btn-outline-secondary btn-sm"
@@ -770,7 +723,7 @@ export default function SeatAllocationPage() {
                           )
                         }
                       >
-                        Next
+                        ต่อไป
                       </button>
                     </div>
                   </div>

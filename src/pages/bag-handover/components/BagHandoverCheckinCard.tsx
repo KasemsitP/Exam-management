@@ -25,6 +25,8 @@ interface Props {
   onReturn: () => void;
   setFilterSessionId: (value: string) => void;
   setSelectedBagId: (value: string) => void;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
 }
 
 export default function BagHandoverCheckinCard({
@@ -42,6 +44,8 @@ export default function BagHandoverCheckinCard({
   onReturn,
   setFilterSessionId,
   setSelectedBagId,
+  searchTerm,
+  onSearchChange,
 }: Props) {
   return (
     <div className="card shadow-sm">
@@ -49,7 +53,7 @@ export default function BagHandoverCheckinCard({
         <div className="d-flex align-items-center justify-content-between">
           <div>
             <div className="d-flex align-items-center gap-2">
-              <h6 className="mb-0">ส่งมอบ / รับคืนถุงข้อสอบ</h6>
+              <h6 className="mb-0">ลงทะเบียนถุงกับผู้ตรวจ</h6>
             </div>
           </div>
         </div>
@@ -151,13 +155,19 @@ export default function BagHandoverCheckinCard({
           {/* Note */}
           <div className="col-md-2">
             <label className="form-label text-muted small mb-1">
-              หมายเหตุ
+              ค้นหารหัสถุง
             </label>
-            <input
-              className="form-control"
-              placeholder="ระบุหมายเหตุ (ถ้ามี)"
-              {...form.register("note")}
-            />
+            <div className="d-flex flex-column gap-2">
+              <div className="d-flex align-items-center gap-2">
+                <input
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="ค้นหาจากรหัสถุง"
+                  className="form-control"
+                  style={{ width: 260 }}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Buttons */}

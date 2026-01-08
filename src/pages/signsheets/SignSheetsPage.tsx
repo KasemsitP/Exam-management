@@ -34,18 +34,21 @@ export default function SignSheetsPage() {
     <ShowIfCan permission="view_sessions">
       <div className="container py-4">
         {/* Header */}
-        <div className="d-flex gap-3 align-items-start mb-3 print-hidden">
-          <div className="rounded-circle p-2 bg-primary-subtle text-primary">
-            <Users size={22} />
-          </div>
-          <div className="flex-grow-1 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-sm-between gap-2">
-            <div>
-              <h5 className="mb-1">ใบเซ็นชื่อและ QR code ผู้เข้าสอบ</h5>
-              <div className="text-muted small">
-                สำหรับแปะบนเล่มข้อสอบของผู้เข้าสอบ
+        <div className="card shadow-sm mb-4">
+          {/* Card Header */}
+          <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+            {/* Left side: Icon + Title */}
+            <div className="d-flex align-items-center gap-3">
+              <div>
+                <h5 className="mb-1">ใบเซ็นชื่อและ QR code ผู้เข้าสอบ</h5>
+                <div className="text-muted small">
+                  สำหรับแปะบนเล่มข้อสอบของผู้เข้าสอบ
+                </div>
               </div>
             </div>
-            <div className="d-flex flex-wrap gap-2">
+
+            {/* Right side: Search + Buttons */}
+            <div className="d-flex flex-wrap align-items-center gap-2 mt-2 mt-lg-0">
               <input
                 className="form-control"
                 style={{ width: 220 }}
@@ -76,6 +79,7 @@ export default function SignSheetsPage() {
             </div>
           </div>
         </div>
+
 
         {/* Exam info form */}
         <div className="card mb-4 print-hidden">

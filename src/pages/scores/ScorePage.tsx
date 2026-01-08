@@ -213,7 +213,7 @@ export default function BagScoresPage() {
             {/* filter session */}
             <div className="d-flex flex-wrap align-items-center gap-2">
               <span className="text-muted small d-flex align-items-center">
-                <Filter size={16} className="me-1" />
+                {/* <Filter size={16} className="me-1" /> */}
                 Session
               </span>
               <select
