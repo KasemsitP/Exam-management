@@ -55,7 +55,7 @@ export const useKeyManagement = () => {
 
   // --- Local state ---
   const [keyInput, setKeyInput] = useState("");
-  const [selectedSessionId, setSelectedSessionId] = useState<string>("");
+  const [selectedSessionId, setSelectedSessionId] = useState<string>("20");
   const [IshasKey, setIshasKey] = useState(false)
   const [myKeyId, setMyKeyId] = useState<number | null>(null);
 
@@ -91,6 +91,8 @@ export const useKeyManagement = () => {
     console.log("dashboardStatus =", dashboardStatus);
     console.log("EncryptedStatus =", EncryptedStatus);
     console.log("ImportStatus =", ImportStatus);
+    console.log("headerSummary =", headerSummary);
+    console.log(sessions)
   }, [dashboardStatus, EncryptedStatus, ImportStatus]);
 
 
@@ -139,11 +141,15 @@ export const useKeyManagement = () => {
 
 
 
-  useEffect(() => {
-    if (sessions.length > 0 && !selectedSessionId) {
-      setSelectedSessionId(sessions[0].id);
-    }
-  }, [sessions, selectedSessionId]);
+useEffect(() => {
+  if (sessions.length > 0) {
+    // บังคับให้เลือกตัวแรกเสมอ (หรือจะหา default ตัวอื่นก็ได้)
+    setSelectedSessionId(String(sessions[0].id));
+  } else {
+    setSelectedSessionId("");
+  }
+}, [sessions]);
+
 
 
   const handleSaveKey = () => {
@@ -260,39 +266,59 @@ export const useKeyManagement = () => {
 
 
   const handleSessionChange = (sessionId: string) => {
+    console.log(sessionId)
     setSelectedSessionId(sessionId);
   };
 
-  const handleRunBulkEncryption = () => {
+  const handleRunBulkEncryption = async () => {
     if (!numericCampaignId || !selectedSessionId || !canEncrypt) {
-      toast({
+      await Swal.fire({
+        icon: "warning",
         title: "ข้อมูลไม่ครบ",
-        description: "กรุณาเลือก Session และตรวจสอบว่าคีย์/ข้อมูล พร้อม",
-        variant: "destructive",
+        text: "กรุณาเลือก Session และตรวจสอบว่าคีย์/ข้อมูล พร้อม",
+        confirmButtonText: "ตกลง",
       });
       return;
     }
 
     dispatch(clearEncryptionResult());
-    dispatch(
+
+    // แสดง loading ระหว่างเข้ารหัส
+    Swal.fire({
+      title: "กำลังเข้ารหัส...",
+      text: "กรุณารอสักครู่",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+    console.log(numericCampaignId , selectedSessionId);
+
+    const result: any = await dispatch(
       runBulkEncryptionForSession({
         campaignId: numericCampaignId,
         sessionId: parseSessionId(selectedSessionId),
       })
-    ).then((result: any) => {
-      if (result.meta.requestStatus === "fulfilled") {
-        toast({
-          title: "เข้ารหัสสำเร็จ!",
-          description: `เข้ารหัสผู้สอบ ${result.payload.usersEncrypted} คน ใน Session นี้`,
-        });
-      } else {
-        toast({
-          title: "เข้ารหัสล้มเหลว",
-          description: result.payload as string,
-          variant: "destructive",
-        });
-      }
-    });
+    );
+
+    Swal.close();
+
+    if (result.meta.requestStatus === "fulfilled") {
+      await Swal.fire({
+        icon: "success",
+        title: "เข้ารหัสสำเร็จ!",
+        text: `เข้ารหัสผู้สอบ ${result.payload.usersEncrypted} คน ใน Session นี้`,
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } else {
+      await Swal.fire({
+        icon: "error",
+        title: "เข้ารหัสล้มเหลว",
+        text: result.payload as string,
+        confirmButtonText: "ตกลง",
+      });
+    }
   };
 
   const prerequisitesCards = useMemo(
@@ -313,7 +339,7 @@ export const useKeyManagement = () => {
     prerequisites: prerequisitesCards,
     encryptionStatus,
     lastBulkEncryptionStats,
-     headerSummary,  
+    headerSummary,
 
     // local
 

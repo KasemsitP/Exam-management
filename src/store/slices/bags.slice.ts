@@ -190,6 +190,7 @@ export const deleteBagThunk = createAsyncThunk<
 >(
     "bags/delete",
     async (payload, { rejectWithValue }) => {
+        console.log(payload)
         try {
             await axios.delete(`/api/bags/${payload.bagId}`);
             return payload; // (ส่ง Payload กลับไปให้ Reducer)

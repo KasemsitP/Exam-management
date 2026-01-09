@@ -44,7 +44,7 @@ export default function EncryptionCard({
       </div>
       <div className="card-body">
         {/* Status Check */}
-        <div className="mb-3">
+        {/* <div className="mb-3">
           <label className="form-label small text-muted">
             ตรวจสอบเงื่อนไข:
           </label>
@@ -78,7 +78,7 @@ export default function EncryptionCard({
               <span>นำเข้าข้อมูลผู้สอบ (Users) แล้ว</span>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Session select */}
         <div className="row g-3">
@@ -90,7 +90,11 @@ export default function EncryptionCard({
               id="enc-session"
               className="form-select"
               value={selectedSessionId}
-              onChange={(e) => onSessionChange(e.target.value)}
+              onChange={(e) => {
+                     console.log("lnwza",e.target.value);
+                onSessionChange(e.target.value);
+           
+              }}
               disabled={!sessions.length || isEncryptionLoading}
             >
               {sessions.length === 0 && (
@@ -98,7 +102,7 @@ export default function EncryptionCard({
               )}
               {sessions.map((s: any) => (
                 <option key={s.id} value={s.id}>
-                  {s.label}
+                  {s.id} {s.label}
                 </option>
               ))}
             </select>
@@ -114,13 +118,13 @@ export default function EncryptionCard({
           {isEncryptionLoading ? (
             <Loader2 size={16} className="spin-animation" />
           ) : (
-            <Rocket size={16} />
+            <></>
           )}
-          เข้ารหัสทั้ง Session (Run Bulk Encryption)
+          เข้ารหัสทั้งทั้ง session
         </button>
 
         {/* Result */}
-        {encryptionStatus === "succeeded" && lastBulkEncryptionStats && (
+        {/* {encryptionStatus === "succeeded" && lastBulkEncryptionStats && (
           <div className="alert alert-success small py-2 mt-3 mb-0">
             <ShieldCheck size={16} className="me-2" />
             เข้ารหัสสำเร็จ! จำนวน {lastBulkEncryptionStats.usersEncrypted} รายการ
@@ -131,8 +135,22 @@ export default function EncryptionCard({
           <div className="alert alert-danger small py-2 mt-3 mb-0">
             {keyManagementError}
           </div>
-        )}
+        )} */}
       </div>
+      {/* <div className="d-flex justify-content-center mb-4">
+        <button
+          className="btn btn-primary w-50 mt-3 d-inline-flex align-items-center justify-content-center gap-2"
+          onClick={onRunBulkEncryption}
+          disabled={!canEncrypt || isEncryptionLoading || !selectedSessionId}
+        >
+          {isEncryptionLoading ? (
+            <Loader2 size={16} className="spin-animation" />
+          ) : (
+            <></>
+          )}
+          เข้ารหัสทั้งทั้ง session
+        </button>
+      </div> */}
     </div>
   );
 }

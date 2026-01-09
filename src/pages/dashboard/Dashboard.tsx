@@ -1,5 +1,6 @@
 // src/pages/Dashboard.tsx
 import { useEffect, useMemo, useState } from "react";
+import type { PieLabelRenderProps } from "recharts";
 import axios from "axios";
 import {
   ResponsiveContainer,
@@ -17,7 +18,7 @@ import {
 import { CalendarDays, GraduationCap, Package, Users } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
-import { selectDefaultBagCapacity  , selectBagsForCampaign , fetchBagsForCampaignThunk} from "@/store/slices/bags.slice";
+import { selectDefaultBagCapacity, selectBagsForCampaign, fetchBagsForCampaignThunk } from "@/store/slices/bags.slice";
 import { selectCurrentUser } from "@/store/slices/auth.slice";
 import { useDispatch } from "react-redux";
 
@@ -30,8 +31,14 @@ const grid = "#E2E8F0"; // slate-200
 const surface = "#FFFFFF";
 const surfaceSoft = "#F8FAFC"; // slate-50
 const border = "#E2E8F0"; // slate-200
+const pieColors = [
+  "#3B82F6", // น้ำเงินสด (Blue)
+  "#22C55E", // เขียวสด (Green)
+  "#F59E0B", // เหลือง/ส้ม (Amber)
+  "#EF4444", // แดงสด (Red)
+  "#8B5CF6", // ม่วงสด (Violet)
+];
 
-const pieColors = ["#334155", "#64748B", "#94A3B8", "#CBD5E1", "#E2E8F0"];
 
 /* ---------- 1. Types ที่ตรงกับ API Response จริง ---------- */
 
@@ -119,9 +126,7 @@ interface EncryptedStatusUI {
   totalUsersInSession: number;
 }
 
-/* -----------------------------------------
-   ✅ Soft badge style (ไม่ใช้สีจัด)
------------------------------------------- */
+
 type Tone = "neutral" | "good" | "warn";
 
 const badgeStyle = (tone: Tone): React.CSSProperties => {
@@ -159,11 +164,15 @@ export default function Dashboard() {
   );
   const [loadingDashboard, setLoadingDashboard] = useState(false);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [scoreChartData, setScoreChartData] = useState<
+    { range: string; count: number }[]
+  >([]);
 
-  useEffect(()=>{
-    
+
+  useEffect(() => {
+
     console.log(bags)
-  },[])
+  }, [])
   useEffect(() => {
     if (!activeCampaign?.id) return;
 
@@ -177,6 +186,7 @@ export default function Dashboard() {
         const res = await axios.get<DashboardApiResponse>(
           `http://localhost:8000/api/dashboard/campaign/${activeCampaign.id}`
         );
+
         console.log("Dashboard API:", res.data);
         setDashboardData(res.data);
       } catch (err: any) {
@@ -190,6 +200,37 @@ export default function Dashboard() {
 
     fetchDashboard();
   }, [activeCampaign?.id]);
+
+  useEffect(() => {
+    if (!dashboardData?.summary?.scoreDistribution) return;
+
+    const chartData = buildScoreChartData(
+      dashboardData.summary.scoreDistribution
+    );
+    console.log("Score Chart Data:", chartData);
+
+    setScoreChartData(chartData);
+  }, [dashboardData]);
+
+
+  const buildScoreChartData = (scoreDistribution: any) => {
+    if (!scoreDistribution) return [];
+
+    const { buckets, noScore } = scoreDistribution;
+
+    const bucketData = Object.entries(buckets).map(([range, count]) => ({
+      range,
+      count: Number(count),
+    }));
+
+    bucketData.push({
+      range: "ยังไม่มีคะแนน",
+      count: Number(noScore),
+    });
+
+    return bucketData;
+  };
+
 
   /* ---------- Derived Data (แปลง API -> UI) ---------- */
 
@@ -258,6 +299,49 @@ export default function Dashboard() {
     }));
   }, [dashboardData]);
 
+
+  const renderLabel = (props: PieLabelRenderProps) => {
+    const {
+      cx,
+      cy,
+      midAngle,
+      innerRadius,
+      outerRadius,
+      value,
+    } = props;
+
+    // Guard type ให้เป็น number เท่านั้น
+    if (
+      typeof cx !== "number" ||
+      typeof cy !== "number" ||
+      typeof midAngle !== "number" ||
+      typeof innerRadius !== "number" ||
+      typeof outerRadius !== "number" ||
+      typeof value !== "number"
+    ) {
+      return null;
+    }
+
+    const radius = innerRadius + (outerRadius - innerRadius) / 2;
+    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
+    const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={12}
+        fontWeight={600}
+        fill="#fff"
+        pointerEvents="none"
+      >
+        {value}
+      </text>
+    );
+  };
+
   /* ---------- Render ---------- */
 
   return (
@@ -268,9 +352,9 @@ export default function Dashboard() {
           <div className="d-flex align-items-center gap-3">
             <div>
               <div className="text-uppercase small fw-semibold mb-1" style={{ color: muted }}>
-                Campaign Dashboard
+                Dashboard
               </div>
-              <h2 className="h4 mb-1 fw-bold text-dark">
+              <h2 className="h4 mb-1  text-dark">
                 {activeCampaign ? `${activeCampaign.name}` : "ยังไม่ได้เลือกแคมเปญ"}
               </h2>
               <div className="d-flex align-items-center gap-2 small" style={{ color: muted }}>
@@ -302,8 +386,7 @@ export default function Dashboard() {
             {/* Sessions */}
             <div className="col-lg-3 col-sm-6">
               <div
-                className="card shadow-sm h-100 border-start border-4"
-                style={{ borderLeftColor: "#CBD5E1" }}
+                className="card shadow-sm h-100 border-start "
               >
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-2">
@@ -322,11 +405,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Subjects */}
+            {/* Subjects */}  {/* border-4 กรอบใหญ่ขึ้น */}
             <div className="col-lg-3 col-sm-6">
               <div
-                className="card shadow-sm h-100 border-start border-4"
-                style={{ borderLeftColor: "#CBD5E1" }}
+                className="card shadow-sm h-100 border-start "
               >
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-2">
@@ -348,7 +430,7 @@ export default function Dashboard() {
             {/* Total Users */}
             <div className="col-lg-3 col-sm-6">
               <div
-                className="card shadow-sm h-100 border-start border-4"
+                className="card shadow-sm h-100 border-start"
                 style={{ borderLeftColor: "#CBD5E1" }}
               >
                 <div className="card-body">
@@ -371,7 +453,7 @@ export default function Dashboard() {
             {/* Bags */}
             <div className="col-lg-3 col-sm-6">
               <div
-                className="card shadow-sm h-100 border-start border-4"
+                className="card shadow-sm h-100 border-start "
                 style={{ borderLeftColor: "#CBD5E1" }}
               >
                 <div className="card-body">
@@ -400,7 +482,7 @@ export default function Dashboard() {
                 <div className="card-header bg-white py-3">
                   <h6 className="mb-0 fw-bold">ช่วงคะแนนรวม</h6>
                   <small style={{ color: muted }}>
-                    กราฟแสดงการกระจายตัวของคะแนน (รอข้อมูลจาก API / ยังไม่ผูกกราฟ)
+                    กราฟแสดงการกระจายตัวของคะแนน
                   </small>
                 </div>
                 <div className="card-body" style={{ height: 320 }}>
@@ -412,7 +494,14 @@ export default function Dashboard() {
                       border: `1px dashed ${border}`,
                     }}
                   >
-                    ยังไม่มีข้อมูลคะแนนจาก API
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={scoreChartData}>
+                        <XAxis dataKey="range" />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip formatter={(value) => [`${value} คน`, "จำนวน"]} />
+                        <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>
@@ -421,23 +510,48 @@ export default function Dashboard() {
             {/* Bags by Session placeholder */}
             <div className="col-lg-4">
               <div className="d-flex flex-column gap-3 h-100">
-                <div className="card shadow-sm flex-grow-1" style={{ background: surface }}>
-                  <div className="card-header bg-white py-3">
-                    <h6 className="mb-0 fw-bold">สัดส่วนถุงข้อสอบ</h6>
-                    <small style={{ color: muted }}>รอข้อมูลจาก API</small>
-                  </div>
-                  <div className="card-body" style={{ height: 250 }}>
-                    <div
-                      className="h-100 d-flex align-items-center justify-content-center rounded"
-                      style={{
-                        color: muted,
-                        background: surfaceSoft,
-                        border: `1px dashed ${border}`,
-                      }}
-                    >
-                      ไม่มีข้อมูลถุงข้อสอบ
+                <div className="" style={{ background: surface }}>
+                  {bagCounts.length > 0 && (
+                    <div className="card shadow-sm" style={{ background: surface }}>
+                      <div className="card-header bg-white py-3">
+                        <h6 className="mb-0 fw-bold">สัดส่วนถุงข้อสอบแบ่งตามวันที่สอบ</h6>
+                      </div>
+                      <div className="card-body" style={{ height: 280 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={bagCounts}
+                              dataKey="bagCount"
+                              nameKey="sessionLabel"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={60}
+                              outerRadius={85}
+                              paddingAngle={4}
+                              label={renderLabel}
+                              labelLine={false}
+                            >
+                              {bagCounts.map((_, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={pieColors[index % pieColors.length]}
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{
+                                background: "#FFFFFF",
+                                border: `1px solid ${border}`,
+                                borderRadius: 10,
+                                boxShadow: "0 6px 20px rgba(15, 69, 195, 0.08)",
+                              }}
+                            />
+                            <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Summary box - muted */}
@@ -556,7 +670,7 @@ export default function Dashboard() {
                           className="list-group-item d-flex align-items-center justify-content-between py-3"
                         >
                           <div>
-                            <div className="fw-medium text-dark">{s.sessionCode}</div>
+                            <div className="fw-medium text-dark">{s.sessionCode} </div>
                             <div className="small" style={{ color: muted }}>
                               เข้ารหัสแล้ว: {s.encrypted} / {s.totalUsersInSession} คน
                             </div>
@@ -583,11 +697,10 @@ export default function Dashboard() {
           </section>
 
           {/* PieChart ตามรอบสอบ (UI เดิมที่มีอยู่แล้ว) */}
-          {bagCounts.length > 0 && (
+          {/* {bagCounts.length > 0 && (
             <div className="card shadow-sm" style={{ background: surface }}>
               <div className="card-header bg-white py-3">
-                <h6 className="mb-0 fw-bold">สัดส่วนถุงข้อสอบแบ่งตามรอบ</h6>
-                <small style={{ color: muted }}>เปรียบเทียบปริมาณงานแต่ละ Session</small>
+                <h6 className="mb-0 fw-bold">สัดส่วนถุงข้อสอบแบ่งตามวันที่สอบ</h6>
               </div>
               <div className="card-body" style={{ height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -622,7 +735,7 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               </div>
             </div>
-          )}
+          )} */}
         </>
       )}
     </div>

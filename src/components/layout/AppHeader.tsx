@@ -36,7 +36,7 @@ export function AppHeader({
           <div className="d-flex align-items-center gap-2">
             <span className="text-secondary small fw-medium d-none d-sm-inline">Console</span>
             <ChevronRight size={14} className="text-muted d-none d-sm-inline" />
-            <h1 className="h6 mb-0 fw-bold text-dark">ภาพรวมระบบ</h1>
+            <h1 className="h6 mb-0  ">Examination Management System</h1>
           </div>
         </div>
       </div>

@@ -14,46 +14,40 @@ export type Permission =
   | "view_reports"
   | "view_qr"
   | "manage_graders"
-  | "manage_accounts";
+  | "manage_accounts"
+  | "manage_bagshandover"
+  | "importcsv"
+  | "signshheets";
 
 const ALL_PERMISSIONS: Permission[] = [
-  "manage_bags",
-  "manage_rooms",
-  "manage_sessions",
-  "manage_subjects",
-  "manage_users",
-  "manage_keys",
-  "manage_graders",
-  "import_subjects",
-  "allocate_seats",
-  "grade_exams",
-  "view_sessions",
-  "view_reports",
-  "view_qr",
-  "manage_accounts"
+"manage_bags",
+"manage_rooms",
+"manage_sessions",
+"manage_subjects",
+"manage_users",
+"manage_keys",
+"import_subjects",
+"allocate_seats",
+"view_sessions",
+"view_reports",
+"view_qr",
+"manage_graders",
+"manage_accounts",
+"manage_bagshandover",
+"importcsv",
+"signshheets",
 ];
 
 const rolePermissions: Record<Role, Permission[]> = {
   admin: ALL_PERMISSIONS,
   manager: [
-    "manage_bags",
-    "manage_rooms",
-    "manage_sessions",
-    "manage_subjects",
-    "manage_users",
     "manage_keys",
-    "import_subjects",
-    "allocate_seats",
-    "view_reports",
-    "view_qr",
-    "view_sessions",
   ],
   staff: [
     "manage_bags",
-    "manage_keys",
     "allocate_seats",
+    "importcsv",
     "view_sessions",
-    "view_reports",
     "view_qr",
   ],
   grader: ["grade_exams", "view_sessions"],

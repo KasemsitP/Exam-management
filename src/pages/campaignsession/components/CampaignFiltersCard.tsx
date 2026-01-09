@@ -86,18 +86,10 @@ export function CampaignFiltersCard({
               onChange={(e) => onDateFilterChange(e.target.value)}
             />
           </div>
-
-          <div className="col-12 col-lg-3">
-            <div className="d-flex flex-wrap gap-2 justify-content-start justify-content-lg-end align-items-end">
-              <button className="btn btn-outline-secondary btn-sm w-100 w-sm-auto" onClick={onResetFilters}>
-                ล้างตัวกรอง
-              </button>
-
-              <span className="badge text-bg-light small d-inline-flex align-items-center gap-1">
-                <CalendarDays size={12} />
-                {sessionCount} เซสชัน
-              </span>
-            </div>
+          <div className="col-lg-3 d-flex align-items-end justify-content-lg-end">
+            <button className="btn btn-outline-secondary btn-sm w-100 w-sm-auto" onClick={onResetFilters}>
+              ล้างตัวกรอง
+            </button>
           </div>
         </div>
       </div>

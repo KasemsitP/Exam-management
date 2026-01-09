@@ -9,6 +9,7 @@ import {
   selectActiveCampaign,
   selectActiveCampaignSessions,
 } from "@/store/slices/examData.slice";
+import Swal from "sweetalert2";
 
 import {
   bagScanAdded,
@@ -104,7 +105,7 @@ export default function BagsPage() {
     const bagNo = (composeBag as any).bag_no ?? Number(composeBag.id);
     const sessionId = Number(composeBag.sessionId);
     const campaignIdNumeric = Number(activeCampaign.id);
-    console.log("bagno: ",bagNo)
+    console.log("bagno: ", bagNo)
     dispatch(
       ScannedPayloadThunk({
         bagNo,
@@ -128,7 +129,7 @@ export default function BagsPage() {
       (composeBag?.scanned ?? []).map(normalizePayload)
     );
   }, [composeBag?.scanned]);
-  
+
   // useEffect(()=>{
   //   console.log(composeBag)
   // },[composeBag])
@@ -140,15 +141,14 @@ export default function BagsPage() {
       filterSessionId === "all"
         ? bags
         : bags.filter(
-            (bag) => String(bag.sessionId) === filterSessionId
-          );
+          (bag) => String(bag.sessionId) === filterSessionId
+        );
 
     if (!term) return sessionFiltered;
 
     return sessionFiltered.filter((bag) => {
-      const subjectText = `${bag.subjectCode ?? ""} ${
-        bag.subjectName ?? ""
-      }`.toLowerCase();
+      const subjectText = `${bag.subjectCode ?? ""} ${bag.subjectName ?? ""
+        }`.toLowerCase();
       return (
         bag.id.toString().toLowerCase().includes(term) ||
         bag.sessionLabel.toLowerCase().includes(term) ||
@@ -182,16 +182,18 @@ export default function BagsPage() {
   const handleBulkCreateBags = createForm.handleSubmit(
     async (values) => {
       if (!activeCampaign) {
-        toast({
+        Swal.fire({
+          icon: "warning",
           title: "กรุณาเลือกสนามสอบ",
-          variant: "destructive",
+          confirmButtonText: "ตกลง",
         });
         return;
       }
       if (!values.sessionId) {
-        toast({
+        await Swal.fire({
+          icon: "warning",
           title: "ต้องเลือกรอบสอบ",
-          variant: "destructive",
+          confirmButtonText: "ตกลง",
         });
         return;
       }
@@ -213,9 +215,13 @@ export default function BagsPage() {
       await dispatch(bulkCreateBagsThunk(payload)).unwrap();
 
       setCreateDialogOpen(false);
-      toast({
+      await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
+      await Swal.fire({
+        icon: "success",
         title: "สร้างถุงข้อสอบสำเร็จ",
-        description: `สร้าง ${values.count} ถุง (Prefix: ${values.prefix})`,
+        text: `สร้าง ${values.count} ถุง (Prefix: ${values.prefix})`,
+        timer: 2000,
+        showConfirmButton: false,
       });
     }
   );
@@ -276,19 +282,25 @@ export default function BagsPage() {
           scannedCodes: composeBag.scanned,
         })
       ).unwrap();
-      toast({
-        title: "บันทึกข้อมูล",
-        description: `ถุง ${composeBag.id} บันทึกสมุด ${composeBagId?.length ?? 0} เล่ม`,
+      await Swal.fire({
+        icon: "success",
+        title: "บันทึกข้อมูลสำเร็จ",
+        text: `ถุง ${composeBag.bag_no} บันทึกสมุด ${composeBagId?.length ?? 0} เล่ม`,
+        timer: 2000,
+        showConfirmButton: false,
       });
       setComposeBagId(null);
+
+      await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
     } catch (error: any) {
       console.error("Finalize Error:", error);
-      toast({
+      await Swal.fire({
+        icon: "error",
         title: "Finalize ล้มเหลว",
-        description:
+        text:
           error?.message ??
           "ไม่สามารถเชื่อมโยงข้อมูลกับ Backend ได้",
-        variant: "destructive",
+        confirmButtonText: "ตกลง",
       });
     }
   };
@@ -320,26 +332,43 @@ export default function BagsPage() {
     }
   };
 
-  const handleDeleteBag = async (bagId: string) => {
-    if (!activeCampaign) return;
-    if (!window.confirm(`ลบถุง ${bagId} หรือไม่?`)) return;
-    try {
-      await dispatch(
-        deleteBagThunk({ campaignId: activeCampaign.id, bagId })
-      ).unwrap();
-      toast({
-        title: "ลบถุงแล้ว",
-        description: bagId,
-        variant: "destructive",
-      });
-    } catch (error: any) {
-      toast({
-        title: "ลบถุงล้มเหลว",
-        description: error?.message ?? "API Error",
-        variant: "destructive",
-      });
-    }
-  };
+const handleDeleteBag = async (bagId: string) => {
+  if (!activeCampaign) return;
+
+  const result = await Swal.fire({
+    icon: "warning",
+    title: "ยืนยันการลบ",
+    text: `ลบถุง ${bagId} หรือไม่?`,
+    showCancelButton: true,
+    confirmButtonText: "ลบ",
+    cancelButtonText: "ยกเลิก",
+    confirmButtonColor: "#d33",
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    await dispatch(
+      deleteBagThunk({ campaignId: activeCampaign.id, bagId })
+    ).unwrap();
+
+    await Swal.fire({
+      icon: "success",
+      title: "ลบถุงแล้ว",
+      text: bagId,
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
+  } catch (error: any) {
+    await Swal.fire({
+      icon: "error",
+      title: "ลบถุงล้มเหลว",
+      text: error?.message ?? "API Error",
+      confirmButtonText: "ตกลง",
+    });
+  }
+};
 
   const handleCapacityChange = (value: number) => {
     if (!composeBag || !activeCampaign) return;

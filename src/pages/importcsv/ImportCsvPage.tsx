@@ -34,7 +34,7 @@ export default function ImportCsvPage() {
   } = useUserImport();
 
   return (
-    <ShowIfCan permission="manage_users">
+    <ShowIfCan permission="importcsv">
       <div className="container-fluid px-3 px-sm-4 py-4">
         <ImportHeader />
 

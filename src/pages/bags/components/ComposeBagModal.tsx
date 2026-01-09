@@ -55,9 +55,7 @@ export default function ComposeBagModal({
               <div className="modal-header">
                 <h6 className="modal-title">
                   สแกนสมุดคำตอบ : {composeBag.id}{" "}
-                  <span className="fw-normal text-muted">
-                    ({composeBag.scanned.length}/{composeBag.capacity})
-                  </span>
+
                 </h6>
                 <button
                   type="button"
@@ -76,27 +74,17 @@ export default function ComposeBagModal({
                           รายการสแกนแล้ว (QR Payloads)
                         </h6>
                         <small className="text-muted">
-                          วิชา {composeBag.subjectCode ?? "-"} ·{" "}
-                          {composeBag.subjectName ?? "ไม่ระบุ"} · รอบ{" "}
+                          {/* วิชา {composeBag.subjectCode ?? "-"} ·{" "}
+
+                          {composeBag.subjectName ?? "ไม่ระบุ"} · 
+                           */}
+                          รอบ{" "}
                           {composeBag.sessionLabel}
                         </small>
                       </div>
                       <div className="card-body">
                         <div className="d-flex align-items-center justify-content-between small text-muted mb-2">
                           <span>จำนวนที่ต้องการ</span>
-                          <div className="d-flex align-items-center gap-2">
-                            <input
-                              type="number"
-                              min={1}
-                              value={composeBag.capacity}
-                              onChange={(e) =>
-                                onCapacityChange(Number(e.target.value))
-                              }
-                              className="form-control form-control-sm text-end"
-                              style={{ width: 90 }}
-                            />
-                            <span>เล่ม</span>
-                          </div>
                         </div>
 
                         <div
@@ -112,7 +100,7 @@ export default function ComposeBagModal({
                                   >
                                     <div className="d-flex flex-column">
                                       <span className="fw-medium">
-                                        {bk.userCode} — {bk.fullName}
+                                       {bk.id} {/*  — {bk.fullName} */}
                                       </span>
                                       <span
                                         className="small text-muted text-truncate"
@@ -266,7 +254,7 @@ export default function ComposeBagModal({
                             </button>
                           </div>
                         </div>
-
+{/* 
                         {composeBag.scanned.length <
                           composeBag.capacity && (
                           <div className="alert alert-warning py-2 small mb-0">
@@ -275,7 +263,7 @@ export default function ComposeBagModal({
                               composeBag.scanned.length}{" "}
                             เล่ม
                           </div>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   </div>

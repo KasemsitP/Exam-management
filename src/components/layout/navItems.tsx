@@ -33,7 +33,7 @@ export const NAV_ITEMS: NavItem[] = [
     to: "/subject",
     label: "จัดการรายวิชา",
     icon: BookOpen,
-    permissions: ["manage_sessions"],
+    permissions: ["manage_subjects"],
     notRequiredCampaignActive: true
   },
   {
@@ -77,17 +77,17 @@ export const NAV_ITEMS: NavItem[] = [
     to: "/bag-handover",
     label: "ส่งมอบถุง",
     icon: HandCoins,
-    permissions: ["manage_bags"],
+    permissions: ["manage_bagshandover"],
   },
   {
     to: "/import-csv",
     label: "นำเข้าข้อมูล",
     icon: DownloadCloud,
-    permissions: ["import_subjects"],
+    permissions: ["importcsv"],
   },
   {
     to: "/keys",
-    label: "รหัสผ่าน / คีย์",
+    label: "เข้ารหัสข้อมูลสอบ",
     icon: KeyRound,
     permissions: ["manage_keys"],
   },

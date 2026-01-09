@@ -321,9 +321,7 @@ export default function BagScoresPage() {
                   {String(selectedBag.bagNo).padStart(3, "0")}
                 </h5>
                 <div className="text-muted small mt-1 d-flex flex-wrap gap-3">
-                  <span>วิชา: {selectedBag.subjectName || "-"}</span>
                   <span>รอบสอบ: {selectedBag.sessionLabel}</span>
-                  <span>สถานะถุง: {selectedBag.status}</span>
                   <span>จำนวนชุดข้อสอบ: {selectedBag.scannedCount}</span>
                 </div>
               </div>

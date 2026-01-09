@@ -138,10 +138,10 @@ export function CampaignList({
                   <div>
                     <div className="d-flex flex-wrap align-items-center gap-2">
                       <h6 className="mb-0">{session.label}</h6>
-                      <span className="badge text-bg-secondary d-inline-flex align-items-center gap-1">
+                      {/* <span className="badge text-bg-secondary d-inline-flex align-items-center gap-1">
                         <MoreHorizontal size={14} />
                         {session.subjects.length} วิชา
-                      </span>
+                      </span> */}
                     </div>
                     <p className="mb-0 mt-1 small text-muted">
                       วันที่สอบ: {formatDateDisplay(session.examDate)}
@@ -214,7 +214,7 @@ export function CampaignList({
                           <td>{subject.bookletRange || "-"}</td>
                           <td>
                             <div className="d-flex justify-content-end gap-2">
-                              <button
+                              {/* <button
                                 className="btn btn-link p-0"
                                 onClick={() =>
                                   onEditSubject(
@@ -226,9 +226,10 @@ export function CampaignList({
                                 aria-label="แก้ไขรายวิชา"
                               >
                                 <Pencil size={16} />
-                              </button>
+                              </button> */}
+                              <div className="d-flex flex-wrap gap-2">
                               <button
-                                className="btn btn-link text-danger p-0"
+                                className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
                                 onClick={() =>
                                   onDeleteSubject(
                                     campaign.id,
@@ -239,7 +240,9 @@ export function CampaignList({
                                 aria-label="ลบรายวิชา"
                               >
                                 <Trash2 size={16} />
+                                ลบ
                               </button>
+                              </div>
                             </div>
                           </td>
                         </tr>
