@@ -6,6 +6,8 @@ interface AppHeaderProps {
   onOpenCampaignModal: () => void;
   onLogout: () => void;
   onOpenMobileSidebar: () => void;
+  theme: { color: string; bg: string };
+  onclickSidebar: string;
 }
 
 export function AppHeader({
@@ -13,9 +15,11 @@ export function AppHeader({
   onOpenCampaignModal,
   onLogout,
   onOpenMobileSidebar,
+  onclickSidebar,
+  theme,
 }: AppHeaderProps) {
   const campaignLabel = activeCampaign
-    ? `${activeCampaign.code ?? activeCampaign.id} - ${activeCampaign.name}`
+    ? `${activeCampaign.name ?? activeCampaign.id} - ${activeCampaign.code}`
     : null;
 
   return (
@@ -25,9 +29,10 @@ export function AppHeader({
     >
       <div className="d-flex align-items-center gap-3">
         <button
-          className="btn btn-light btn-sm d-lg-none border"
+          className="btn btn-sm d-lg-none border"
           onClick={onOpenMobileSidebar}
           aria-label="Open menu"
+          style={{ backgroundColor: theme.bg }} // <-- เปลี่ยนพื้นหลัง
         >
           <Menu size={20} className="text-secondary" />
         </button>
@@ -36,7 +41,7 @@ export function AppHeader({
           <div className="d-flex align-items-center gap-2">
             <span className="text-secondary small fw-medium d-none d-sm-inline">Console</span>
             <ChevronRight size={14} className="text-muted d-none d-sm-inline" />
-            <h1 className="h6 mb-0  ">Examination Management System</h1>
+            <h1 className="h6 mb-0">{onclickSidebar}</h1>
           </div>
         </div>
       </div>
@@ -44,18 +49,25 @@ export function AppHeader({
       <div className="d-flex align-items-center gap-2">
         <div className="d-none d-md-flex align-items-center me-3">
           {activeCampaign ? (
-            <div className="d-flex align-items-center gap-2 px-3 py-1 bg-light rounded-pill border">
+            <div 
+              className="d-flex align-items-center gap-3 px-4 py-2 rounded-pill border"
+              style={{ backgroundColor: theme.bg }} // <-- เปลี่ยนพื้นหลัง
+            >
               <span
-                className={`badge rounded-circle p-1 ${
-                  activeCampaign.isActive ? "bg-success" : "bg-secondary"
-                }`}
-                style={{ width: 8, height: 8 }}
+                className={`badge rounded-circle ${activeCampaign.isActive ? "bg-success" : "bg-secondary"}`}
+                style={{ width: 14, height: 14 }}
               />
               <span
-                className="text-dark small fw-medium text-truncate"
-                style={{ maxWidth: 150 }}
+                className="text-dark fw-semibold"
+                style={{
+                  maxWidth: 600,
+                  fontSize: "1.1rem",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
               >
-                {campaignLabel}
+                รอบสอบ {campaignLabel}
               </span>
             </div>
           ) : (

@@ -17,17 +17,23 @@ export default function KeyManagementPage() {
     prerequisites,
     encryptionStatus,
     lastBulkEncryptionStats,
-    myKeyId,
     IshasKey,
-    keyInput,
-    setKeyInput,
+    firstKey,
+    secondKey,
+    firstKeyId,
+    secondKeyId,
     selectedSessionId,
     headerSummary,
     isLoading,
     canGenerate,
     isEncryptionLoading,
     canEncrypt,
-
+    manager1,
+    manager2,
+    setFirstKey,
+    setSecondKey,
+    handleSaveFirstKey,
+    handleSaveSecondKey,
     handleSaveKey,
     handleDeleteKey,
     handleSessionChange,
@@ -43,17 +49,22 @@ export default function KeyManagementPage() {
 
 
         <KeyCreateCard
-          activeKeys={activeKeys}
-          IsHasKey={IshasKey}
-          myKeyId={myKeyId}
-          keyInput={keyInput}
-          onKeyInputChange={setKeyInput}
+          firstKey={firstKey}
+          secondKey={secondKey}
+          firstKeyId={firstKeyId}
+          secondKeyId={secondKeyId}
+          onFirstKeyChange={setFirstKey}
+          onSecondKeyChange={setSecondKey}
+          onSaveFirstKey={handleSaveFirstKey}
+          onSaveSecondKey={handleSaveSecondKey}
           onDeleteKey={handleDeleteKey}
           canGenerate={canGenerate}
           isLoading={isLoading}
           hasActiveCampaign={!!activeCampaign}
           activeKeyCount={activeKeys.length}
-          onSaveKey={handleSaveKey}
+          manager1={manager1}
+          manager2={manager2}
+          onRunBulkEncryption={handleRunBulkEncryption}
         />
         {/* 
         <ActiveKeysCard
@@ -62,7 +73,7 @@ export default function KeyManagementPage() {
           isLoading={isLoading}
           onDeleteKey={handleDeleteKey}
         /> */}
-
+{/* 
         <EncryptionCard
           activeKeysCount={activeKeys.length}
           prerequisites={prerequisites}
@@ -75,7 +86,7 @@ export default function KeyManagementPage() {
           lastBulkEncryptionStats={lastBulkEncryptionStats}
           keyManagementError={keyManagementError}
           onRunBulkEncryption={handleRunBulkEncryption}
-        />
+        /> */}
       </div>
 
 

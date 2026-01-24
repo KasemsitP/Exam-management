@@ -40,7 +40,7 @@ export default function EncryptionCard({
   return (
     <div className="card shadow-sm">
       <div className="card-header bg-white">
-        <h6 className="mb-0">3. เข้ารหัสข้อมูล (Official Bulk Run)</h6>
+        <h6 className="mb-0">3. เข้ารหัสข้อมูล </h6>
       </div>
       <div className="card-body">
         {/* Status Check */}
@@ -83,10 +83,10 @@ export default function EncryptionCard({
         {/* Session select */}
         <div className="row g-3">
           <div className="col-12">
-            <label htmlFor="enc-session" className="form-label">
+            {/* <label htmlFor="enc-session" className="form-label">
               เลือก Session ที่จะเข้ารหัส
-            </label>
-            <select
+            </label> */}
+            {/* <select
               id="enc-session"
               className="form-select"
               value={selectedSessionId}
@@ -105,7 +105,7 @@ export default function EncryptionCard({
                   {s.id} {s.label}
                 </option>
               ))}
-            </select>
+            </select> */}
           </div>
         </div>
 
@@ -120,7 +120,7 @@ export default function EncryptionCard({
           ) : (
             <></>
           )}
-          เข้ารหัสทั้งทั้ง session
+          เข้ารหัส
         </button>
 
         {/* Result */}

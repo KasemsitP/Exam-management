@@ -97,6 +97,8 @@ export function useCampaignsPage() {
 
   }, [dispatch, status]);
 
+
+
   /* ------------------------------ Filters & UI ----------------------------- */
 
   const [textFilter, setTextFilter] = useState("");
@@ -110,6 +112,7 @@ export function useCampaignsPage() {
     null
   );
 
+
   const [sessionContext, setSessionContext] = useState<{
     campaignId: string;
     session: CampaignSession | null;
@@ -120,6 +123,12 @@ export function useCampaignsPage() {
     sessionId: string;
     subject: CampaignSubject | null;
   } | null>(null);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(1); // ปรับได้: 5/10/20
+
+
+
 
   /* ------------------------------ Forms setup ------------------------------ */
 
@@ -295,6 +304,23 @@ export function useCampaignsPage() {
     () => visibleCampaigns.reduce((total, item) => total + item.sessions.length, 0),
     [visibleCampaigns]
   );
+
+  useEffect(() => {
+    setPage(1);
+  }, [textFilter, dateFilter, pageSize]);
+
+
+
+  const totalCampaigns = visibleCampaigns.length;
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(totalCampaigns / pageSize));
+  }, [totalCampaigns, pageSize]);
+
+  const pagedCampaigns = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return visibleCampaigns.slice(start, start + pageSize);
+  }, [visibleCampaigns, page, pageSize]);
 
   /* ------------------------------- Submit handlers ------------------------- */
 
@@ -541,7 +567,7 @@ export function useCampaignsPage() {
     });
 
     if (!result.isConfirmed) {
-      return; 
+      return;
     }
     try {
       await dispatch(
@@ -598,6 +624,7 @@ export function useCampaignsPage() {
     // data
     campaigns,
     visibleCampaigns,
+      pagedCampaigns,
     sessionCount,
     allSubjects,
 
@@ -629,6 +656,14 @@ export function useCampaignsPage() {
       form: subjectForm,
       onOpenChange: handleSubjectDialogChange,
       onSubmit: handleSubjectSubmit,
+    },
+    pagination: {      
+      page,
+      setPage,
+      pageSize,
+      setPageSize,
+      totalPages,
+      totalCampaigns,
     },
 
     // actions for UI

@@ -52,6 +52,7 @@ interface FinalizeLinkResponse {
 interface BagsState {
     bags: Record<string, Bag>;
     status: "idle" | "loading" | "succeeded" | "failed";
+    submitStatus: "idle" | "loading" | "succeeded" | "failed";
     error: string | null;
     defaultCapacity: number;
     stats: Record<string, BagStats>;
@@ -74,6 +75,7 @@ interface BagPayloadRecord {
 const initialState: BagsState = {
     bags: {},
     status: "idle",
+    submitStatus: "idle",
     error: null,
     defaultCapacity: 30,
     stats: {},
@@ -199,6 +201,38 @@ export const deleteBagThunk = createAsyncThunk<
                 return rejectWithValue(error.response?.data?.message ?? "Delete bag failed");
             }
             return rejectWithValue("Delete bag failed");
+        }
+    }
+);
+
+export const CreateBagAndAddQrPayload = createAsyncThunk<
+    { bagId: number; campaignId: number; bagNo: number },
+    { campaignId: number; payload: string[] },
+    { rejectValue: string }
+>(
+    "bags/createAndAddQrPayload",
+    async ({ campaignId, payload }, { rejectWithValue }) => {
+        try {
+            console.log(campaignId, payload);
+            const res = await axios.post("/api/bags/create-insert", {
+                campaignId,
+                payload,
+            });
+            console.log("API RESULT", res.data);
+
+            return {
+                bagId: res.data.bagId,
+                campaignId,
+                bagNo: res.data.bagNo,
+            };
+        } catch (error: unknown) {
+            if (axios.isAxiosError(error)) {
+                return rejectWithValue(
+                    error.response?.data?.message ??
+                    "Create bag and add QR payload failed"
+                );
+            }
+            return rejectWithValue("Create bag and add QR payload failed");
         }
     }
 );
@@ -385,7 +419,19 @@ const bagsSlice = createSlice({
             .addCase(ScannedPayloadThunk.rejected, (state, action) => {
                 state.status = "failed";
                 state.error = action.payload as string;
+            })
+
+            .addCase(CreateBagAndAddQrPayload.pending, (state) => {
+                state.submitStatus = "loading";
+            })
+            .addCase(CreateBagAndAddQrPayload.fulfilled, (state) => {
+                state.submitStatus = "succeeded";
+            })
+            .addCase(CreateBagAndAddQrPayload.rejected, (state, action) => {
+                state.submitStatus = "failed";
+                state.error = action.payload ?? null;
             });
+
     },
 });
 
@@ -404,46 +450,46 @@ export const {
 export const selectBagsSlice = (state: RootState) => state.bags;
 
 export const selectDefaultBagCapacity = (state: RootState) =>
-  state.bags.defaultCapacity;
+    state.bags.defaultCapacity;
 
 export const selectAllBagsAsArray = (state: RootState) =>
-  Object.values(state.bags.bags);
+    Object.values(state.bags.bags);
 
 export const selectBagsForCampaign =
-  (campaignId: string | null) =>
-  (state: RootState) => {
-    if (!campaignId) return [];
-    return Object.values(state.bags.bags).filter(
-      (bag) => bag.campaignId === campaignId
-    );
-  };
+    (campaignId: string | null) =>
+        (state: RootState) => {
+            if (!campaignId) return [];
+            return Object.values(state.bags.bags).filter(
+                (bag) => bag.campaignId === campaignId
+            );
+        };
 
 export const selectBagById =
-  (campaignId: string, bagId: string) =>
-  (state: RootState) => {
-    const bag = state.bags.bags[bagId];
-    if (bag && bag.campaignId === campaignId) {
-      return bag;
-    }
-    return undefined;
-  };
+    (campaignId: string, bagId: string) =>
+        (state: RootState) => {
+            const bag = state.bags.bags[bagId];
+            if (bag && bag.campaignId === campaignId) {
+                return bag;
+            }
+            return undefined;
+        };
 
 // ⭐ แนะนำให้คืนโครงสร้าง BagStats ให้ครบทุก field เสมอ
 export const selectBagStatsForCampaign =
-  (campaignId: string | null) =>
-  (state: RootState): BagStats => {
-    if (!campaignId || !state.bags.stats[campaignId]) {
-      return { total: 0, completed: 0, inProgress: 0, scanned: 0 };
-    }
-    return state.bags.stats[campaignId];
-  };
+    (campaignId: string | null) =>
+        (state: RootState): BagStats => {
+            if (!campaignId || !state.bags.stats[campaignId]) {
+                return { total: 0, completed: 0, inProgress: 0, scanned: 0 };
+            }
+            return state.bags.stats[campaignId];
+        };
 
 export const selectBookletsInBag =
-  (campaignId: number, sessionId: number, bagNo: number) =>
-  (state: RootState) => {
-    const key = `${campaignId}:${sessionId}:${bagNo}`;
-    return state.bags.inBags[key] ?? [];
-  };
+    (campaignId: number, sessionId: number, bagNo: number) =>
+        (state: RootState) => {
+            const key = `${campaignId}:${sessionId}:${bagNo}`;
+            return state.bags.inBags[key] ?? [];
+        };
 
 export { bagsSlice };
 

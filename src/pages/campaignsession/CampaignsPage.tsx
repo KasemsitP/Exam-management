@@ -14,6 +14,8 @@ export default function CampaignsPage() {
     visibleCampaigns,
     sessionCount,
     textFilter,
+    pagedCampaigns,
+    pagination,
     setTextFilter,
     dateFilter,
     setDateFilter,
@@ -27,7 +29,7 @@ export default function CampaignsPage() {
 
   return (
     <ShowIfCan permission="manage_subjects">
-      <div className="container py-4">
+      <div className="flex-grow-1 overflow-auto p-2 p-sm-3 p-lg-4">
         <CampaignFiltersCard
           textFilter={textFilter}
           onTextFilterChange={setTextFilter}
@@ -39,7 +41,8 @@ export default function CampaignsPage() {
         />
 
         <CampaignList
-          visibleCampaigns={visibleCampaigns}
+          // visibleCampaigns={visibleCampaigns}
+          visibleCampaigns={pagedCampaigns}
           onEditCampaign={actions.openCampaignDialog}
           onDeleteCampaign={actions.confirmAndRemoveCampaign}
           onCreateSession={(campaignId) =>
@@ -57,6 +60,42 @@ export default function CampaignsPage() {
           }
           onDeleteSubject={actions.confirmAndRemoveSubject}
         />
+<div className="position-fixed bottom-0 start-0 w-100 bg-white border-top p-3 z-3">
+  <div className="d-flex flex-column flex-sm-row gap-2 align-items-sm-center justify-content-between">
+    <div className="text-muted small">
+      ทั้งหมด {pagination.totalCampaigns} แคมเปญ • หน้า {pagination.page} / {pagination.totalPages}
+    </div>
+
+    <div className="d-flex gap-2 align-items-center">
+      <div className="btn-group btn-group-sm">
+        <button
+          className="btn btn-outline-secondary"
+          disabled={pagination.page <= 1}
+          onClick={() => pagination.setPage((p) => Math.max(1, p - 1))}
+        >
+          ก่อนหน้า
+        </button>
+
+        <button className="btn btn-outline-secondary" disabled>
+          {pagination.page}/{pagination.totalPages}
+        </button>
+
+        <button
+          className="btn btn-outline-secondary"
+          disabled={pagination.page >= pagination.totalPages}
+          onClick={() =>
+            pagination.setPage((p) =>
+              Math.min(pagination.totalPages, p + 1)
+            )
+          }
+        >
+          ถัดไป
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
         <CampaignModal
           open={campaignDialog.open}

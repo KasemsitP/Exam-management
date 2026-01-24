@@ -35,7 +35,7 @@ export default function ImportCsvPage() {
 
   return (
     <ShowIfCan permission="importcsv">
-      <div className="container-fluid px-3 px-sm-4 py-4">
+      <div className="flex-grow-1 overflow-auto p-2 p-sm-3 p-lg-4">
         <ImportHeader />
 
         <div className="card shadow-sm mb-4">

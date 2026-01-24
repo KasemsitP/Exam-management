@@ -29,6 +29,7 @@ import {
   selectActiveCampaign,
   selectActiveCampaignSessions,
 } from "@/store/slices/examData.slice";
+import { set } from "react-hook-form";
 
 const parseCampaignId = (id: string): number => Number(id.replace("camp-", ""));
 const parseSessionId = (id: string): number => Number(id.replace("sess-", ""));
@@ -38,6 +39,7 @@ export const useKeyManagement = () => {
   const dispatch = useAppDispatch();
 
   // --- Redux state ---
+
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const users = useAppSelector(selectCurrentUser)
@@ -54,10 +56,20 @@ export const useKeyManagement = () => {
   const ImportStatus = useAppSelector(selectImportStatus)
 
   // --- Local state ---
-  const [keyInput, setKeyInput] = useState("");
+  // const [keyInput, setKeyInput] = useState("");
   const [selectedSessionId, setSelectedSessionId] = useState<string>("20");
   const [IshasKey, setIshasKey] = useState(false)
-  const [myKeyId, setMyKeyId] = useState<number | null>(null);
+  const [firstKey, setFirstKey] = useState<string>("");
+  const [secondKey, setSecondKey] = useState<string>("");
+  const [firstKeyId, setFirstKeyId] = useState<number | null>(null);
+  const [secondKeyId, setSecondKeyId] = useState<number | null>(null);
+  const [manager1, setmanager1] = useState<string>("");
+  const [manager2, setmanager2] = useState<string>("")
+
+
+  // console.log("KeyCreateCard props:", {
+  //   manager1
+  // });
 
   const numericCampaignId = activeCampaign
     ? parseCampaignId(activeCampaign.id)
@@ -69,6 +81,7 @@ export const useKeyManagement = () => {
   const isEncryptionLoading = encryptionStatus === "loading";
   const canEncrypt =
     !!prerequisites?.hasTwoKeys && !!prerequisites?.hasImportedUsers;
+
 
 
   const headerSummary = useMemo(
@@ -86,6 +99,19 @@ export const useKeyManagement = () => {
     [ImportStatus, EncryptedStatus]
   );
 
+  function syncLocalFromKeys(keys: any[]) {
+    const first = keys.find((k) => k.order_num === 1) ?? null;
+    const second = keys.find((k) => k.order_num === 2) ?? null;
+
+    setFirstKey(first?.key ?? "");
+    setSecondKey(second?.key ?? "");
+    setFirstKeyId(first?.id ?? null);
+    setSecondKeyId(second?.id ?? null);
+
+    setmanager1(String(first?.full_name ?? ""));
+    setmanager2(String(second?.full_name ?? ""));
+  }
+
 
   useEffect(() => {
     console.log("dashboardStatus =", dashboardStatus);
@@ -100,36 +126,15 @@ export const useKeyManagement = () => {
 
   useEffect(() => {
     if (!numericCampaignId || !userAccountId) return;
+
     dispatch(fetchDashboardStatus(numericCampaignId));
-    dispatch(
-      fetchKeysForCampaignByManager({
-        campaignId: numericCampaignId,
-        AccountId: Number(userAccountId),
-      })
-    )
+
+    dispatch(fetchKeysForCampaign(numericCampaignId))
       .unwrap()
-      .then((keys) => {
-        console.log("keys =", keys);
-
-        if (!keys || keys.length === 0) {
-          setKeyInput("");
-          setIshasKey(false);
-          setMyKeyId(null);
-          return;
-        }
-
-        const latest = keys[0];
-        console.log("latest =", latest);
-
-        setKeyInput(latest.key ?? "");
-        setIshasKey(true);
-        setMyKeyId(latest.id);
-      })
+      .then(syncLocalFromKeys)
       .catch((err) => {
-        console.log("fetchKeysForCampaignByManager failed:", err);
-        setKeyInput("");
-        setIshasKey(false);
-        setMyKeyId(null);
+        console.log("fetchKeysForCampaign failed:", err);
+        syncLocalFromKeys([]);
       });
 
     dispatch(checkEncryptionPrerequisites(numericCampaignId));
@@ -141,51 +146,63 @@ export const useKeyManagement = () => {
 
 
 
-useEffect(() => {
-  if (sessions.length > 0) {
-    // บังคับให้เลือกตัวแรกเสมอ (หรือจะหา default ตัวอื่นก็ได้)
-    setSelectedSessionId(String(sessions[0].id));
-  } else {
-    setSelectedSessionId("");
-  }
-}, [sessions]);
+
+  useEffect(() => {
+    if (sessions.length > 0) {
+      // บังคับให้เลือกตัวแรกเสมอ (หรือจะหา default ตัวอื่นก็ได้)
+      setSelectedSessionId(String(sessions[0].id));
+    } else {
+      setSelectedSessionId("");
+    }
+  }, [sessions]);
+
+
+  const handleSaveFirstKey = () => handleSaveKey(1);
+  const handleSaveSecondKey = () => handleSaveKey(2);
 
 
 
-  const handleSaveKey = () => {
-    if (!numericCampaignId) {
+
+  const handleSaveKey = (orderNum: 1 | 2) => {
+    if (!numericCampaignId || !userAccountId) {
       Swal.fire({
         icon: "warning",
         title: "กรุณาเลือก Campaign ก่อน",
-        confirmButtonText: "ตกลง",
       });
       return;
     }
 
-    if (!keyInput.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "กรุณากรอกคีย์ (Secret)",
-        confirmButtonText: "ตกลง",
-      });
-      return;
-    }
-
-    if (!canGenerate) {
+    // ป้องกัน save ซ้ำ
+    if (orderNum === 1 && firstKeyId) {
       Swal.fire({
         icon: "error",
-        title: "รอบสอบนี้มีคีย์ครบ 2 อันแล้ว",
-        confirmButtonText: "ตกลง",
+        title: "คีย์คนที่ 1 ถูกบันทึกแล้ว",
       });
       return;
     }
 
-    if (keyInput.trim().length !== 16) {
+    if (orderNum === 2 && secondKeyId) {
+      Swal.fire({
+        icon: "error",
+        title: "คีย์คนที่ 2 ถูกบันทึกแล้ว",
+      });
+      return;
+    }
+
+    const keyValue = orderNum === 1 ? firstKey : secondKey;
+
+    if (!keyValue.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอก Secret Key",
+      });
+      return;
+    }
+
+    if (keyValue.trim().length !== 16) {
       Swal.fire({
         icon: "error",
         title: "คีย์ต้องมีความยาว 16 ตัวอักษร",
-        text: "กรุณาตรวจสอบ Secret Key อีกครั้ง",
-        confirmButtonText: "ตกลง",
       });
       return;
     }
@@ -193,40 +210,69 @@ useEffect(() => {
     dispatch(
       saveNewKey({
         campaignId: numericCampaignId,
-        key: keyInput.trim(),
-        account_id: Number(userAccountId)
+        key: keyValue.trim(),
+        account_id: Number(userAccountId),
+        order_num: orderNum,
       })
     )
       .unwrap()
-      .then(() => {
-        Swal.fire({
-          icon: "success",
-          title: "บันทึกคีย์สำเร็จ",
-          timer: 1500,
-          showConfirmButton: false,
-        });
+      .then(async () => {
+        Swal.fire({ icon: "success", title: "บันทึกคีย์สำเร็จ", timer: 1500, showConfirmButton: false });
+
+        const keys = await dispatch(fetchKeysForCampaign(numericCampaignId)).unwrap();
+        syncLocalFromKeys(keys);
 
         dispatch(checkEncryptionPrerequisites(numericCampaignId));
-        setKeyInput("");
+
+        const MIN_LOADING_TIME = 3000;
+        const startTime = Date.now();
+
+        // ✅ 2. เปิด loading
+        Swal.fire({
+          title: "กำลังประมวลผล...",
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
+        // ✅ 3. ใส่ logic เวลา "ตรงนี้"
+        dispatch(runBulkEncryptionForSession({ campaignId: numericCampaignId }))
+          .unwrap()
+          .then(() => {
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
+
+            setTimeout(() => {
+              Swal.fire({
+                icon: "success",
+                title: "เข้ารหัสสำเร็จ",
+                timer: 1500,
+                showConfirmButton: false,
+              });
+            }, remaining);
+          })
+          .catch(() => {
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
+
+            setTimeout(() => {
+              Swal.fire({
+                icon: "error",
+                title: "เข้ารหัสล้มเหลว",
+              });
+            }, remaining);
+          });
       })
       .catch((error) => {
         Swal.fire({
           icon: "error",
           title: "บันทึกคีย์ไม่สำเร็จ",
           text: typeof error === "string" ? error : "เกิดข้อผิดพลาด",
-          confirmButtonText: "ตกลง",
         });
-      });
-
-
-    setKeyInput("");
-    dispatch(
-      fetchKeysForCampaignByManager({
-        campaignId: numericCampaignId,
-        AccountId: Number(userAccountId),
       })
-    )
   };
+
 
   const handleDeleteKey = (keyId: number) => {
     Swal.fire({
@@ -237,30 +283,25 @@ useEffect(() => {
       cancelButtonText: "ยกเลิก",
       reverseButtons: true,
     }).then((result) => {
-      if (result.isConfirmed) {
-        dispatch(deleteKey(keyId))
-          .unwrap()
-          .then(() => {
-            Swal.fire({
-              icon: "success",
-              title: "ลบคีย์สำเร็จ",
-              timer: 1500,
-              showConfirmButton: false,
-            });
+      if (!result.isConfirmed) return;
+      dispatch(deleteKey(keyId))
+        .unwrap()
+        .then(async () => {
+          Swal.fire({ icon: "success", title: "ลบคีย์สำเร็จ", timer: 1500, showConfirmButton: false });
 
-            if (numericCampaignId) {
-              dispatch(checkEncryptionPrerequisites(numericCampaignId));
-            }
-          })
-          .catch((error) => {
-            Swal.fire({
-              icon: "error",
-              title: "ลบคีย์ไม่สำเร็จ",
-              text: typeof error === "string" ? error : "เกิดข้อผิดพลาด",
-              confirmButtonText: "ตกลง",
-            });
+          const keys = await dispatch(fetchKeysForCampaign(numericCampaignId!)).unwrap();
+          syncLocalFromKeys(keys);
+
+          dispatch(checkEncryptionPrerequisites(numericCampaignId!));
+        })
+        .catch((error) => {
+          Swal.fire({
+            icon: "error",
+            title: "ลบคีย์ไม่สำเร็จ",
+            text: typeof error === "string" ? error : "เกิดข้อผิดพลาด",
+            confirmButtonText: "ตกลง",
           });
-      }
+        });
     });
   };
 
@@ -283,7 +324,10 @@ useEffect(() => {
 
     dispatch(clearEncryptionResult());
 
-    // แสดง loading ระหว่างเข้ารหัส
+    const MIN_LOADING_TIME = 3000;
+    const startTime = Date.now();
+
+    // ✅ เปิด loading
     Swal.fire({
       title: "กำลังเข้ารหัส...",
       text: "กรุณารอสักครู่",
@@ -292,16 +336,22 @@ useEffect(() => {
         Swal.showLoading();
       },
     });
-    console.log(numericCampaignId , selectedSessionId);
 
-    const result: any = await dispatch(
-      runBulkEncryptionForSession({
-        campaignId: numericCampaignId,
-        sessionId: parseSessionId(selectedSessionId),
-      })
-    );
+    let result;
+    try {
+      result = await dispatch(
+        runBulkEncryptionForSession({
+          campaignId: numericCampaignId,
+        })
+      );
+    } finally {
+      //  คำนวณเวลาให้ loading โชว์ขั้นต่ำ
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
 
-    Swal.close();
+      await new Promise((resolve) => setTimeout(resolve, remaining));
+      Swal.close();
+    }
 
     if (result.meta.requestStatus === "fulfilled") {
       await Swal.fire({
@@ -320,6 +370,7 @@ useEffect(() => {
       });
     }
   };
+
 
   const prerequisitesCards = useMemo(
     () => ({
@@ -344,12 +395,14 @@ useEffect(() => {
     // local
 
     IshasKey,
-    myKeyId,
-    keyInput,
-    setKeyInput,
+    firstKey,
+    secondKey,
+    firstKeyId,
+    secondKeyId,
     selectedSessionId,
     setSelectedSessionId,
-
+    setFirstKey,
+    setSecondKey,
     // derived
     numericCampaignId,
     isLoading,
@@ -357,7 +410,13 @@ useEffect(() => {
     isEncryptionLoading,
     canEncrypt,
 
+    //manager
+    manager1,
+    manager2,
+
     // handlers
+    handleSaveFirstKey,
+    handleSaveSecondKey,
     handleSaveKey,
     handleDeleteKey,
     handleSessionChange,

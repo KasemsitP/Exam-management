@@ -9,6 +9,7 @@ interface ComposeBagModalProps {
   canScan: boolean;
   isSealed: boolean;
   scannerEnabled: boolean;
+
   deviceId?: string;
   manualCode: string;
   onManualCodeChange: (v: string) => void;
@@ -20,6 +21,8 @@ interface ComposeBagModalProps {
   onFinalize: () => void;
   bagStatus: string;
   bookletsInBag: any[];
+  isLoading: boolean;
+
 }
 
 export default function ComposeBagModal({
@@ -40,6 +43,7 @@ export default function ComposeBagModal({
   onFinalize,
   bagStatus,
   bookletsInBag,
+  isLoading,
 }: ComposeBagModalProps) {
   return (
     <div
@@ -61,7 +65,9 @@ export default function ComposeBagModal({
                   type="button"
                   className="btn-close"
                   onClick={onClose}
+                  disabled={isLoading}
                 />
+
               </div>
 
               <div className="modal-body">
@@ -94,47 +100,47 @@ export default function ComposeBagModal({
                           <ul className="list-group list-group-flush">
                             {isSealed
                               ? bookletsInBag.map((bk: any) => (
-                                  <li
-                                    key={bk.id}
-                                    className="list-group-item"
-                                  >
-                                    <div className="d-flex flex-column">
-                                      <span className="fw-medium">
-                                       {bk.id} {/*  — {bk.fullName} */}
-                                      </span>
-                                      <span
-                                        className="small text-muted text-truncate"
-                                        style={{ maxWidth: "100%" }}
-                                      >
-                                        {bk.qrPayload}
-                                      </span>
-                                    </div>
-                                  </li>
-                                ))
-                              : composeBag.scanned.map((code: string) => (
-                                  <li
-                                    key={code}
-                                    className="list-group-item d-flex align-items-center justify-content-between"
-                                  >
-                                    <span
-                                      className="fw-medium text-truncate"
-                                      style={{ maxWidth: "80%" }}
-                                    >
-                                      {code}
+                                <li
+                                  key={bk.id}
+                                  className="list-group-item"
+                                >
+                                  <div className="d-flex flex-column">
+                                    <span className="fw-medium">
+                                      {bk.id} {/*  — {bk.fullName} */}
                                     </span>
-                                    <button
-                                      className="btn btn-link text-danger p-1"
-                                      onClick={() => onRemoveCode(code)}
-                                      title="ลบ"
+                                    <span
+                                      className="small text-muted text-truncate"
+                                      style={{ maxWidth: "100%" }}
                                     >
-                                      <X size={16} />
-                                    </button>
-                                  </li>
-                                ))}
+                                      {bk.qrPayload}
+                                    </span>
+                                  </div>
+                                </li>
+                              ))
+                              : composeBag.scanned.map((code: string) => (
+                                <li
+                                  key={code}
+                                  className="list-group-item d-flex align-items-center justify-content-between"
+                                >
+                                  <span
+                                    className="fw-medium text-truncate"
+                                    style={{ maxWidth: "80%" }}
+                                  >
+                                    {code}
+                                  </span>
+                                  <button
+                                    className="btn btn-link text-danger p-1"
+                                    onClick={() => onRemoveCode(code)}
+                                    title="ลบ"
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </li>
+                              ))}
 
                             {(!isSealed &&
                               composeBag.scanned.length === 0) ||
-                            (isSealed && bookletsInBag.length === 0) ? (
+                              (isSealed && bookletsInBag.length === 0) ? (
                               <li className="list-group-item text-center text-muted">
                                 ยังไม่มีการสแกน QR Code
                               </li>
@@ -149,13 +155,13 @@ export default function ComposeBagModal({
                           <span
                             className={
                               composeBag.scanned.length >=
-                              composeBag.capacity
+                                composeBag.capacity
                                 ? "text-success"
                                 : "text-warning"
                             }
                           >
                             {composeBag.scanned.length >=
-                            composeBag.capacity
+                              composeBag.capacity
                               ? "ครบแล้ว"
                               : "ยังไม่ครบ"}
                           </span>
@@ -254,7 +260,7 @@ export default function ComposeBagModal({
                             </button>
                           </div>
                         </div>
-{/* 
+                        {/* 
                         {composeBag.scanned.length <
                           composeBag.capacity && (
                           <div className="alert alert-warning py-2 small mb-0">
@@ -280,15 +286,16 @@ export default function ComposeBagModal({
                 <button
                   className="btn btn-primary d-inline-flex align-items-center gap-2"
                   onClick={onFinalize}
-                  disabled={!canScan}
+                  disabled={!canScan || isLoading}
                 >
-                  {bagStatus === "loading" ? (
+                  {isLoading ? (
                     <Loader2 size={16} className="spin-animation" />
                   ) : (
                     <DatabaseZap size={16} />
                   )}
-                  บันทึกข้อมูล
+                  {isLoading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
                 </button>
+
               </div>
             </>
           )}

@@ -6,10 +6,14 @@ import { RootState } from "../index";
 export interface CampaignKey {
   id: number;
   campaign_id: number;
+  account_id: number;
+  full_name:string;
   key: string;
+  algor?: string;
   iv: string;
-  algor: string;
-  created_at: string;
+  active: number;   
+  order_num: number; 
+  created_at: string;  
 }
 
 export interface PrerequisiteStatus {
@@ -26,7 +30,6 @@ export interface EncryptionResponse {
 }
 export interface BulkEncryptionPayload {
   campaignId: number;
-  sessionId: number;
 }
 export interface BulkEncryptionResponse {
   usersEncrypted: number;
@@ -92,15 +95,16 @@ export const fetchKeysForCampaignByManager = createAsyncThunk<
 );
 export const saveNewKey = createAsyncThunk<
   CampaignKey,
-  { campaignId: number; key: string; account_id : number },
+  { campaignId: number; key: string; account_id : number  , order_num: number },
   { rejectValue: string }
 >(
   "keyManagement/saveNewKey",
-  async ({ campaignId, key, account_id }, { rejectWithValue }) => {
+  async ({ campaignId, key, account_id, order_num }, { rejectWithValue }) => {
     try {
+      console.log("TEST KEY " , campaignId, key, account_id, order_num)
       const response = await axios.post<CampaignKey>(
         "/api/keys",
-        { campaignId, key , account_id }
+        { campaignId, key , account_id, order_num }
       );
       return response.data;
     } catch (error: unknown) {

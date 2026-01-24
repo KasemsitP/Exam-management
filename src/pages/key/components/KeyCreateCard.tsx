@@ -2,101 +2,167 @@
 import { Lightbulb, Loader2, Minus, Plus, ShieldCheck } from "lucide-react";
 
 interface KeyCreateCardProps {
-  activeKeys: any[];
-  myKeyId: number | null;
-  IsHasKey: boolean
-  keyInput: string;
-  onKeyInputChange: (value: string) => void;
+  firstKey: string;
+  secondKey: string;
+  firstKeyId: number | null;
+  secondKeyId: number | null;
+  manager1: string;
+  manager2: string;
+
+  onFirstKeyChange: (value: string) => void;
+  onSecondKeyChange: (value: string) => void;
+
+  onSaveFirstKey: () => void;
+  onSaveSecondKey: () => void;
+
   onDeleteKey: (id: number) => void;
+
   canGenerate: boolean;
   isLoading: boolean;
   hasActiveCampaign: boolean;
   activeKeyCount: number;
-  onSaveKey: () => void;
+  onRunBulkEncryption: () => void;
 }
 
+
 export default function KeyCreateCard({
-  activeKeys,
-  myKeyId,
-  IsHasKey,
-  keyInput,
-  onKeyInputChange,
+  firstKey,
+  secondKey,
+  firstKeyId,
+  secondKeyId,
+  onFirstKeyChange,
+  onSecondKeyChange,
+  onSaveFirstKey,
+  onSaveSecondKey,
   onDeleteKey,
-  canGenerate,
   isLoading,
   hasActiveCampaign,
   activeKeyCount,
-  onSaveKey,
+  onRunBulkEncryption,
+  manager1,
+  manager2
 }: KeyCreateCardProps) {
   return (
     <div className="card shadow-sm mb-4 mt-4">
       <div className="card-header bg-white">
-        <h6 className="mb-0">1.ลงทะเบียนคีย์เข้ารหัส</h6>
+        <h6 className="mb-0">1. ลงทะเบียนคีย์เข้ารหัส</h6>
       </div>
+
       <div className="card-body">
-        <div className="row g-3">
+        <div className="row g-4">
+
+          {/* ===== FIRST KEY ===== */}
           <div className="col-lg-8">
-            <label htmlFor="key-input" className="form-label">
-              คีย์สำหรับการเข้ารหัส
+            <label className="form-label d-flex align-items-center justify-content-between">
+              <span>คีย์สำหรับการเข้ารหัสคนที่ 1</span>
+
+              {manager1 && (
+                <span className="badge bg-light text-secondary fw-normal">
+                  เข้ารหัสโดย {manager1}
+                </span>
+              )}
             </label>
+
             <input
-              id="key-input"
               type="password"
               className="form-control"
-              placeholder="กรอกคีย์ลับที่ต้องการบันทึก"
-              value={keyInput}
-              onChange={(e) => onKeyInputChange(e.target.value)}
-              disabled={!canGenerate || IsHasKey}
+              value={firstKey}
+              onChange={(e) => onFirstKeyChange(e.target.value)}
+              disabled={!!firstKeyId}
             />
           </div>
-          <div className="col-lg-4 d-flex align-items-end gap-3">
+
+          <div className="col-lg-4 d-flex align-items-end gap-2">
             <button
-              className="btn btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-2"
-              onClick={onSaveKey}
-              disabled={!canGenerate || !hasActiveCampaign || !keyInput.trim() || IsHasKey}
+              className="btn btn-primary w-100"
+              onClick={onSaveFirstKey}
+              disabled={
+                !!firstKeyId ||
+                !firstKey.trim() ||
+                !hasActiveCampaign
+              }
             >
-              {isLoading ? (
-                <Loader2 size={16} className="spin-animation" />
-              ) : (
-                <Plus size={16} />
-              )}
-              สร้างคีย์ใหม่
-            </button>
-            <button
-              className="btn btn-danger w-100 d-inline-flex align-items-center justify-content-center gap-2"
-              onClick={() => myKeyId && onDeleteKey(myKeyId)}
-              disabled={!IsHasKey || !myKeyId}
-            >
-              {isLoading ? (
-                <Loader2 size={16} className="spin-animation" />
-              ) : (
-                <Minus size={16} />
-              )}
-              ลบคีย์
-            </button>
-            <button
-              className="btn btn-secondary w-100 d-inline-flex align-items-center justify-content-center gap-2"
-              onClick={onSaveKey}
-              disabled={!IsHasKey}
-            >
-              {isLoading ? (
-                <Loader2 size={16} className="spin-animation" />
-              ) : (
-                <Lightbulb size={16} />
-              )}
-              ลืมคีย์
+              {isLoading ? <Loader2 size={16} className="spin-animation" /> : <Plus size={16} />}
+              สร้าง
             </button>
 
+            <button
+              className="btn btn-danger w-100"
+              onClick={() => firstKeyId && onDeleteKey(firstKeyId)}
+              disabled={!firstKeyId}
+            >
+              <Minus size={16} /> ลบ
+            </button>
+          </div>
+
+          {/* ===== SECOND KEY ===== */}
+          <div className="col-lg-8">
+            <label className="form-label d-flex align-items-center justify-content-between">
+              <span>คีย์สำหรับการเข้ารหัสคนที่ 2</span>
+
+              {manager2 && (
+                <span className="badge bg-light text-secondary fw-normal">
+                  เข้ารหัสโดย {manager2}
+                </span>
+              )}
+            </label>
+
+            <input
+              type="password"
+              className="form-control"
+              value={secondKey}
+              onChange={(e) => onSecondKeyChange(e.target.value)}
+              disabled={!!secondKeyId}
+            />
+          </div>
+
+          <div className="col-lg-4 d-flex align-items-end gap-2">
+            <button
+              className="btn btn-primary w-100"
+              onClick={onSaveSecondKey}
+              disabled={
+                !hasActiveCampaign ||
+                !!secondKeyId ||
+                !secondKey.trim()
+              }
+            >
+              {isLoading ? <Loader2 size={16} className="spin-animation" /> : <Plus size={16} />}
+              สร้าง
+            </button>
+
+            <button
+              className="btn btn-danger w-100"
+              onClick={() => secondKeyId && onDeleteKey(secondKeyId)}
+              disabled={!secondKeyId}
+            >
+              <Minus size={16} /> ลบ
+            </button>
           </div>
         </div>
 
-        {!canGenerate && activeKeyCount >= 2 && (
-          <div className="alert alert-success small py-2 mt-3 mb-0">
-            <ShieldCheck size={16} className="me-2" />
-            รอบสอบนี้มีคีย์ครบ 2 อันแล้ว (ไม่สามารถเพิ่มได้)
+        {activeKeyCount >= 2 && (
+          <div
+            className="d-flex align-items-center gap-2 mt-3 p-3 rounded border border-success bg-success bg-opacity-10"
+          >
+            <ShieldCheck size={18} className="text-success" />
+            <div>
+              <div className="fw-semibold text-success">
+                ระบบพร้อมสำหรับการเข้ารหัส
+              </div>
+              <div className="small text-muted">
+                รอบสอบนี้มีคีย์ความปลอดภัยครบทั้ง 2 อันแล้ว
+              </div>
+            </div>
           </div>
         )}
+        <div className="mt-4">
+          <button className="btn btn-success" onClick={onRunBulkEncryption}>
+            เริ่มการเข้ารหัส
+          </button>
+        </div>
+
       </div>
     </div>
   );
 }
+

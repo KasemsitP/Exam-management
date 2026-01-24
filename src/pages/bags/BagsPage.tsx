@@ -27,6 +27,7 @@ import {
   deleteBagThunk,
   selectBookletsInBag,
   ScannedPayloadThunk,
+  CreateBagAndAddQrPayload,
 } from "@/store/slices/bags.slice";
 
 import BagsHeader from "./components/BagsHeader";
@@ -34,6 +35,7 @@ import BagsTable from "./components/BagsTable";
 import ModalBackdrop from "./components/ModalBackdrop";
 import CreateBagModal from "./components/CreateBagModal";
 import ComposeBagModal from "./components/ComposeBagModal";
+import BagScannerModal from "./components/BagScannerModal";
 import type { CreateBagForm } from "./bags.types";
 
 // ปรับ payload ให้เทียบเท่ากันเสมอ
@@ -53,6 +55,7 @@ export default function BagsPage() {
   );
   const defaultCapacity = useAppSelector(selectDefaultBagCapacity);
   const { status: bagStatus } = useAppSelector(selectBagsSlice);
+  const { submitStatus: bagSubmitStatus } = useAppSelector(selectBagsSlice);
 
   const [searchText, setSearchText] = useState("");
   const [filterSessionId, setFilterSessionId] = useState<string>("all");
@@ -60,9 +63,16 @@ export default function BagsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [manualCode, setManualCode] = useState("");
   const [scannerEnabled, setScannerEnabled] = useState(true);
+  const [IsScannerModalOpen, setIsScannerModalOpen] = useState(false);
+  const [qrPayloads, setQrPayloads] = useState<string[]>([]);
   const deviceId: string | undefined = undefined;
 
+  const isLoading = bagStatus === "loading";
+
+
   const createForm = useForm<CreateBagForm>();
+
+
 
   // Set กันซ้ำ
   const scannedSetRef = useRef<Set<string>>(new Set());
@@ -70,6 +80,8 @@ export default function BagsPage() {
   const RECENT_WINDOW_MS = 1200;
 
   // Reset form เมื่อเปิด modal
+
+
   useEffect(() => {
     if (!createDialogOpen) return;
     const defaultSessionId = sessions?.[0]?.id ?? "";
@@ -230,40 +242,37 @@ export default function BagsPage() {
   // Scan logic
   // ------------------------------
   const handleScan = (raw: string) => {
-    if (!composeBag || !activeCampaign || !scannerEnabled) return;
+    if (!activeCampaign || !scannerEnabled) return;
+
     const data = normalizePayload(raw);
 
-    if (recentScanSetRef.current.has(data)) {
-      return;
-    }
+    // กันสแกนถี่
+    if (recentScanSetRef.current.has(data)) return;
     recentScanSetRef.current.add(data);
     setTimeout(
       () => recentScanSetRef.current.delete(data),
       RECENT_WINDOW_MS
     );
 
-    if (scannedSetRef.current.has(data)) {
+    // กันซ้ำใน local list
+    if (qrPayloads.includes(data)) {
       toast({
         title: "สแกนซ้ำ",
-        description: "QR Code นี้ถูกสแกนในถุงแล้ว",
+        description: "QR Code นี้ถูกสแกนแล้ว",
         variant: "destructive",
       });
       return;
     }
 
-    dispatch(
-      bagScanAdded({
-        campaignId: activeCampaign.id,
-        bagId: composeBag.id,
-        code: data,
-      })
-    );
-    scannedSetRef.current.add(data);
+    setQrPayloads((prev) => [...prev, data]);
+
 
     setManualCode("");
     setScannerEnabled(false);
     setTimeout(() => setScannerEnabled(true), 500);
   };
+
+
 
   const handleManualAdd = () => {
     const v = normalizePayload(manualCode);
@@ -273,37 +282,45 @@ export default function BagsPage() {
 
   // finalize
   const handleFinalizeAndLink = async () => {
-    if (!composeBag || !activeCampaign) return;
+    console.log("CLICK FINALIZE");
+
+    if (!activeCampaign) return;
+
     try {
-      await dispatch(
-        finalizeAndLinkBagThunk({
-          campaignId: activeCampaign.id,
-          bag_no: composeBag.id,
-          scannedCodes: composeBag.scanned,
+      console.log("BEFORE DISPATCH");
+
+      const result = await dispatch(
+        CreateBagAndAddQrPayload({
+          campaignId: Number(activeCampaign.id),
+          payload: qrPayloads,
         })
       ).unwrap();
+
+      console.log("AFTER DISPATCH", result);
+
       await Swal.fire({
         icon: "success",
         title: "บันทึกข้อมูลสำเร็จ",
-        text: `ถุง ${composeBag.bag_no} บันทึกสมุด ${composeBagId?.length ?? 0} เล่ม`,
-        timer: 2000,
-        showConfirmButton: false,
+        text: `สร้างถุงเลขที่ ${result.bagNo}`,
       });
-      setComposeBagId(null);
+
+      console.log("AFTER SWAL");
+
 
       await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
-    } catch (error: any) {
-      console.error("Finalize Error:", error);
+
+      setIsScannerModalOpen(false);
+    } catch (error) {
+      console.error("CATCH ERROR:", error);
+
       await Swal.fire({
         icon: "error",
-        title: "Finalize ล้มเหลว",
-        text:
-          error?.message ??
-          "ไม่สามารถเชื่อมโยงข้อมูลกับ Backend ได้",
-        confirmButtonText: "ตกลง",
+        title: "ผิดพลาด",
+        text: String(error),
       });
     }
   };
+
 
   const handleRemoveCode = (code: string) => {
     if (!composeBag || !activeCampaign) return;
@@ -332,43 +349,43 @@ export default function BagsPage() {
     }
   };
 
-const handleDeleteBag = async (bagId: string) => {
-  if (!activeCampaign) return;
+  const handleDeleteBag = async (bagId: string) => {
+    if (!activeCampaign) return;
 
-  const result = await Swal.fire({
-    icon: "warning",
-    title: "ยืนยันการลบ",
-    text: `ลบถุง ${bagId} หรือไม่?`,
-    showCancelButton: true,
-    confirmButtonText: "ลบ",
-    cancelButtonText: "ยกเลิก",
-    confirmButtonColor: "#d33",
-  });
-
-  if (!result.isConfirmed) return;
-
-  try {
-    await dispatch(
-      deleteBagThunk({ campaignId: activeCampaign.id, bagId })
-    ).unwrap();
-
-    await Swal.fire({
-      icon: "success",
-      title: "ลบถุงแล้ว",
-      text: bagId,
-      timer: 1500,
-      showConfirmButton: false,
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "ยืนยันการลบ",
+      text: `ลบถุง ${bagId} หรือไม่?`,
+      showCancelButton: true,
+      confirmButtonText: "ลบ",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#d33",
     });
-    await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
-  } catch (error: any) {
-    await Swal.fire({
-      icon: "error",
-      title: "ลบถุงล้มเหลว",
-      text: error?.message ?? "API Error",
-      confirmButtonText: "ตกลง",
-    });
-  }
-};
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await dispatch(
+        deleteBagThunk({ campaignId: activeCampaign.id, bagId })
+      ).unwrap();
+
+      await Swal.fire({
+        icon: "success",
+        title: "ลบถุงแล้ว",
+        text: bagId,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
+    } catch (error: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "ลบถุงล้มเหลว",
+        text: error?.message ?? "API Error",
+        confirmButtonText: "ตกลง",
+      });
+    }
+  };
 
   const handleCapacityChange = (value: number) => {
     if (!composeBag || !activeCampaign) return;
@@ -394,9 +411,30 @@ const handleDeleteBag = async (bagId: string) => {
         onSearchTextChange={setSearchText}
         filterSessionId={filterSessionId}
         onFilterSessionChange={setFilterSessionId}
-        onOpenCreateDialog={() => setCreateDialogOpen(true)}
+        onOpenCreateDialog={() => setIsScannerModalOpen(true)}
         activeCampaignPresent={!!activeCampaign}
       />
+      <ModalBackdrop open={IsScannerModalOpen} />
+      <BagScannerModal
+        open={IsScannerModalOpen}
+        onClose={() => { setIsScannerModalOpen(false); setQrPayloads([]); }}
+        canScan={canScan}
+        isSealed={isSealed}
+        scannerEnabled={scannerEnabled}
+        deviceId={deviceId}
+        manualCode={manualCode}
+        onManualCodeChange={setManualCode}
+        onManualAdd={handleManualAdd}
+        onScan={handleScan}
+        onCapacityChange={handleCapacityChange}
+        onRemoveCode={handleRemoveCode}
+        onClearCodes={handleClearCodes}
+        onFinalize={handleFinalizeAndLink}
+        scannedPayloads={qrPayloads}
+        bagStatus={bagStatus}
+        bookletsInBag={bookletsInBag}
+      />
+
 
       <BagsTable
         filteredBags={filteredBags}
@@ -434,8 +472,9 @@ const handleDeleteBag = async (bagId: string) => {
         onRemoveCode={handleRemoveCode}
         onClearCodes={handleClearCodes}
         onFinalize={handleFinalizeAndLink}
-        bagStatus={bagStatus}
+        bagStatus={bagSubmitStatus}
         bookletsInBag={bookletsInBag}
+        isLoading={isLoading}
       />
     </div>
   );
