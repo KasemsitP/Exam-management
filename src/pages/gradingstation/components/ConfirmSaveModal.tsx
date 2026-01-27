@@ -4,7 +4,7 @@ import { AlertCircle } from "lucide-react";
 interface ConfirmSaveModalProps {
   open: boolean;
   scanData: string | null;
-  score: string;
+  scores: Record<number, number>;
   isLoading: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -13,7 +13,7 @@ interface ConfirmSaveModalProps {
 export default function ConfirmSaveModal({
   open,
   scanData,
-  score,
+  scores,
   isLoading,
   onClose,
   onConfirm,
@@ -43,10 +43,25 @@ export default function ConfirmSaveModal({
                 รหัสผู้เข้าสอบ:{" "}
                 <span className="text-body">{scanData ?? "-"}</span>
               </p>
-              <p>
-                คะแนน: <span className="text-body">{score || "-"}</span>
-              </p>
+
+              <div className="mt-2">
+                <div className="fw-semibold text-body mb-1">คะแนนที่กรอก</div>
+
+                {Object.keys(scores).length === 0 ? (
+                  <div>-</div>
+                ) : (
+                  <ul className="mb-0 ps-3">
+                    {Object.entries(scores).map(([questionNo, score]) => (
+                      <li key={questionNo}>
+                        ข้อ {questionNo}:{" "}
+                        <span className="text-body">{score}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
+
             <div className="modal-footer">
               <button
                 className="btn btn-outline-secondary"

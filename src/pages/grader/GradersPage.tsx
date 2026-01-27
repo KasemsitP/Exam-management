@@ -17,11 +17,15 @@ import {
   RevokeAccountThunk,
   UnrevokeAccountThunk
 } from "@/store/slices/account.slice";
+import { selectAssignmentsForGrader } from "@/store/slices/graders.slice";
+
+import { fetchSubjectsQuestionThunk } from "@/store/slices/subjects.slice";
 import GradersHeader from "./components/GradersHeader";
 import GradersToolbar from "./components/GradersToolbar";
 import GradersTable from "./components/GradersTable";
 import GradersCreateModal from "./components/GradersCreateModal";
 import GradersEditModal from "./components/GradersEditModal";
+import GradersSubjectLists from "./components/GraderSubjectList"
 import { selectSessionsForCampaign } from "@/store/slices/examData.slice";
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
 import { createGraderAssignmentsThunk } from "@/store/slices/graders.slice";
@@ -40,7 +44,6 @@ import type {
 
 export default function AccountsPage() {
   const dispatch = useAppDispatch();
-  const { toast } = useToast();
 
   const { status: accountStatus } = useAppSelector(selectAccountsSlice);
 
@@ -59,19 +62,27 @@ export default function AccountsPage() {
 
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [subjectListAccount, setSubjectListAccount] = useState<Account | null>(null);
 
   const camp = useAppSelector(selectActiveCampaign);
   const sessInCamp = useAppSelector(
     selectSessionsForCampaign(camp ? camp.id : null)
   );
 
-  useEffect(() => {
-    console.log("activeCampaign =", camp);
-    console.log("campId =", camp?.id);
-    console.log("sessions in camp =", sessInCamp);
-    console.log(accounts)
-  }, [camp, sessInCamp]);
+  const campaignId = camp ? Number(camp.id) : 0;
+  const accountId = subjectListAccount ? Number(subjectListAccount.id) : 0;
 
+  const graderAssignments = useAppSelector(
+    subjectListAccount
+      ? selectAssignmentsForGrader(campaignId, accountId)
+      : () => [] // ถ้ายังไม่เลือก account ให้คืน array ว่าง
+  );
+  console.log(graderAssignments , campaignId , accountId)
+
+  const openSubjectList = async (acc: Account) => {
+   // console.log(acc)
+    setSubjectListAccount(acc);
+  };
 
   useEffect(() => {
     dispatch(fetchAccountsThunk());
@@ -87,6 +98,17 @@ export default function AccountsPage() {
   }, [dispatch, camp]);
 
 
+
+  const handleSessionChange = (sessionId: number) => {
+    if (!camp) return;
+
+    dispatch(
+      fetchSubjectsQuestionThunk({
+        session_id: sessionId,
+        camapign_id: Number(camp.id),
+      })
+    );
+  };
 
 
   const filteredAccounts = useMemo(() => {
@@ -122,6 +144,8 @@ export default function AccountsPage() {
   }, [accounts]);
 
 
+
+
   const handleCreate = async (data: CreateAccountFormValues) => {
     try {
       const created = await dispatch(
@@ -131,28 +155,43 @@ export default function AccountsPage() {
           full_name: data.full_name,
           email: data.email,
           role: data.role_id,
-          campaignId: Number(camp.id)
+          campaignId: Number(camp.id),
         })
       ).unwrap();
 
-      const assignments = (data.assignments ?? [])
-        .filter(a => a.sessionId > 0 && a.subjectId > 0 && a.questionNo > 0)
-        .map(a => ({
+      const a = data.assignments;
+
+      const assignments = [];
+
+      if (a.sessionId > 0 && a.subjectId > 0 && a.questionNo1 > 0) {
+        assignments.push({
           campaignId: Number(camp?.id),
           accountId: created.id,
           sessionId: a.sessionId,
           subjectId: a.subjectId,
-          questionNo: a.questionNo,
-        }));
+          questionNo: a.questionNo1,
+        });
+      }
+
+      if (a.sessionId > 0 && a.subjectId > 0 && a.questionNo2 > 0) {
+        assignments.push({
+          campaignId: Number(camp?.id),
+          accountId: created.id,
+          sessionId: a.sessionId,
+          subjectId: a.subjectId,
+          questionNo: a.questionNo2,
+        });
+      }
 
       if (assignments.length > 0) {
         await dispatch(
           createGraderAssignmentsThunk({ assignments })
         ).unwrap();
       }
-    await dispatch(fetchAccountsThunk()).unwrap();
-    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
-    await dispatch(fetchRolesThunk()).unwrap();
+
+      await dispatch(fetchAccountsThunk()).unwrap();
+      await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+      await dispatch(fetchRolesThunk()).unwrap();
 
       await Swal.fire({
         icon: "success",
@@ -170,6 +209,7 @@ export default function AccountsPage() {
       });
     }
   };
+
 
 
   const handleUpdate = async (id: number, data: UpdateAccountFormValues) => {
@@ -194,9 +234,9 @@ export default function AccountsPage() {
         showConfirmButton: false,
       });
       setEditingAccount(null);
-    await dispatch(fetchAccountsThunk()).unwrap();
-    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
-    await dispatch(fetchRolesThunk()).unwrap();
+      await dispatch(fetchAccountsThunk()).unwrap();
+      await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+      await dispatch(fetchRolesThunk()).unwrap();
 
     } catch (err: any) {
       await Swal.fire({
@@ -228,9 +268,9 @@ export default function AccountsPage() {
         showConfirmButton: false,
       });
       setEditingAccount(null);
-    await dispatch(fetchAccountsThunk()).unwrap();
-    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
-    await dispatch(fetchRolesThunk()).unwrap();
+      await dispatch(fetchAccountsThunk()).unwrap();
+      await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+      await dispatch(fetchRolesThunk()).unwrap();
 
     } catch (err: any) {
       await Swal.fire({
@@ -260,9 +300,9 @@ export default function AccountsPage() {
         showConfirmButton: false,
       });
       setEditingAccount(null);
-    await dispatch(fetchAccountsThunk()).unwrap();
-    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
-    await dispatch(fetchRolesThunk()).unwrap();
+      await dispatch(fetchAccountsThunk()).unwrap();
+      await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+      await dispatch(fetchRolesThunk()).unwrap();
 
     } catch (err: any) {
       await Swal.fire({
@@ -294,9 +334,9 @@ export default function AccountsPage() {
         timer: 1200,
         showConfirmButton: false,
       });
-    await dispatch(fetchAccountsThunk()).unwrap();
-    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
-    await dispatch(fetchRolesThunk()).unwrap();
+      await dispatch(fetchAccountsThunk()).unwrap();
+      await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+      await dispatch(fetchRolesThunk()).unwrap();
     } catch (err: any) {
       await Swal.fire({
         icon: "error",
@@ -328,8 +368,15 @@ export default function AccountsPage() {
         status={accountStatus}
         onEdit={setEditingAccount}
         onDelete={handleDelete}
-        onRevoke={handleRevoke}       // <<-- ส่งเป็นฟังก์ชันที่รับ Account
-        onUnrevoke={handleUnrevoke}   // <<-- ส่งเป็นฟังก์ชันที่รับ Account
+        onRevoke={handleRevoke}
+        onUnrevoke={handleUnrevoke}
+        onViewSubjects={openSubjectList}     // ✅ เพิ่มบรรทัดนี้
+      />
+      <GradersSubjectLists
+        open={!!subjectListAccount}
+        account={subjectListAccount}
+        assignments={graderAssignments}
+        onClose={() => setSubjectListAccount(null)}
       />
 
       <GradersCreateModal
@@ -339,6 +386,7 @@ export default function AccountsPage() {
         onClose={() => setCreateOpen(false)}
         onSubmit={handleCreate}
         sessions={sessInCamp}
+        onSessionChange={handleSessionChange}   // 👈 เพิ่ม
       />
 
       <GradersEditModal

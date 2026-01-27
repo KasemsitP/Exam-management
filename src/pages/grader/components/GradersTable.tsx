@@ -1,5 +1,5 @@
 // src/pages/accounts/components/AccountsTable.tsx
-import { CheckCircle2, X, Trash2, Edit, Search, Loader2 } from "lucide-react";
+import { CheckCircle2, X, Trash2, Edit, Search, Loader2, Pencil } from "lucide-react";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import type { Account, Role } from "../types";
 
@@ -12,6 +12,7 @@ interface AccountsTableProps {
   onDelete: (account: Account) => void;
   onRevoke: (account: Account) => void;
   onUnrevoke: (account: Account) => void;
+  onViewSubjects: (account: Account) => void;
 }
 
 export default function AccountsTable({
@@ -22,6 +23,7 @@ export default function AccountsTable({
   onDelete,
   onRevoke,
   onUnrevoke,
+  onViewSubjects
 }: AccountsTableProps) {
   const roleName = (id: number) =>
     roles.find((r) => r.id === id)?.name ?? `Role#${id}`;
@@ -67,6 +69,16 @@ export default function AccountsTable({
                   </td>
                   <td className="text-end">
                     <div className="d-flex justify-content-end gap-2">
+                      <button
+                        className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+                        onClick={() => {
+                          onViewSubjects(acc)
+                          console.log("TEST ACC", acc)
+                        }}
+                        title="แก้ไข"
+                      >
+                        <Pencil size={14} /> ดูรายวิชาที่ตรวจ
+                      </button>
                       {/* ปุ่มแก้ไข */}
                       <button
                         className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"

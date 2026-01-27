@@ -7,12 +7,14 @@ export interface PayloadScore {
   campaignId: number;
   graderId: number;
   slotId: number;
+  question_no: number;
   score: number;
 }
 export interface PayloadSlot {
   qrPayload: string;
   campaignId: number;
   graderId: number;
+  questionNo : number;
 }
 
 

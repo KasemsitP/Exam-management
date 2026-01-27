@@ -29,6 +29,8 @@ export default function GradingStationPage() {
     cooldownMs,
     facingMode,
     isConfirmOpen,
+    setQuestionNo,
+    questionNo,
 
     // handlers
     setPauseAfterSuccess,
@@ -39,7 +41,7 @@ export default function GradingStationPage() {
     setManualPayload,
     verifyManualPayload,
     setScore,
-    handleConfirmScore,
+   // handleConfirmScore,
     handleSaveScore,
     handleScan,
     closeConfirmModal,
@@ -85,8 +87,11 @@ export default function GradingStationPage() {
                 onChangeManualPayload={setManualPayload}
                 onVerifyManualPayload={verifyManualPayload}
                 onChangeScore={setScore}
-                onConfirmScore={handleConfirmScore}
+                onConfirmScore={handleSaveScore}
                 onScan={handleScan}
+                recent={gradersAssignment}
+                questionNo={questionNo}
+                setQuestionNo={setQuestionNo}
               />
             </div>
 
@@ -104,14 +109,14 @@ export default function GradingStationPage() {
         )}
 
         {/* Confirm Modal */}
-        <ConfirmSaveModal
+        {/* <ConfirmSaveModal
           open={isConfirmOpen}
           scanData={scanData}
           score={score}
           isLoading={isLoading}
           onClose={closeConfirmModal}
           onConfirm={handleSaveScore}
-        />
+        /> */}
       </div>
     </ShowIfCan>
   );

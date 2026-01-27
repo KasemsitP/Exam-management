@@ -20,6 +20,7 @@ export interface Subject {
 
 interface SubjectsState {
   items: Subject[];
+  sessionQuestions: Record<number, SubjectQuestion[]>;
   selectedId: number | null;
   nextId: number;
   loading: boolean;
@@ -30,6 +31,7 @@ interface SubjectsState {
 const initialState: SubjectsState = {
   items: [],
   selectedId: null,
+  sessionQuestions: {},
   nextId: 1,
   loading: false,
   error: null,
@@ -50,6 +52,23 @@ export const fetchSubjectsThunk = createAsyncThunk<
     return rejectWithValue("Failed to fetch subjects");
   }
 });
+
+export const fetchSubjectsQuestionThunk = createAsyncThunk<
+  any[],
+  { session_id: number, camapign_id: number },
+  { rejectValue: string }
+>("subjects/fetchSubjectsQuestionThunk", async (payload, { rejectWithValue }) => {
+  try {
+    const response = await axios.get<Subject[]>(`/api/subjects/${payload.session_id}/${payload.camapign_id}`);
+    //console.log(response.data)
+    return response.data;
+  } catch (error: unknown) {
+    return rejectWithValue("Failed to fetch subjects");
+  }
+});
+
+
+
 
 // สร้างวิชาใหม่ + (optional) questions ไปพร้อมกัน
 export const createSubjectThunk = createAsyncThunk<
@@ -321,6 +340,37 @@ const subjectsSlice = createSlice({
         if (idx !== -1) {
           state.items[idx] = updated;
         }
+      })
+      .addCase(fetchSubjectsQuestionThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchSubjectsQuestionThunk.fulfilled, (state, action) => {
+        state.loading = false;
+
+        // reset ก่อนทุกครั้ง (เปลี่ยน session)
+        state.sessionQuestions = {};
+
+        action.payload.forEach((q) => {
+          if (!state.sessionQuestions[q.subject_id]) {
+            state.sessionQuestions[q.subject_id] = [];
+          }
+
+          state.sessionQuestions[q.subject_id].push({
+            id: String(q.subject_question_id),
+            questionNo: q.question_no,
+            label: q.question_name,
+          });
+        });
+
+        // sort ข้อ
+        Object.values(state.sessionQuestions).forEach((list) => {
+          list.sort((a, b) => a.questionNo - b.questionNo);
+        });
+      })
+      .addCase(fetchSubjectsQuestionThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload ?? "Failed to fetch subject questions";
       });
   },
 });
@@ -357,6 +407,11 @@ export const selectQuestionsForSubject = (state: RootState, id: number) => {
 };
 export const selectSubjectsLoading = (state: RootState) => state.subjects.loading;
 export const selectSubjectsError = (state: RootState) => state.subjects.error;
+
+export const selectQuestionsBySubjectId =
+  (subjectId: number) =>
+  (state: RootState) =>
+    state.subjects.sessionQuestions[subjectId] ?? [];
 
 
 export { subjectsSlice };

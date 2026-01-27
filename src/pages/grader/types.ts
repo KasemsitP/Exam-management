@@ -16,20 +16,20 @@ export interface AccountStats {
   inactive: number;
 }
 
-export interface CreateAccountFormValues {
+export type CreateAccountFormValues = {
   username: string;
   password: string;
   full_name: string;
   email?: string;
   role_id: number;
   active: boolean;
-
-  assignments?: {
-    sessionId: number;  
-    subjectId: number;  
-    questionNo: number;  
-  }[];
-}
+  assignments: {
+    sessionId: number;
+    subjectId: number;
+    questionNo1: number;
+    questionNo2: number;
+  };
+};
 export interface UpdateAccountFormValues {
   full_name: string;
   email: string;

@@ -1,5 +1,6 @@
 // components/ScannerPanel.tsx
 import { Scanner, boundingBox } from "@yudiel/react-qr-scanner";
+import { CrmGrader } from "@/store/slices/graders.slice";
 import {
   Camera,
   CheckCircle2,
@@ -9,6 +10,7 @@ import {
   RotateCcw,
   Scan,
 } from "lucide-react";
+import QrScannerBox from "./QRScannerBox";
 
 interface ScannerPanelProps {
   scanData: string | null;
@@ -20,18 +22,21 @@ interface ScannerPanelProps {
   cooldownMs: number;
   facingMode: "environment" | "user";
   isLoading: boolean;
+  questionNo: number;
 
   onChangePauseAfterSuccess: (checked: boolean) => void;
   onChangeCooldown: (ms: number) => void;
   onToggleScanner: () => void;
   onToggleFacingMode: () => void;
   onClear: () => void;
+  setQuestionNo: (value: number) => void
   onChangeManualPayload: (value: string) => void;
   onVerifyManualPayload: () => void;
   onChangeScore: (value: string) => void;
   onConfirmScore: () => void;
   // requestCameraPermission: () => void;
   onScan: (value: string) => void;
+  recent: CrmGrader[]
 }
 
 export default function ScannerPanel({
@@ -55,6 +60,9 @@ export default function ScannerPanel({
   // requestCameraPermission,
   onConfirmScore,
   onScan,
+  recent,
+  setQuestionNo,
+  questionNo
 }: ScannerPanelProps) {
   return (
     <div className="card shadow-sm border-0">
@@ -142,6 +150,21 @@ export default function ScannerPanel({
         >
           <RotateCcw size={16} /> ล้าง
         </button>
+
+        <select
+          className="form-select"
+          value={questionNo}
+          onChange={(e) => setQuestionNo(Number(e.target.value))}
+        >
+
+          <option value="">-- เลือก --</option>
+          {recent.map((row, idx) => (
+            <option key={idx} value={row.question_no}>
+              ข้อ {row.question_no} วิชา {row.question_label}
+            </option>
+          ))}
+        </select>
+
       </div>
 
       {/* Ribbon แจ้งรหัสล่าสุด */}
@@ -160,65 +183,16 @@ export default function ScannerPanel({
         )}
       </div>
 
+
       <div className="card-body">
         {/* Scanner */}
-        <div
-          className="rounded overflow-hidden border bg-black mb-2 position-relative"
-          style={{ minHeight: 220 }}
-        >
-          {!scannerEnabled && (
-            <div
-              className="d-flex flex-column justify-content-center align-items-center text-muted py-5"
-              style={{ minHeight: 220 }}
-            >
-              <Pause className="mb-2" />
-              <div>กล้องถูกหยุดอยู่ — กด “เริ่ม” เพื่อใช้งาน</div>
-            </div>
-          )}
-
-          {scannerEnabled && (
-            <>
-              <Scanner
-                formats={["qr_code", "micro_qr_code", "rm_qr_code"]}
-                onScan={(codes) => {
-                  if (!codes?.length) return;
-                  onScan(codes[0].rawValue);
-                }}
-                onError={(e) => console.warn("scanner error:", e)}
-                constraints={{ facingMode }}
-                styles={{
-                  container: { width: "100%" },
-                  video: { width: "100%" },
-                }}
-                components={{
-                  onOff: true,
-                  torch: true,
-                  zoom: true,
-                  finder: true,
-                  tracker: boundingBox,
-                }}
-                allowMultiple={false}
-                scanDelay={cooldownMs}
-                paused={pause}
-              />
-
-              {pause && (
-                <div
-                  className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-center align-items-center"
-                  style={{ background: "rgba(0,0,0,0.45)" }}
-                >
-                  <Pause className="mb-2 text-white" />
-                  <div className="text-white text-center px-3">
-                    กำลังพักกล้องชั่วคราว
-                    <div className="small text-white-50">
-                      กด “เริ่ม” เพื่อกลับไปสแกนต่อ
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <QrScannerBox
+          scannerEnabled={scannerEnabled}
+          pause={pause}
+          facingMode={facingMode}
+          cooldownMs={cooldownMs}
+          onScan={onScan}
+        />
 
         {/* Manual input */}
         <div className="mt-3">
