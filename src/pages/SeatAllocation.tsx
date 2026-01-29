@@ -21,6 +21,12 @@ type SeatCell = {
   lastNameKey?: string;
 };
 
+type AssignedSummary = {
+  room_code: string;
+  count_user: number;
+};
+
+
 type RoomLike = {
   roomCode: string;
   capacity: number;
@@ -51,6 +57,17 @@ export default function SeatAllocationPage() {
 
   // cache layout แต่ละห้อง: key = roomCode
   const [roomSeats, setRoomSeats] = useState<Record<string, SeatCell[]>>({});
+  // ===== Create Layout Modal state =====
+  const [createRoom, setCreateRoom] = useState<RoomLike | null>(null);
+  const [createSeatsPerRow, setCreateSeatsPerRow] = useState<number>(30);
+  const [isCreatingLayout, setIsCreatingLayout] = useState(false);
+  const [unassignedRoomCodes, setUnassignedRoomCodes] = useState<string[]>([]);
+  const [assignedCounts, setAssignedCounts] = useState<Record<string, number>>({});
+
+  const [totaluser, setTotalUsers] = useState<number>(0);
+  const [totaluserAssigned, setTotalUsersAssigned] = useState<number>(0);
+
+
 
   const rooms: RoomLike[] = (roomsState?.rooms ?? []) as any;
 
@@ -96,14 +113,92 @@ export default function SeatAllocationPage() {
   };
 
   useEffect(() => {
-    if (campaign?.id) {
-      dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
-    }
-  }, [campaign?.id, dispatch]);
+    if (!campaign?.id) return;
+    const cid = Number(campaign.id);
 
+    dispatch(fetchRoomsByCampaignThunk(cid));
+    loadAssignedCounts(cid);
+    fetchUserAssigned(cid);
+  }, [campaign?.id, dispatch]);
   useEffect(() => {
     setModalPage(1);
   }, [modalSearch, selectedRoom]);
+
+  useEffect(() => {
+    if (!campaign?.id) return;
+    // const fetchUserAssigned = async () => {
+    //   try {
+    //     const res = await axios.get<{
+    //       total_users: number;
+    //       total_users_assigned_room: number;
+    //     }>(`api/seat/countusers/${campaign.id}`);
+    //     //console.log("test", res.data)
+
+    //     const total = res.data.total_users;
+    //     const assigned = res.data.total_users_assigned_room;
+
+    //     setTotalUsersAssigned(assigned)
+    //     setTotalUsers(total)
+    //     console.log(total, assigned)
+    //   } catch (err) {
+    //     console.error("fetch unassigned rooms error", err);
+    //   }
+    // };
+
+    const fetchUnassignedRooms = async () => {
+      try {
+        const res = await axios.get<{ room_code: string }[]>(
+          `/api/seat/isassigned/${campaign.id}`
+        );
+
+        const codes = res.data.map((r) => r.room_code);
+        setUnassignedRoomCodes(codes);
+        console.log("unassignedRoomCodes =", codes);
+      } catch (err) {
+        console.error("fetch unassigned rooms error", err);
+      }
+    };
+    fetchUnassignedRooms();
+  }, [campaign?.id]);
+
+  // ด้านบนใน component (ก่อน useEffect)
+  const fetchUserAssigned = async (campaignId: number) => {
+    try {
+      const res = await axios.get<{
+        total_users: number;
+        total_users_assigned_room: number;
+      }>(`/api/seat/countusers/${campaignId}`);
+
+      const total = res.data.total_users;
+      const assigned = res.data.total_users_assigned_room;
+
+      setTotalUsers(total);
+      setTotalUsersAssigned(assigned);
+    } catch (err) {
+      console.error("fetch user assigned error", err);
+    }
+  };
+
+
+
+
+  const loadAssignedCounts = async (campaignId: number) => {
+    try {
+      const res = await axios.get<AssignedSummary[]>(
+        `/api/seat/isassigned/${campaignId}`
+      );
+
+      const map: Record<string, number> = {};
+      res.data.forEach((item) => {
+        map[item.room_code] = item.count_user ?? 0;
+      });
+
+      setAssignedCounts(map);
+    } catch (err) {
+      console.error("fetch assigned counts error", err);
+      // จะ popup ก็ได้ แต่ถ้าไม่ critical จะแค่ console ก็โอเค
+    }
+  };
 
   // ใช้ layout ตามห้อง (ทั้ง summary + modal)
   const getRoomSeatCells = (room: RoomLike | null): SeatCell[] => {
@@ -175,60 +270,33 @@ export default function SeatAllocationPage() {
     }));
   };
 
-  // ===== เปิด modal + โหลด layout เฉพาะห้องที่กด =====
-  const handleOpenRoom = async (room: RoomLike) => {
-    if (!campaign?.id) return;
 
-    // เปิด modal + reset เฉพาะของ modal
-    setSelectedRoom(room);
+  const handleOpenRoomPreview = async (room: RoomLike) => {
+    if (!campaign?.id) return;
     setModalSearch("");
     setModalPage(1);
-    setModalSeatsPerRow(30);
 
     try {
-      const committedRes = await axios.get<SeatApiResponse>(
+      const res = await axios.get<SeatApiResponse>(
         `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
           room.roomCode
         )}`,
         { params: { _t: Date.now() } }
       );
 
-      const committed = committedRes.data;
-      console.log(committed)
+      const data = res.data;
 
-      if (committed.seats && committed.seats.length > 0) {
-        console.log("gy")
-        const seatCells = mapApiSeatsToCells(committed);
-
-        setRoomSeats((prev) => ({
-          ...prev,
-          [room.roomCode]: seatCells,
-        }));
-
-        if (committed.seatsPerRow && committed.seatsPerRow > 0) {
-          setModalSeatsPerRow(committed.seatsPerRow);
-        }
-
-        return; // ไม่ต้องไป preview
+      if (!data.seats || data.seats.length === 0) {
+        await Swal.fire({
+          icon: "info",
+          title: "ยังไม่มีผังที่นั่ง",
+          text: "กรุณากดปุ่ม \"สร้างผังที่นั่ง\" ก่อน",
+        });
+        setSelectedRoom(null);
+        return;
       }
+      setSelectedRoom(room);
 
-      // 2) ถ้ายังไม่มีใน DB → preview
-      const initialSeatsPerRow = 30;
-      const previewRes = await axios.get<SeatApiResponse>(
-        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
-          room.roomCode
-        )}/preview`,
-        {
-          params: {
-            seatsPerRow: initialSeatsPerRow,
-            _t: Date.now(),
-          },
-        }
-      );
-
-
-      const data = previewRes.data;
-      console.log(data)
       const seatCells = mapApiSeatsToCells(data);
 
       setRoomSeats((prev) => ({
@@ -236,58 +304,70 @@ export default function SeatAllocationPage() {
         [room.roomCode]: seatCells,
       }));
 
-      setModalSeatsPerRow(data.seatsPerRow || initialSeatsPerRow);
+      setModalSeatsPerRow(data.seatsPerRow || 30);
     } catch (err) {
       console.error("fetch seat layout error", err);
 
-      Swal.fire({
+      await Swal.fire({
         icon: "error",
-        title: "ไม่สามารถเปิดได้",
-        text: "ไม่สามารถเชื่อมต่อ API ได้",
-        confirmButtonText: "ตกลง",
-      }).then(() => {
-        setSelectedRoom(null);
+        title: "ไม่สามารถโหลดผังที่นั่งได้",
+        text: "กรุณาลองใหม่อีกครั้ง",
       });
+
+      setSelectedRoom(null);
     }
   };
 
-  // ===== จัดใหม่ (Preview) สำหรับห้องที่เปิดอยู่ =====
-  const handleApplySeatsPerRow = async () => {
-    if (!campaign?.id || !selectedRoom) return;
+
+  const handleResetSeat = async () => {
+    if (!campaign?.id) {
+      await Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่พบข้อมูลแคมเปญ",
+      });
+      return;
+    }
+
+    // ให้ถามยืนยันก่อน
+    const ok = await Swal.fire({
+      icon: "warning",
+      title: "รีเซ็ตผังที่นั่งทั้งหมด",
+      text: `ระบบจะลบผังที่นั่งของแคมเปญ${campaign.name ?? campaign.code} ทุกห้อง`,
+      showCancelButton: true,
+      confirmButtonText: "ตกลง",
+      cancelButtonText: "ยกเลิก",
+    }).then((r) => r.isConfirmed);
+
+    if (!ok) return;
 
     try {
-      const seatsPerRow = modalSeatsPerRow || 30;
+      await axios.delete(`/api/seat/reset/${campaign.id}`);
 
-      const res = await axios.get<SeatApiResponse>(
-        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
-          selectedRoom.roomCode
-        )}/preview`,
-        {
-          params: {
-            seatsPerRow,
-            _t: Date.now(),
-          },
-        }
-      );
+      // 1) เคลียร์ state layout ที่ cache ไว้ทั้งหมด
+      setRoomSeats({});       // ถ้าคุณใช้ useState<Record<string, SeatCell[]>>({})
+      setSelectedRoom(null);  // ปิด modal ถ้ามี
+      setModalSearch("");
+      setModalPage(1);
 
-      const data = res.data;
-      const seatCells = mapApiSeatsToCells(data);
+      // 2) รีเซ็ตตัวเลขที่คุณใช้โชว์จำนวนคน (แล้วแต่ที่ประกาศ state ไว้)
+      setAssignedCounts({});
+      // ถ้าอนาคตเปลี่ยนเป็น per-room ก็ใช้ setAssignedCounts({}) แล้วค่อย reload ใหม่
 
-      setModalSeatsPerRow(data.seatsPerRow || seatsPerRow);
+      // 3) refresh รายการห้องจาก backend (จะได้ allocatedCount = 0)
+      dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
+      loadAssignedCounts(Number(campaign.id));
+      fetchUserAssigned(Number(campaign.id));
 
-      setRoomSeats((prev) => ({
-        ...prev,
-        [selectedRoom.roomCode]: seatCells,
-      }));
 
-      Swal.fire({
+      await Swal.fire({
         icon: "success",
-        title: "จัดที่นั่งใหม่ (Preview) แล้ว",
+        title: "รีเซ็ตผังที่นั่งเรียบร้อย",
+        timer: 1500,
         showConfirmButton: false,
-        timer: 1200,
       });
-    } catch (err) {
-      console.error("re-allocate seat error", err);
+    } catch (error) {
+      console.error(error);
       Swal.fire({
         icon: "error",
         title: "จัดที่นั่งไม่สำเร็จ",
@@ -296,62 +376,6 @@ export default function SeatAllocationPage() {
     }
   };
 
-  // ===== ยืนยันจัดสรร (commit) =====
-  const handleConfirmSeatAllocation = async () => {
-    if (!campaign?.id || !selectedRoom) return;
-
-    try {
-      await axios.post(
-        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
-          selectedRoom.roomCode
-        )}/confirm`,
-        {
-          seatsPerRow: modalSeatsPerRow,
-        }
-      );
-
-      const committedRes = await axios.get<SeatApiResponse>(
-        `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
-          selectedRoom.roomCode
-        )}`,
-        { params: { _t: Date.now() } }
-      );
-
-      const committed = committedRes.data;
-
-      if (committed.seats && committed.seats.length > 0) {
-        const seatCells = mapApiSeatsToCells(committed);
-
-        setRoomSeats((prev) => ({
-          ...prev,
-          [selectedRoom.roomCode]: seatCells,
-        }));
-
-        setModalSeatsPerRow(
-          committed.seatsPerRow || modalSeatsPerRow || 30
-        );
-      }
-
-      Swal.fire({
-        icon: "success",
-        title: "ยืนยันการจัดสรรเรียบร้อยแล้ว",
-        showConfirmButton: false,
-        timer: 1500,
-      });
-
-      setSelectedRoom(null);
-
-      // reload summary (allocatedCount ฯลฯ)
-      dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
-    } catch (err) {
-      console.error("confirm seat allocation error", err);
-      Swal.fire({
-        icon: "error",
-        title: "ยืนยันไม่สำเร็จ",
-        text: "กรุณาลองใหม่อีกครั้ง",
-      });
-    }
-  };
 
   const handleCloseModal = () => {
     setSelectedRoom(null);
@@ -381,7 +405,7 @@ export default function SeatAllocationPage() {
 
             {/* Optional stats row (เหมือน card ย่อยข้างบน) */}
             <div className="row g-3">
-              <div className="col-sm-6 col-lg-4">
+              <div className="col-sm-6 col-lg-3">
                 <div className="card shadow-none border">
                   <div className="card-body">
                     <div className="text-uppercase small text-muted mb-1">
@@ -391,13 +415,33 @@ export default function SeatAllocationPage() {
                   </div>
                 </div>
               </div>
-              <div className="col-sm-6 col-lg-4">
+              <div className="col-sm-6 col-lg-3">
                 <div className="card shadow-none border">
                   <div className="card-body">
                     <div className="text-uppercase small text-muted mb-1">
-                      ความจุรวม (คน)
+                      ความจุที่นั่งรวม (คน)
                     </div>
                     <div className="h3 mb-0">{roomsTotal}</div>
+                  </div>
+                </div>
+              </div>
+              <div className="col-sm-6 col-lg-3">
+                <div className="card shadow-none border">
+                  <div className="card-body">
+                    <div className="text-uppercase small text-muted mb-1">
+                      จำนวนผู้เข้าสอบทั้งหมด
+                    </div>
+                    <div className="h3 mb-0">{totaluser} </div>
+                  </div>
+                </div>
+              </div>
+              <div className="col-sm-6 col-lg-3">
+                <div className="card shadow-none border">
+                  <div className="card-body">
+                    <div className="text-uppercase small text-muted mb-1">
+                      จำนวนผู้เข้าสอบที่ถูกจัดสรรแล้ว
+                    </div>
+                    <div className="h3 mb-0">{totaluserAssigned} </div>
                   </div>
                 </div>
               </div>
@@ -408,7 +452,7 @@ export default function SeatAllocationPage() {
         </div>
 
 
-     
+
         {/* ===== Rooms grid ===== */}
         <div className="card shadow-sm">
           <div className="card-header bg-white">
@@ -448,7 +492,11 @@ export default function SeatAllocationPage() {
                   {currentRooms.map((room) => {
                     const cells = getRoomSeatCells(room);
                     const anyRoom = room as any;
-                    const allocatedCount = Number(
+
+                    // ใช้ค่าจาก API เป็นหลัก
+                    const assignedCountFromApi = assignedCounts[room.roomCode];
+
+                    const allocatedCount = assignedCountFromApi ?? Number(
                       anyRoom.allocatedCount ?? cells.length ?? 0
                     );
 
@@ -485,10 +533,19 @@ export default function SeatAllocationPage() {
                         </td>
                         <td className="text-end">
                           <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => handleOpenRoom(room)}
+                            className="btn btn-sm btn-outline-success me-2"
+                            onClick={() => {
+                              setCreateRoom(room);  // ใช้ modal สร้างผังตามที่เขียนไว้แล้ว
+                            }}
                           >
-                            เปิดดู
+                            สร้างผังที่นั่ง
+                          </button>
+
+                          <button
+                            className="btn btn-sm btn-outline-primary"
+                            onClick={() => handleOpenRoomPreview(room)}
+                          >
+                            ดูผังที่นั่ง
                           </button>
                         </td>
                       </tr>
@@ -499,8 +556,14 @@ export default function SeatAllocationPage() {
             </div>
 
             {/* Pagination */}
-            <nav className="mt-3">
-              <ul className="pagination justify-content-end mb-0">
+            <nav className="mt-3 d-flex justify-content-between align-items-center">
+              <div>
+                <button className="btn btn-outline-secondary" onClick={handleResetSeat}>
+                  รีเซ็ตการจัดสรรทั้งหมด
+                </button>
+              </div>
+
+              <ul className="pagination mb-0">
                 <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
                   <button
                     className="page-link"
@@ -515,8 +578,7 @@ export default function SeatAllocationPage() {
                 {Array.from({ length: totalPages }).map((_, idx) => (
                   <li
                     key={idx}
-                    className={`page-item ${currentPage === idx + 1 ? "active" : ""
-                      }`}
+                    className={`page-item ${currentPage === idx + 1 ? "active" : ""}`}
                   >
                     <button
                       className="page-link"
@@ -544,8 +606,141 @@ export default function SeatAllocationPage() {
             </nav>
           </div>
         </div>
+        {createRoom && (
+          <div
+            className="modal d-block d-flex justify-content-center"
+            tabIndex={-1}
+            role="dialog"
+            style={{
+              background: "rgba(0,0,0,.35)",
+              minHeight: "100vh",
+              alignItems: "flex-start",  // ชิดบน
+              paddingTop: "20vh",        // ขยับลงจากบน 10% ของจอ
+            }}
+          >
+            <div className="modal-dialog" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">
+                    สร้างผังที่นั่ง ห้อง {createRoom.roomCode}
+                  </h5>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    aria-label="Close"
+                    onClick={() => setCreateRoom(null)}
+                  />
+                </div>
 
-        {/* ===== Modal: ผังที่นั่ง ===== */}
+                <div className="modal-body">
+                  <p className="mb-3">
+                    ระบบจะจัดที่นั่งตามจำนวนที่นั่งต่อแถวที่กำหนดด้านล่าง และบันทึกลงฐานข้อมูล
+                  </p>
+
+                  <div className="mb-3">
+                    <label className="form-label">ที่นั่งต่อแถว</label>
+                    <input
+                      type="number"
+                      className="form-control"
+                      min={5}
+                      max={60}
+                      value={createSeatsPerRow}
+                      onChange={(e) =>
+                        setCreateSeatsPerRow(
+                          clamp(Number(e.target.value), 5, 60)
+                        )
+                      }
+                    />
+                    <div className="form-text">
+                      ความจุห้อง: {createRoom.capacity} ที่นั่ง
+                    </div>
+                  </div>
+
+                  <div className="alert alert-warning mb-0">
+                    การสร้างผังใหม่อาจทับข้อมูลเดิมของห้องนี้ (ถ้ามี)
+                    กรุณาตรวจสอบให้แน่ใจก่อนดำเนินการ
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setCreateRoom(null)}
+                    disabled={isCreatingLayout}
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={isCreatingLayout}
+                    onClick={async () => {
+                      if (!campaign?.id || !createRoom) return;
+                      try {
+                        setIsCreatingLayout(true);
+
+                        // เรียก confirm สร้างผัง
+                        await axios.post(
+                          `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
+                            createRoom.roomCode
+                          )}/confirm`,
+                          {
+                            seatsPerRow: createSeatsPerRow,
+                          }
+                        );
+
+                        // โหลดผังที่ commit แล้วมาเก็บใน state
+                        const res = await axios.get<SeatApiResponse>(
+                          `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
+                            createRoom.roomCode
+                          )}`,
+                          { params: { _t: Date.now() } }
+                        );
+
+                        const data = res.data;
+                        if (data.seats && data.seats.length > 0) {
+                          const seatCells = mapApiSeatsToCells(data);
+
+                          setRoomSeats((prev) => ({
+                            ...prev,
+                            [createRoom.roomCode]: seatCells,
+                          }));
+                        }
+
+                        await Swal.fire({
+                          icon: "success",
+                          title: "สร้างผังที่นั่งเรียบร้อย",
+                          timer: 1500,
+                          showConfirmButton: false,
+                        });
+
+                        setCreateRoom(null);
+                        const cid = Number(campaign.id);
+                        // refresh summary count
+                        dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
+                        loadAssignedCounts(cid);
+                        fetchUserAssigned(cid);
+                      } catch (err) {
+                        console.error("create seat layout error", err);
+                        Swal.fire({
+                          icon: "error",
+                          title: "สร้างผังไม่สำเร็จ",
+                          text: "กรุณาลองใหม่อีกครั้ง",
+                        });
+                      } finally {
+                        setIsCreatingLayout(false);
+                      }
+                    }}
+                  >
+                    {isCreatingLayout ? "กำลังสร้าง..." : "สร้างผังที่นั่ง"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* ===== Modal: ผังที่นั่ง (Preview-only) ===== */}
         {selectedRoom && (
           <div
             className="modal d-block"
@@ -556,16 +751,16 @@ export default function SeatAllocationPage() {
               if (e.target === e.currentTarget) handleCloseModal();
             }}
           >
-            <div
-              className="modal-dialog modal-xl modal-dialog-scrollable"
-              role="document"
-            >
+            <div className="modal-dialog modal-xl modal-dialog-scrollable" role="document">
               <div className="modal-content">
                 <div className="modal-header">
                   <div>
                     <h5 className="modal-title mb-1">
-                      ห้อง {selectedRoom.roomCode}
+                      ผังที่นั่ง ห้อง {selectedRoom.roomCode}
                     </h5>
+                    <div className="small text-muted">
+                      แสดงค่า seatsPerRow = {modalSeatsPerRow}
+                    </div>
                   </div>
 
                   <button
@@ -578,47 +773,19 @@ export default function SeatAllocationPage() {
 
                 <div className="modal-body">
                   <div className="row g-3 align-items-end mb-3">
-                    <div className="col-md-5">
+                    <div className="col-md-6">
                       <label className="form-label">
                         ค้นหา (userId / ชื่อ)
                       </label>
                       <input
                         className="form-control"
-                        placeholder="นายทดสอบ"
+                        placeholder="เช่น 0001 / นายทดสอบ"
                         value={modalSearch}
                         onChange={(e) => setModalSearch(e.target.value)}
                       />
                     </div>
 
-                    <div className="col-12 col-md-5 d-flex flex-column flex-md-row align-items-end gap-2">
-                      <div className="flex-grow-1">
-                        <label className="form-label">ที่นั่งต่อแถว</label>
-                        <input
-                          type="number"
-                          className="form-control"
-                          min={5}
-                          max={60}
-                          value={modalSeatsPerRow}
-                          onChange={(e) =>
-                            setModalSeatsPerRow(
-                              clamp(Number(e.target.value), 5, 60)
-                            )
-                          }
-                        />
-                      </div>
-
-                      <div className="mt-2 mt-md-0">
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          onClick={handleApplySeatsPerRow}
-                        >
-                          จัดที่นั่งใหม่
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="col-md-4 d-flex gap-2 justify-content-md-end">
+                    <div className="col-md-6 d-flex gap-2 justify-content-md-end">
                       <span className="badge text-bg-light border align-self-center">
                         capacity: {selectedRoom.capacity}
                       </span>
@@ -737,18 +904,13 @@ export default function SeatAllocationPage() {
                   >
                     ปิด
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-success"
-                    onClick={handleConfirmSeatAllocation}
-                  >
-                    ยืนยันการจัดสรร
-                  </button>
+                  {/* ไม่มีปุ่มยืนยัน/จัดใหม่แล้ว เพราะเป็น preview-only */}
                 </div>
               </div>
             </div>
           </div>
         )}
+
       </div>
     </div>
   );

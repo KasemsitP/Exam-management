@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import Swal from "sweetalert2";
+import axios from "axios";
 
 import {
   selectAccountsSlice,
@@ -40,6 +41,7 @@ import type {
   RoleFilter,
   CreateAccountFormValues,
   UpdateAccountFormValues,
+  SimpleAssignment
 } from "./types";
 
 export default function AccountsPage() {
@@ -63,6 +65,7 @@ export default function AccountsPage() {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [subjectListAccount, setSubjectListAccount] = useState<Account | null>(null);
+  const [subjectAssignments, setSubjectAssignments] = useState<SimpleAssignment[]>([]);
 
   const camp = useAppSelector(selectActiveCampaign);
   const sessInCamp = useAppSelector(
@@ -77,12 +80,38 @@ export default function AccountsPage() {
       ? selectAssignmentsForGrader(campaignId, accountId)
       : () => [] // ถ้ายังไม่เลือก account ให้คืน array ว่าง
   );
-  console.log(graderAssignments , campaignId , accountId)
+  console.log(graderAssignments, campaignId, accountId)
 
   const openSubjectList = async (acc: Account) => {
-   // console.log(acc)
-    setSubjectListAccount(acc);
+    if (!camp) return;
+    const numericCampId = Number(camp.id);
+
+    try {
+      const res = await axios.get(
+        `/api/graders/assignment/${numericCampId}/${acc.id}`
+      );
+
+      console.log(res.data)
+
+      // const data = res.data.sort(
+      //   (a, b) => a.question_no - b.question_no
+      // );
+      // console.log(data)
+
+      setSubjectAssignments(res.data);
+
+
+      setSubjectListAccount(acc);
+    } catch (error: any) {
+      console.error("cannot fetch subjectlists", error);
+      await Swal.fire({
+        icon: "error",
+        title: "โหลดรายวิชาไม่สำเร็จ",
+        text: error?.message ?? "ไม่สามารถดึงรายวิชาที่ได้รับมอบหมายได้",
+      });
+    }
   };
+
 
   useEffect(() => {
     dispatch(fetchAccountsThunk());
@@ -96,6 +125,7 @@ export default function AccountsPage() {
     }
     dispatch(fetchAccountsGradersThunk(campaignId));
   }, [dispatch, camp]);
+
 
 
 
@@ -375,7 +405,7 @@ export default function AccountsPage() {
       <GradersSubjectLists
         open={!!subjectListAccount}
         account={subjectListAccount}
-        assignments={graderAssignments}
+        assignments={subjectAssignments}
         onClose={() => setSubjectListAccount(null)}
       />
 

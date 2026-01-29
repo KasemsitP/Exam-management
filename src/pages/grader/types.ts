@@ -16,6 +16,14 @@ export interface AccountStats {
   inactive: number;
 }
 
+export type SimpleAssignment = {
+  id: number;
+  question_no: number;
+  label: string;
+  session_code : string 
+  title : string
+};
+
 export type CreateAccountFormValues = {
   username: string;
   password: string;
