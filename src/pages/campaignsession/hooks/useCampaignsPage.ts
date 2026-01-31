@@ -29,11 +29,10 @@ import Swal from "sweetalert2"
 /* -------------------------------------------------------------------------- */
 
 export interface CampaignFormValues {
-  code: string;
+  year_be: string;
+  site: string
+  campaign_size: string
   name: string;
-  startDate: string;
-  endDate: string;
-  description?: string;
   isActive: boolean;
 }
 
@@ -134,11 +133,10 @@ export function useCampaignsPage() {
 
   const campaignForm = useForm<CampaignFormValues>({
     defaultValues: {
-      code: "",
+      campaign_size: "",
+      site: "",
+      year_be: "",
       name: "",
-      startDate: "",
-      endDate: "",
-      description: "",
       isActive: true, // boolean
     },
   });
@@ -168,21 +166,20 @@ export function useCampaignsPage() {
 
   const resetCampaignForm = (campaign?: ExamCampaign | null) => {
     if (campaign) {
-      campaignForm.reset({
-        code: campaign.code,
-        name: campaign.name,
-        startDate: formatDateForInput(campaign.startDate),
-        endDate: formatDateForInput(campaign.endDate),
-        description: campaign.description ?? "",
-        isActive: campaign.isActive,
-      });
+      // campaignForm.reset({
+      //   code: campaign.code,
+      //   name: campaign.name,
+      //   startDate: formatDateForInput(campaign.startDate),
+      //   endDate: formatDateForInput(campaign.endDate),
+      //   description: campaign.description ?? "",
+      //   isActive: campaign.isActive,
+      // });
     } else {
       campaignForm.reset({
-        code: "",
+        campaign_size: "",
+        site: "",
+        year_be: "",
         name: "",
-        startDate: "",
-        endDate: "",
-        description: "",
         isActive: true,
       });
     }
@@ -259,8 +256,7 @@ export function useCampaignsPage() {
     return campaigns
       .map<VisibleCampaign | null>((campaign) => {
         const campaignMatches = keyword
-          ? campaign.name.toLowerCase().includes(keyword) ||
-          campaign.description?.toLowerCase().includes(keyword)
+          ? campaign.name.toLowerCase().includes(keyword.toLowerCase())
           : true;
 
         const sessions = campaign.sessions.filter((session) => {
@@ -325,18 +321,18 @@ export function useCampaignsPage() {
   /* ------------------------------- Submit handlers ------------------------- */
 
   const handleCampaignSubmit = async (values: CampaignFormValues) => {
-    const normalizedCode = values.code.trim().toUpperCase();
-
+   // const normalizedCode = values.code.trim().toUpperCase();
+    const name_value = values.campaign_size+" "+values.year_be
+    console.log(name_value)
     if (editingCampaign) {
       try {
         await dispatch(
           updateCampaignThunk({
             ...editingCampaign,
-            code: normalizedCode,
-            name: values.name,
-            startDate: values.startDate,
-            endDate: values.endDate,
-            description: values.description,
+            site: values.site,
+            campaign_size: values.campaign_size,
+            year_be: values.year_be,
+            name: name_value,
             isActive: values.isActive,
           })
         ).unwrap();
@@ -350,11 +346,10 @@ export function useCampaignsPage() {
       try {
         await dispatch(
           createCampaignThunk({
-            code: normalizedCode,
-            name: values.name,
-            startDate: values.startDate,
-            endDate: values.endDate,
-            description: values.description,
+            site: values.site,
+            campaign_size: values.campaign_size,
+            year_be: values.year_be,
+            name: name_value,
             isActive: values.isActive,
           })
         ).unwrap();
@@ -624,7 +619,7 @@ export function useCampaignsPage() {
     // data
     campaigns,
     visibleCampaigns,
-      pagedCampaigns,
+    pagedCampaigns,
     sessionCount,
     allSubjects,
 
@@ -657,7 +652,7 @@ export function useCampaignsPage() {
       onOpenChange: handleSubjectDialogChange,
       onSubmit: handleSubjectSubmit,
     },
-    pagination: {      
+    pagination: {
       page,
       setPage,
       pageSize,

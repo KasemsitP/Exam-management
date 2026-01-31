@@ -82,21 +82,21 @@ export function CampaignList({
               <div className="d-flex align-items-center gap-2">
                 <h6 className="mb-0">{campaign.name}</h6>
                 <span className="badge text-bg-light d-inline-flex align-items-center gap-1">
-                  <CalendarDays size={14} />
+                  {/* <CalendarDays size={14} />
                   {formatDateDisplay(campaign.startDate)} -{" "}
-                  {formatDateDisplay(campaign.endDate)}
+                  {formatDateDisplay(campaign.endDate)} */}
                 </span>
               </div>
-              {campaign.description && (
+              {/* {campaign.description && (
                 <p className="mb-0 mt-1 text-muted small">
                   {campaign.description}
                 </p>
-              )}
+              )} */}
             </div>
 
             <ShowIfCan permission="manage_subjects">
               <div className="d-flex flex-wrap gap-2">
-                <button
+                {/* <button
                   className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
                   onClick={() => onEditCampaign(campaign)}
                 >
@@ -116,7 +116,7 @@ export function CampaignList({
                 >
                   <BadgePlus size={14} />
                   เพิ่มเซสชัน
-                </button>
+                </button> */}
               </div>
             </ShowIfCan>
           </div>
@@ -128,6 +128,29 @@ export function CampaignList({
                 แคมเปญนี้ไม่มีรายการที่ตรงกับเงื่อนไข / กรุณาเพิ่มเซสชัน
               </div>
             )}
+            <div className=" d-flex flex-row justify-content-end mb-2 gap-2">
+              <button
+                className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
+                onClick={() => onEditCampaign(campaign)}
+              >
+                <Pencil size={14} />
+                แก้ไข
+              </button>
+              <button
+                className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
+                onClick={() => onDeleteCampaign(campaign)}
+              >
+                <Trash2 size={14} />
+                ลบ
+              </button>
+              <button
+                className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
+                onClick={() => onCreateSession(campaign.id)}
+              >
+                <BadgePlus size={14} />
+                เพิ่มเซสชัน
+              </button>
+            </div>
 
             {sessions.map((session) => (
               <div
@@ -150,13 +173,13 @@ export function CampaignList({
 
                   <ShowIfCan permission="manage_subjects">
                     <div className="d-flex flex-wrap gap-2">
-                      <button
+                      {/* <button
                         className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
                         onClick={() => onEditSession(campaign.id, session)}
                       >
                         <Pencil size={14} />
                         แก้ไข
-                      </button>
+                      </button> */}
                       <button
                         className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
                         onClick={() => onDeleteSession(campaign.id, session)}
@@ -178,12 +201,12 @@ export function CampaignList({
                 <div className="table-responsive mt-3">
                   <table className="table align-middle table-hover ">
                     <colgroup>
-                      <col style={{ width: 110 }} /> {/* รหัสวิชา */}
-                      <col />                        {/* ชื่อวิชา */}
-                      <col style={{ width: 140 }} /> {/* เวลา */}
-                      <col style={{ width: 110 }} /> {/* จำนวนข้อ */}
-                      <col style={{ width: 170 }} /> {/* ชุดเล่มข้อสอบ */}
-                      <col style={{ width: 110 }} /> {/* การจัดการ */}
+                      <col style={{ width: 110 }} />
+                      <col />
+                      <col style={{ width: 140 }} />
+                      <col style={{ width: 110 }} />
+                      <col style={{ width: 170 }} />
+                      <col style={{ width: 110 }} />
                     </colgroup>
 
                     <thead>
@@ -228,20 +251,20 @@ export function CampaignList({
                                 <Pencil size={16} />
                               </button> */}
                               <div className="d-flex flex-wrap gap-2">
-                              <button
-                                className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
-                                onClick={() =>
-                                  onDeleteSubject(
-                                    campaign.id,
-                                    session.id,
-                                    subject
-                                  )
-                                }
-                                aria-label="ลบรายวิชา"
-                              >
-                                <Trash2 size={16} />
-                                ลบ
-                              </button>
+                                <button
+                                  className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
+                                  onClick={() =>
+                                    onDeleteSubject(
+                                      campaign.id,
+                                      session.id,
+                                      subject
+                                    )
+                                  }
+                                  aria-label="ลบรายวิชา"
+                                >
+                                  <Trash2 size={16} />
+                                  ลบ
+                                </button>
                               </div>
                             </div>
                           </td>

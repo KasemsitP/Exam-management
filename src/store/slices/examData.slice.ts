@@ -26,15 +26,13 @@ export interface CampaignSession {
 }
 
 export interface ExamCampaign {
-  id: string; // plain string id from backend (e.g. "1")
-  code: string;
+  id: string;
+  year_be: string;
+  site: string
+  campaign_size: string
   name: string;
-  startDate: string;
-  endDate: string;
   isActive: boolean;
-  description?: string;
   sessions: CampaignSession[];
-  note?: string;
 }
 
 /* =========================================================
@@ -44,10 +42,10 @@ type ApiBoolean = boolean | 0 | 1;
 
 interface ApiCampaign {
   id: number;
-  code: string;
+  year_be: string;
+  site: string
+  campaign_size: string
   name: string;
-  start_date: string;
-  end_date: string;
   is_active: ApiBoolean;
   note?: string;
 }
@@ -177,14 +175,13 @@ const mapApiPayloadToCampaigns = (payload: ExamDataApiPayload): ExamCampaign[] =
 
     return {
       id: buildCampaignId(campaign.id),
-      code: campaign.code,
       name: campaign.name,
-      startDate: campaign.start_date,
-      endDate: campaign.end_date,
       isActive: toBool(campaign.is_active),
-      description: campaign.note,
-      note: campaign.note,
       sessions,
+
+      year_be: campaign.year_be,
+      site: campaign.site,
+      campaign_size: campaign.campaign_size,
     };
   });
 };
@@ -205,10 +202,10 @@ export const fetchInitialExamData = createAsyncThunk<ExamCampaign[], void, { rej
 );
 
 interface CreateCampaignInput {
-  code: string;
+  year_be: string;
+  site: string
+  campaign_size: string
   name: string;
-  startDate: string;
-  endDate: string;
   isActive: boolean;
   description?: string;
 }
@@ -219,21 +216,23 @@ export const createCampaignThunk = createAsyncThunk<
   { rejectValue: string }
 >("examData/createCampaign", async (payload, { rejectWithValue }) => {
   try {
+
+    console.log(payload)
     const response = await axios.post<ApiCampaign>("/api/campaigns", {
-      code: payload.code,
       name: payload.name,
-      start_date: payload.startDate,
-      end_date: payload.endDate,
+      year_be: payload.year_be,
+      site: payload.site,
+      campaign_size: payload.campaign_size,
       is_active: payload.isActive,
       note: payload.description,
     });
 
     return {
       id: buildCampaignId(response.data.id),
-      code: response.data.code,
       name: response.data.name,
-      startDate: response.data.start_date,
-      endDate: response.data.end_date,
+      campaign_size: response.data.campaign_size,
+      site: response.data.site,
+      year_be: response.data.year_be,
       isActive: toBool(response.data.is_active),
       description: response.data.note,
       note: response.data.note,
@@ -262,20 +261,16 @@ export const updateCampaignThunk = createAsyncThunk<ExamCampaign, ExamCampaign, 
     try {
       const response = await axios.put<ApiCampaign>(`/api/campaigns`, {
         id: parseCampaignId(campaign.id),
-        code: campaign.code,
         name: campaign.name,
-        start_date: campaign.startDate,
-        end_date: campaign.endDate,
         is_active: campaign.isActive,
-        note: campaign.description,
       });
 
       return {
         id: buildCampaignId(response.data.id),
-        code: response.data.code,
         name: response.data.name,
-        startDate: response.data.start_date,
-        endDate: response.data.end_date,
+        campaign_size: response.data.campaign_size,
+        site: response.data.site,
+        year_be: response.data.year_be,
         isActive: toBool(response.data.is_active),
         description: response.data.note,
         note: response.data.note,
@@ -656,24 +651,24 @@ export const selectActiveCampaign = (state: RootState) =>
 
 export const selectSessionsForCampaign =
   (campaignId: string | null) =>
-  (state: RootState) =>
-    campaignId ? state.examData.list.find((c) => c.id === campaignId)?.sessions ?? [] : [];
+    (state: RootState) =>
+      campaignId ? state.examData.list.find((c) => c.id === campaignId)?.sessions ?? [] : [];
 
 export const selectActiveCampaignSessions = (state: RootState) =>
   selectActiveCampaign(state)?.sessions ?? [];
 
 export const selectSessionById =
   (campaignId: string, sessionId: string) =>
-  (state: RootState) =>
-    state.examData.list.find((c) => c.id === campaignId)?.sessions.find((s) => s.id === sessionId) ??
-    null;
+    (state: RootState) =>
+      state.examData.list.find((c) => c.id === campaignId)?.sessions.find((s) => s.id === sessionId) ??
+      null;
 
 export const selectSubjectsForSession =
   (campaignId: string, sessionId: string) =>
-  (state: RootState) =>
-    state.examData.list
-      .find((c) => c.id === campaignId)
-      ?.sessions.find((s) => s.id === sessionId)?.subjects ?? [];
+    (state: RootState) =>
+      state.examData.list
+        .find((c) => c.id === campaignId)
+        ?.sessions.find((s) => s.id === sessionId)?.subjects ?? [];
 
 export const selectExamDataStatus = (state: RootState) => state.examData.status;
 export const selectExamDataError = (state: RootState) => state.examData.error ?? null;

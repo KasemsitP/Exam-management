@@ -1,309 +1,171 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
-import QRCode from "react-qr-code";                 // ใช้แสดง QR บนหน้าเว็บ
-import QR from "qrcode";                            // ใช้สร้าง dataURL สำหรับ PDF
-import { Printer, Download, Users, Loader2 } from "lucide-react";
+﻿// src/pages/signsheets/SignSheetsPage.tsx
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import QRCode from "react-qr-code";
+import { Printer, FileDown, Users, Loader2, Search } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { useAppDispatch, useAppSelector } from "@/store/hook";
+import { useAppSelector } from "@/store/hook";
 import {
-  selectActiveCampaign,
-  selectActiveCampaignSessions,
+  selectActiveCampaign,
+  selectActiveCampaignSessions,
 } from "@/store/slices/examData.slice";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
-import pdfMake from "pdfmake/build/pdfmake";
-import vfs_th from "../../build/vfs_th";
-(pdfMake as any).vfs = vfs_th;
-(pdfMake as any).fonts = {
-  THSarabun: {
-    normal: "THSarabunNew.ttf",
-    bold: "THSarabunNew-Bold.ttf",
-    italics: "THSarabunNew-Italic.ttf",
-    bolditalics: "THSarabunNew-BoldItalic.ttf",
-  },
-Roboto: {
-    normal: "Roboto-Regular.ttf",
-    bold: "Roboto-Medium.ttf",
-    italics: "Roboto-Italic.ttf",
-    bolditalics: "Roboto-MediumItalic.ttf",
-  },
+import axios from "axios";
 
-};
-// import vfsTH from "@/lib/vfs-THSarabun"; 
-// (pdfMake as any).vfs = vfsTH;
-// (pdfMake as any).fonts = {
-//   THSarabun: {
-//     normal: "THSarabunNew.ttf",
-//     bold: "THSarabunNew-Bold.ttf",
-//     italics: "THSarabunNew-Italic.ttf",
-//     bolditalics: "THSarabunNew-BoldItalic.ttf",
-//   },
-// };
+const ITEMS_PER_PAGE = 20; // จำนวนแถวต่อหน้าในตาราง
 
-import {
-  fetchUserSessionsForSession,
-  selectAllUserSessions,
-  selectUserSessionsStatus,
-  clearUserSessions,
-  UserSessionData,
-} from "@/store/slices/userSessions.slice";
-
-type RowItem = {
+type SignSheetRow = {
+  user_id: number;
+  userCode: string;
   firstName: string;
   lastName: string;
-  userCode: string;
   roomName: string | null;
+  seat_code: string | null;
   qr_payload: string | null;
-  __absIndex?: number;
 };
 
-const chunk = <T,>(arr: T[], size: number) =>
-  Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
-    arr.slice(i * size, i * size + size)
-  );
-
-const BLANK_USER: UserSessionData = {
-  user_session_id: 0,
-  user_id: 0,
-  userCode: "",
-  firstName: "",
-  lastName: "",
-  roomName: null,
-  qr_payload: null,
-};
-const padTo = <T,>(arr: T[], size: number, filler: T) =>
-  arr.length >= size ? arr : [...arr, ...Array.from({ length: size - arr.length }, () => filler)];
-
-const QR_SIZE = 96;    // ขนาด QR (หน้าเว็บ)
-const QR_BOX = 110;
-const ROWS_PER_PAGE = 6;
-
-// ========== PDF Helpers ==========
-async function makeQR(value: string, size = 300): Promise<string> {
-  if (!value) return "";
-  return QR.toDataURL(value, { width: size, margin: 1, errorCorrectionLevel: "M" });
-}
-function cellText(text: string, opts: any = {}) {
-  return { text, ...opts };
-}
-
-export async function exportSignSheetsPDF({
-  rows,
-  course,
-  org,
-  sessionText,
-  rowsPerPage = 6,
-  fileName = "ใบเซ็นชื่อผู้เข้าสอบ.pdf",
-  useThaiFont = false, // ถ้าตั้ง vfs ฟอนต์ไทยด้านบน ให้ส่ง true แล้วไปตั้ง defaultStyle.font = "THSarabun"
-}: {
-  rows: RowItem[];
-  course: string;
-  org: string;
-  sessionText: string;
-  rowsPerPage?: number;
-  fileName?: string;
-  useThaiFont?: boolean;
-}) {
-  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
-  const pages: RowItem[][] = chunk(rows, rowsPerPage).map((p, i) => {
-    while (p.length < rowsPerPage) {
-      p.push({ firstName: "", lastName: "", userCode: "", roomName: null, qr_payload: null });
-    }
-    p.forEach((r, j) => (r.__absIndex = i * rowsPerPage + j + 1));
-    return p;
-  });
-
-  const content: any[] = [];
-
-  for (let pageNo = 1; pageNo <= totalPages; pageNo++) {
-    const pageRows = pages[pageNo - 1];
-
-    // หัวเรื่อง (เหมือนภาพตัวอย่าง)
-    content.push(
-      { text: `ใบเซ็นชื่อสอบวิชา ${course}`, bold: true, fontSize: 16, alignment: "center", margin: [0, 0, 0, 4] },
-      { text: `${sessionText}  ณ ${org}`, alignment: "center", margin: [0, 0, 0, 2] },
-      { text: `${rows.length} คน | หน้า ${pageNo}/${totalPages}`, alignment: "center", color: "#666", fontSize: 9, margin: [0, 0, 0, 8] }
-    );
-
-    // ตาราง 4 คอลัมน์: ลำดับ | ข้อมูล | QR เข้า | QR ออก
-    const tableBody: any[] = [];
-    tableBody.push([
-      cellText("ลำดับ", { bold: true, alignment: "center" }),
-      cellText("ชื่อ-นามสกุล / รหัส / ห้อง", { bold: true }),
-      cellText("คิวอาร์โค้ดภาคผนวก", { bold: true, alignment: "center" }),
-      cellText("คิวอาร์โค้ดภาคผนวก", { bold: true, alignment: "center" }),
-    ]);
-
-    for (const r of pageRows) {
-      const isBlank = !r.userCode && !r.firstName;
-      const infoCell = isBlank
-        ? [{ text: " " }]
-        : [
-            { text: `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim() },
-            { text: `เลขที่นั่งสอบ ${r.userCode || "-"}`, fontSize: 9, color: "#666" },
-            { text: `ห้องสอบ ${r.roomName ?? "-"}`, fontSize: 9, color: "#666" },
-            { text: "ลายเซ็น..................................................", fontSize: 9, color: "#666", margin: [0, 4, 0, 0] },
-          ];
-  let qrDataURL_CheckIn = "";
-  if (!isBlank && r.qr_payload) {
-    qrDataURL_CheckIn = await makeQR(r.qr_payload, 350);
-  }
-
-  const qrCell_CheckIn = isBlank
-    ? { text: " " }
-    : qrDataURL_CheckIn
-    ? { image: qrDataURL_CheckIn, width: 95, alignment: "center" }
-    : { text: "NULL (ยังไม่เข้ารหัส)", color: "#c00000", bold: true, alignment: "center", fontSize: 9 };
-
-  // ✅ ใช้ QR เดียวกันกับ Check-in
-  const qrCell_CheckOut = isBlank
-    ? { text: " " }
-    : qrDataURL_CheckIn
-    ? { image: qrDataURL_CheckIn, width: 95, alignment: "center" }
-    : { text: "NULL (ยังไม่เข้ารหัส)", color: "#c00000", bold: true, alignment: "center", fontSize: 9 };
-
-  tableBody.push([
-    { text: String(r.__absIndex), alignment: "center" },
-    { stack: infoCell },
-    qrCell_CheckIn,
-    qrCell_CheckOut, // ✅ แสดง QR เหมือนกัน
-  ]);
-    }
-
-    content.push({
-      table: {
-        headerRows: 1,
-        widths: [40, "*", 120, 120],
-        body: tableBody,
-      },
-      layout: {
-        hLineWidth: () => 0.7,
-        vLineWidth: () => 0.7,
-        hLineColor: () => "#000",
-        vLineColor: () => "#000",
-        paddingLeft: () => 6,
-        paddingRight: () => 6,
-        paddingTop: () => 6,
-        paddingBottom: () => 6,
-      },
-      dontBreakRows: true,
-    });
-
-    if (pageNo < totalPages) {
-      content.push({ text: "", pageBreak: "after" });
-    }
-  }
-
-  const docDefinition: any = {
-    pageSize: "A4",
-    pageMargins: [25, 28, 25, 28],
-    content,
-    defaultStyle: {
-      fontSize: 11,
-      font: useThaiFont ? "THSarabun" : undefined,
-    },
-  };
-
-  pdfMake.createPdf(docDefinition).download(fileName);
-}
-
-// ========== Component ==========
 export default function SignSheetsPage() {
   const { toast } = useToast();
-  const dispatch = useAppDispatch();
+
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const sessions = useAppSelector(selectActiveCampaignSessions);
 
-  const userSessions = useAppSelector(selectAllUserSessions);
-  const userSessionsStatus = useAppSelector(selectUserSessionsStatus);
-
-  const [course, setCourse] = useState("วิชา ABC123");
-  const [sessionText, setSessionText] = useState("20/10/65 09:00–10:00");
-  const [org, setOrg] = useState("สถาบันการศึกษา XXX");
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
-  const [search, setSearch] = useState("");
+  const [course, setCourse] = useState("วิชา 101");
+  const [sessionText, setSessionText] = useState("");
+  const [org, setOrg] = useState(activeCampaign?.name || "");
 
+  const [rows, setRows] = useState<SignSheetRow[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // --- ตั้งค่า session เริ่มต้น ---
   useEffect(() => {
-    if (!sessions.length) {
-      setSelectedSessionId("");
-      return;
-    }
-    if (!selectedSessionId || !sessions.some((s) => s.id === selectedSessionId)) {
-      setSelectedSessionId(sessions[0].id);
+    if (sessions.length > 0 && !selectedSessionId) {
+      setSelectedSessionId(String(sessions[0].id));
     }
   }, [sessions, selectedSessionId]);
 
+  // --- เปลี่ยนชื่อวิชา/เวลา ตาม session ---
   useEffect(() => {
-    if (selectedSessionId) {
-      const numericSessionId = parseInt(selectedSessionId.replace("sess-", ""));
-      if (!isNaN(numericSessionId)) {
-        dispatch(fetchUserSessionsForSession(numericSessionId));
-      }
-    }
-    return () => {
-      dispatch(clearUserSessions());
-    };
-  }, [selectedSessionId, dispatch]);
-
-  useEffect(() => {
-    const session = sessions.find((s) => s.id === selectedSessionId);
+    const session = sessions.find((s) => String(s.id) === selectedSessionId);
     if (session) {
       setCourse(session.subjects?.[0]?.name ?? course);
       setSessionText(
-        `${new Date(session.examDate).toLocaleDateString("th-TH")} ${session.label}`
+        `${new Date(session.examDate).toLocaleDateString("th-TH")} ${
+          session.label
+        }`
       );
     }
-  }, [sessions, selectedSessionId, course]);
+  }, [selectedSessionId, sessions]);
 
+  // --- เซ็ต org ตาม campaign ---
   useEffect(() => {
     if (activeCampaign) setOrg(activeCampaign.name);
   }, [activeCampaign]);
 
-  const filtered = useMemo(() => {
+  // --- ดึงข้อมูลทั้งหมดจาก backend (ไม่มี pagination ที่ backend) ---
+  const fetchRows = useCallback(async () => {
+    if (!selectedSessionId || !activeCampaign) return;
+
+    try {
+      setIsLoading(true);
+
+      // แนะนำให้ backend endpoint นี้ "ไม่ paginate" และคืนมาเป็น array ตรง ๆ
+      // GET /api/signsheet/:sessionId/:campaignId
+      const res = await axios.get<SignSheetRow[]>(
+        `/api/signsheet/${selectedSessionId}/${activeCampaign.id}`
+      );
+
+      setRows(res.data);
+      setPage(1); // reset กลับหน้า 1 เวลาเปลี่ยน session
+    } catch (err) {
+      console.error(err);
+      toast({ title: "โหลดรายชื่อไม่สำเร็จ", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedSessionId, activeCampaign, toast]);
+
+  useEffect(() => {
+    fetchRows();
+  }, [fetchRows]);
+
+  // --- filter + search ฝั่ง frontend ---
+  const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const source = userSessions;
-    if (!term) return source;
-    return source.filter((r) =>
-      [r.userCode, r.firstName, r.lastName, r.roomName ?? "null"]
+    if (!term) return rows;
+
+    return rows.filter((r) =>
+      [
+        r.userCode,
+        r.firstName,
+        r.lastName,
+        r.roomName ?? "-",
+        r.seat_code ?? "",
+      ]
         .join(" ")
         .toLowerCase()
         .includes(term)
     );
-  }, [userSessions, search]);
+  }, [rows, search]);
 
-  const pages = useMemo(() => {
-    const ch = chunk(filtered, ROWS_PER_PAGE);
-    return ch.map((page) => padTo(page, ROWS_PER_PAGE, BLANK_USER));
-  }, [filtered]);
+  // --- pagination ฝั่ง frontend ---
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredRows.length / ITEMS_PER_PAGE)),
+    [filteredRows.length]
+  );
 
-  const exportCsv = () => {
-    const header = "รหัส,ชื่อ,นามสกุล,ห้อง,qr_payload (Encrypted)";
-    const lines = filtered.map((e) => {
-      return [
-        e.userCode,
-        e.firstName,
-        e.lastName,
-        e.roomName ?? "-",
-        e.qr_payload ?? "NULL",
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(",");
-    });
-    const csv = [header, ...lines].join("\n");
-    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "ใบเซ็นชื่อพร้อมQR.csv";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  const pageRows = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    return filteredRows.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredRows, page]);
+
+  useEffect(() => {
+    // ถ้า search เปลี่ยนให้กลับไปหน้า 1
+    setPage(1);
+  }, [search]);
+
+  // --- Download PDF ทั้งชุด (ไม่ใช้ pagination) ---
+  const handleDownloadPdf = async () => {
+    if (!selectedSessionId || !activeCampaign) return;
+
+    setIsExporting(true);
+    try {
+      // GET /api/signsheet/:session/:campaign/pdf
+      const response = await axios.get(
+        `/api/signsheet/${selectedSessionId}/${activeCampaign.id}/pdf`,
+        {
+          params: { course, org, sessionText },
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `ใบเซ็นชื่อ_${org.replaceAll(" ", "")}_${selectedSessionId}.pdf`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Export PDF ไม่สำเร็จ", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handlePrint = () => {
-    if (!filtered.length) {
+    if (!filteredRows.length) {
       toast({
         title: "ไม่พบข้อมูลผู้เข้าสอบ",
-        description: "กรุณาเพิ่มข้อมูลผู้เข้าสอบก่อนพิมพ์",
+        description: "กรุณาตรวจสอบข้อมูลก่อนพิมพ์",
         variant: "destructive",
       });
       return;
@@ -315,233 +177,212 @@ export default function SignSheetsPage() {
     <ShowIfCan permission="view_sessions">
       <div className="container py-4">
         {/* Header */}
-        <div className="d-flex gap-3 align-items-start mb-3 print-hidden">
-          <div className="rounded-circle p-2 bg-primary-subtle text-primary">
-            <Users size={22} />
-          </div>
-          <div className="flex-grow-1 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-sm-between gap-2">
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex align-items-center gap-3">
+            <div className="bg-primary text-white p-2 rounded-circle">
+              <Users size={24} />
+            </div>
             <div>
-              <h5 className="mb-1">ใบเซ็นชื่อและ QR code ผู้เข้าสอบ</h5>
+              <h4 className="mb-0">รายชื่อผู้เข้าสอบ (สำหรับอ้างอิง)</h4>
               <div className="text-muted small">
-                สำหรับแปะบนเล่มข้อสอบของผู้เข้าสอบ
+                ใช้ดูบนเว็บ / ค้นหา / ตรวจสอบ — การโหลดใบเซ็นชื่อใช้ปุ่ม
+                Export PDF
               </div>
             </div>
-            <div className="d-flex flex-wrap gap-2">
-              <input
-                className="form-control"
-                style={{ width: 220 }}
-                placeholder="ค้นหา ชื่อ/นามสกุล/รหัส/ห้อง"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <button
-                className="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-                onClick={exportCsv}
-              >
-                <Download size={16} /> ส่งออก CSV
-              </button>
+          </div>
 
-              <button
-                className="btn btn-primary d-inline-flex align-items-center gap-2"
-                onClick={() =>
-                  exportSignSheetsPDF({
-                    rows: filtered.map((r) => ({
-                      firstName: r.firstName,
-                      lastName: r.lastName,
-                      userCode: r.userCode,
-                      roomName: r.roomName ?? null,
-                      qr_payload: r.qr_payload ?? null,
-                    })),
-                    course,
-                    org,
-                    sessionText,
-                    rowsPerPage: ROWS_PER_PAGE,
-                    fileName: `ใบเซ็นชื่อ_${org.replaceAll(" ", "")}.pdf`,
-                     useThaiFont: true, // ถ้าตั้ง vfs ฟอนต์ไทยไว้ด้านบน เปิดบรรทัดนี้
-                  })
-                }
-              >
-                Export PDF
-              </button>
-
-              <button
-                className="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-                onClick={handlePrint}
-              >
-                <Printer size={16} /> พิมพ์ (จากหน้าเว็บ)
-              </button>
-            </div>
+          <div className="d-flex flex-wrap gap-2">
+            <button
+              className="btn btn-outline-secondary d-flex align-items-center gap-2"
+              onClick={handlePrint}
+            >
+              <Printer size={18} />
+              พิมพ์ตาราง
+            </button>
+            <button
+              className="btn btn-primary d-flex align-items-center gap-2"
+              onClick={handleDownloadPdf}
+              disabled={isExporting || !selectedSessionId}
+            >
+              {isExporting ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <FileDown size={18} />
+              )}
+              Export PDF (ทุกคนในรอบนี้)
+            </button>
           </div>
         </div>
 
-        {/* Exam info form */}
-        <div className="card mb-4 print-hidden">
-          <div className="card-header">
-            <h6 className="mb-0">ข้อมูลการสอบ</h6>
-          </div>
+        {/* ฟอร์มข้อมูลการสอบ */}
+        <div className="card mb-4 border-0 bg-light">
           <div className="card-body">
             <div className="row g-3">
-              <div className="col-12 col-sm-6 col-lg-3">
-                <label htmlFor="session-text" className="form-label">
-                  วัน / เวลา
-                </label>
-                <input
-                  id="session-text"
-                  className="form-control"
-                  value={sessionText}
-                  onChange={(e) => setSessionText(e.target.value)}
-                />
-              </div>
-              <div className="col-12 col-sm-6 col-lg-3">
-                <label htmlFor="organizer" className="form-label">
-                  หน่วยงาน / สถาบัน
-                </label>
-                <input
-                  id="organizer"
-                  className="form-control"
-                  value={org}
-                  onChange={(e) => setOrg(e.target.value)}
-                />
-              </div>
-              <div className="col-12 col-sm-6 col-lg-3">
-                <label className="form-label">รอบการสอบ</label>
+              <div className="col-md-3">
+                <label className="form-label small">รอบสอบ</label>
                 <select
                   className="form-select"
                   value={selectedSessionId}
                   onChange={(e) => setSelectedSessionId(e.target.value)}
                 >
-                  {sessions.map((session: any) => (
-                    <option key={session.id} value={session.id}>
-                      {session.label} – {new Date(session.examDate).toLocaleDateString("th-TH")}
+                  {sessions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label} –{" "}
+                      {new Date(s.examDate).toLocaleDateString("th-TH")}
                     </option>
                   ))}
-                  {!sessions.length && <option value="">ไม่มีข้อมูลรอบการสอบ</option>}
+                  {!sessions.length && (
+                    <option value="">ไม่มีข้อมูลรอบสอบ</option>
+                  )}
                 </select>
+              </div>
+              <div className="col-md-3">
+                <label className="form-label small">วิชา</label>
+                <input
+                  className="form-control"
+                  value={course}
+                  onChange={(e) => setCourse(e.target.value)}
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="form-label small">วัน / เวลา</label>
+                <input
+                  className="form-control"
+                  value={sessionText}
+                  onChange={(e) => setSessionText(e.target.value)}
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="form-label small">หน่วยงาน / สถานที่</label>
+                <input
+                  className="form-control"
+                  value={org}
+                  onChange={(e) => setOrg(e.target.value)}
+                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Sheets preview บนหน้าเว็บ */}
+        {/* Search + summary */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="input-group" style={{ maxWidth: 320 }}>
+            <span className="input-group-text bg-white">
+              <Search size={16} />
+            </span>
+            <input
+              className="form-control border-start-0"
+              placeholder="ค้นหา รหัส / ชื่อ / ห้อง"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="text-muted small">
+            ทั้งหมด {rows.length} คน | หลังกรอง {filteredRows.length} คน |
+            หน้า {page}/{totalPages}
+          </div>
+        </div>
+
+        {/* ตาราง */}
         <div className="card shadow-sm">
-          <div className="card-header py-2 text-center">
-            <h6 className="mb-0">
-              {course}
-              <div className="fw-normal text-muted small mt-1">{org}</div>
-              <div className="fw-normal text-muted small">{sessionText}</div>
-              <div className="fw-normal text-muted small">
-                {filtered.length} คน | {Math.ceil(filtered.length / ROWS_PER_PAGE)} หน้า (7 แถวต่อหน้า)
-              </div>
-            </h6>
-          </div>
-          <div className="card-body pt-0">
-            <div className="d-flex flex-column gap-4">
-              {pages.map((page, pageIndex) => (
-                <div
-                  key={pageIndex}
-                  className={pageIndex < pages.length - 1 ? "break-after-page" : ""}
-                >
-                  <div className="text-center text-muted small mt-2">
-                    แคมเปญ: {activeCampaign?.name ?? "-"} — หน้า {pageIndex + 1}
-                  </div>
+          <div className="table-responsive">
+            <table className="table table-hover align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th style={{ width: 60 }} className="text-center">
+                    #
+                  </th>
+                  <th style={{ width: 120 }}>รหัส</th>
+                  <th>ชื่อ-นามสกุล</th>
+                  <th style={{ width: 180 }}>ห้อง / ที่นั่ง</th>
+                  <th style={{ width: 120 }} className="text-center">
+                    QR Preview
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading && (
+                  <tr>
+                    <td colSpan={5} className="text-center py-5 text-muted">
+                      <Loader2 className="animate-spin me-2" size={18} />
+                      กำลังโหลดข้อมูล...
+                    </td>
+                  </tr>
+                )}
 
-                  <div className="table-responsive mt-2">
-                    <table className="table table-bordered align-top" style={{ tableLayout: "fixed" }}>
-                      <colgroup>
-                        <col style={{ width: "56px" }} />
-                        <col />
-                        <col style={{ width: "170px" }} />
-                        <col style={{ width: "170px" }} />
-                      </colgroup>
-                      <thead className="table-light">
-                        <tr>
-                          <th className="text-center">ลำดับ</th>
-                          <th className="text-start">ชื่อ-นามสกุล / รหัส / ห้อง</th>
-                          <th className="text-center">QR Code (Check-in)</th>
-                          <th className="text-center">QR Code (Check-out)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {page.map((examinee, index) => {
-                          const absoluteIndex = pageIndex * ROWS_PER_PAGE + index + 1;
-                          const isBlank = !examinee.userCode && !examinee.firstName;
-                          const qrPayload = examinee.qr_payload ?? "";
-                          return (
-                            <tr key={absoluteIndex} className="qr-row align-top">
-                              <td className="text-center">{absoluteIndex}</td>
-                              <td className="lh-sm">
-                                {!isBlank ? (
-                                  <>
-                                    <div>{examinee.firstName} {examinee.lastName}</div>
-                                    <div className="small text-muted">
-                                      รหัส: {examinee.userCode} | ห้อง: {examinee.roomName ?? "-"}
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div style={{ height: 18 }} />
-                                )}
-                                <div className="mt-1 small text-muted">ลายเซ็นผู้สอบ</div>
-                              </td>
-                              <td className="text-center">
-                                <div className="mx-auto d-flex align-items-center justify-content-center" style={{ width: QR_BOX, height: QR_BOX }}>
-                                  {!isBlank && <QRCode value={qrPayload} size={QR_SIZE} />}
-                                  {!isBlank && !qrPayload && (
-                                    <span className="badge bg-danger-subtle text-danger-emphasis">
-                                      NULL (ยังไม่เข้ารหัส)
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="text-center">
-                                <div className="mx-auto d-flex align-items-center justify-content-center" style={{ width: QR_BOX, height: QR_BOX }}>
-                                  {!isBlank && <QRCode value={qrPayload} size={QR_SIZE} />}
-                                  {!isBlank && !qrPayload && (
-                                    <span className="badge bg-danger-subtle text-danger-emphasis">
-                                      NULL (ยังไม่เข้ารหัส)
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
+                {!isLoading && pageRows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="text-center py-5 text-muted">
+                      ไม่พบข้อมูลผู้เข้าสอบ
+                    </td>
+                  </tr>
+                )}
+
+                {!isLoading &&
+                  pageRows.map((row, idx) => (
+                    <tr key={row.user_id ?? idx}>
+                      <td className="text-center text-muted">
+                        {(page - 1) * ITEMS_PER_PAGE + idx + 1}
+                      </td>
+                      <td className="fw-semibold text-primary">
+                        {row.userCode}
+                      </td>
+                      <td>{`${row.firstName} ${row.lastName ?? ""}`}</td>
+                      <td>
+                        <span className="badge bg-secondary-subtle text-secondary-emphasis me-1">
+                          {row.roomName || "-"}
+                        </span>
+                        <small className="text-muted">
+                          {row.seat_code ? `ที่นั่ง ${row.seat_code}` : ""}
+                        </small>
+                      </td>
+                      <td className="text-center">
+                        {row.qr_payload ? (
+                          <div
+                            style={{
+                              width: 48,
+                              height: 48,
+                              margin: "0 auto",
+                            }}
+                          >
+                            <QRCode value={row.qr_payload} size={48} />
+                          </div>
+                        ) : (
+                          <span className="badge bg-danger-subtle text-danger-emphasis">
+                            NULL
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* pagination controls */}
+          {totalPages > 1 && (
+            <div className="card-footer d-flex justify-content-end align-items-center gap-2 py-2">
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                ก่อนหน้า
+              </button>
+              <span className="small">
+                หน้า {page} / {totalPages}
+              </span>
+              <button
+                className="btn btn-sm btn-outline-secondary"
+                disabled={page === totalPages}
+                onClick={() =>
+                  setPage((p) => Math.min(totalPages, p + 1))
+                }
+              >
+                ถัดไป
+              </button>
             </div>
-
-            {userSessionsStatus === "loading" && (
-              <div className="d-flex align-items-center justify-content-center text-muted" style={{ height: 180 }}>
-                <Loader2 size={24} className="spin-animation me-2" />
-                กำลังดึงข้อมูลผู้สอบ...
-              </div>
-            )}
-
-            {userSessionsStatus === "failed" && (
-              <div className="d-flex align-items-center justify-content-center text-danger" style={{ height: 180 }}>
-                ไม่สามารถดึงข้อมูลผู้สอบได้ (API Error)
-              </div>
-            )}
-
-            {userSessionsStatus === "succeeded" && filtered.length === 0 && (
-              <div className="d-flex align-items-center justify-content-center text-muted" style={{ height: 180 }}>
-                ไม่พบข้อมูลผู้เข้าสอบในรอบนี้
-              </div>
-            )}
-
-            <style>{`
-              @media print {
-                @page { size: A4 portrait; margin: 8mm; }
-                body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-                .break-after-page { break-after: page; page-break-after: always; }
-                table { width: 100%; table-layout: fixed; border-collapse: collapse; }
-                .qr-row { break-inside: avoid; page-break-inside: avoid; }
-                .print-hidden { display: none !important; }
-              }
-            `}</style>
-          </div>
+          )}
         </div>
       </div>
     </ShowIfCan>

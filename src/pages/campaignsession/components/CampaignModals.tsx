@@ -17,7 +17,13 @@ interface CampaignModalProps {
   onSubmit: (values: CampaignFormValues) => Promise<void> | void;
 }
 
+const currentYear = new Date().getFullYear() + 543;
 
+const years = [
+  currentYear - 1,
+  currentYear,
+  currentYear + 1,
+];
 
 export function CampaignModal({
   open,
@@ -26,8 +32,8 @@ export function CampaignModal({
   onOpenChange,
   onSubmit,
 }: CampaignModalProps) {
-  if (!open) return null;
 
+  if (!open) return null;
   return (
     <>
       <div className="modal fade show d-block" role="dialog" aria-modal="true">
@@ -47,58 +53,50 @@ export function CampaignModal({
               <div className="modal-body">
                 <div className="mb-3">
                   <label htmlFor="campaign-code" className="form-label">
-                    Campaign code
+                    เลือกสนามสอบ
                   </label>
-                  <input
+
+                  <select
                     id="campaign-code"
-                    className="form-control"
-                    placeholder="เช่น Y68-T2 หรือ 2568A"
-                    {...form.register("code", { required: true })}
-                  />
+                    className="form-select"
+                    {...form.register("campaign_size", { required: true })}
+                  >
+                    <option value="">-- เลือกสนามสอบ --</option>
+                    <option value="สนามใหญ่">สนามใหญ่</option>
+                    <option value="สนามเล็ก">สนามเล็ก</option>
+                    <option value="สนามจิ๋ว">สนามจิ๋ว</option>
+                  </select>
                 </div>
                 <div className="mb-3">
+                  <label htmlFor="year-be" className="form-label">
+                    เลือกปีพุทธศักราช
+                  </label>
+
+                  <select
+                    id="year-be"
+                    className="form-select"
+                    {...form.register("year_be", { required: true })}
+                  >
+                    <option value="">-- เลือกปี พ.ศ. --</option>
+                    {years.map((year) => (
+                      <option key={year} value={year}>
+                        พ.ศ. {year}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+
+
+                <div className="mb-3">
                   <label htmlFor="campaign-name" className="form-label">
-                    ชื่อแคมเปญ
+                    สถานที่สอบ
                   </label>
                   <input
                     id="campaign-name"
                     className="form-control"
-                    {...form.register("name", { required: true })}
-                  />
-                </div>
-                <div className="row g-3">
-                  <div className="col-sm-6">
-                    <label htmlFor="campaign-start" className="form-label">
-                      วันที่เริ่มต้น
-                    </label>
-                    <input
-                      id="campaign-start"
-                      type="date"
-                      className="form-control"
-                      {...form.register("startDate", { required: true })}
-                    />
-                  </div>
-                  <div className="col-sm-6">
-                    <label htmlFor="campaign-end" className="form-label">
-                      วันที่สิ้นสุด
-                    </label>
-                    <input
-                      id="campaign-end"
-                      type="date"
-                      className="form-control"
-                      {...form.register("endDate", { required: true })}
-                    />
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <label htmlFor="campaign-desc" className="form-label">
-                    รายละเอียดเพิ่มเติม
-                  </label>
-                  <input
-                    id="campaign-desc"
-                    className="form-control"
-                    placeholder="รายละเอียดเพิ่มเติม (ถ้ามี)"
-                    {...form.register("description")}
+                    placeholder="เช่น ศูนย์ประชุมธรรมศาสตร์รังสิต มหาวิทยาลัยธรรมศาสตร์ศูนย์รังสิต"
+                    {...form.register("site", { required: true })}
                   />
                 </div>
                 <div className="form-check form-switch mt-3">
@@ -106,6 +104,8 @@ export function CampaignModal({
                     id="campaign-active"
                     type="checkbox"
                     className="form-check-input"
+
+
                     {...form.register("isActive")}
                   />
                   <label
@@ -182,11 +182,17 @@ export function SessionModal({
                   <label htmlFor="session-label" className="form-label">
                     ชื่อเซสชัน / รอบสอบ
                   </label>
-                  <input
+
+                  <select
                     id="session-label"
-                    className="form-control"
+                    className="form-select"
                     {...form.register("label", { required: true })}
-                  />
+                  >
+                    <option value="">-- เลือกรอบสอบ --</option>
+                    <option value="วันที่ 1">วันที่ 1</option>
+                    <option value="วันที่ 2">วันที่ 2</option>
+                    <option value="วันที่ 3">วันที่ 3</option>
+                  </select>
                 </div>
                 <div className="mb-3">
                   <label htmlFor="session-date" className="form-label">
@@ -199,7 +205,7 @@ export function SessionModal({
                     {...form.register("examDate", { required: true })}
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label htmlFor="session-note" className="form-label">
                     หมายเหตุ
                   </label>
@@ -209,7 +215,7 @@ export function SessionModal({
                     placeholder="เช่น ห้องสอบ / หมายเหตุเพิ่มเติม"
                     {...form.register("note")}
                   />
-                </div>
+                </div> */}
               </div>
               <div className="modal-footer">
                 <button
@@ -313,9 +319,8 @@ export function SubjectModal({
                     รายวิชา <span className="text-danger">*</span>
                   </label>
                   <select
-                    className={`form-select ${
-                      errors.subjectId ? "is-invalid" : ""
-                    }`}
+                    className={`form-select ${errors.subjectId ? "is-invalid" : ""
+                      }`}
                     value={selectedSubjectId || ""}
                     onChange={handleSubjectChange}
                   >

@@ -68,9 +68,10 @@ export function AppLayout() {
     [roles]
   );
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     dispatch(logout());
-    showSuccess("ออกจากระบบสำเร็จ", "ออกจากระบบ");
+    await showSuccess("ออกจากระบบสำเร็จ", "ออกจากระบบ");
+    window.location.reload();
   };
 
   const handleSelectCampaign = (campaignId: number) => {
@@ -81,7 +82,7 @@ export function AppLayout() {
   return (
     <div className="d-flex min-vh-100 font-sans bg-light app-compact">
       {/* Desktop Sidebar (ถ้าใน AppSidebar ใช้ user.roles คำนวณเองอยู่แล้ว ก็ไม่ต้องส่ง prop เพิ่ม) */}
-      <AppSidebar user={user} navItems={allowedNavItems} setOnClickMobileSidebar={setOnClickMobileSidebar}/>
+      <AppSidebar user={user} navItems={allowedNavItems} setOnClickMobileSidebar={setOnClickMobileSidebar} />
 
       {/* Mobile Sidebar */}
       <AppSidebar

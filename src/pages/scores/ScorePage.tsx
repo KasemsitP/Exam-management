@@ -8,6 +8,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
+import { useForm } from "react-hook-form";
 import {
   selectActiveCampaign,
   selectActiveCampaignSessions,
@@ -21,6 +22,11 @@ import type {
   BagBookletScore,
   BagQuestionScoreRow,
 } from "./types";
+
+interface FormValues  {
+  firstKey: string;
+  secondKey : string;
+};
 
 type ViewMode = "score" | "grader";
 
@@ -39,9 +45,14 @@ export default function BagScoresPage() {
   const [bagScores, setBagScores] = useState<BagScoresApiResponse | null>(null);
   const [loadingScores, setLoadingScores] = useState(false);
   const [errorScores, setErrorScores] = useState<string | null>(null);
+  const [opendecrypt, setopendecrypt] = useState<boolean>(false);
 
   // โหมดแสดงผลคะแนน / ชื่อผู้ตรวจ
   const [viewMode, setViewMode] = useState<ViewMode>("score");
+
+  const { handleSubmit, register } = useForm<FormValues>({
+    defaultValues: { firstKey: "", secondKey: "" },
+  });
 
   // -----------------------------
   // 1) โหลดถุงทั้งหมดของ campaign
@@ -75,6 +86,12 @@ export default function BagScoresPage() {
       })
       .finally(() => setLoadingBags(false));
   }, [activeCampaign, dispatch]);
+
+
+
+  const onSubmitKey = (values : FormValues) => {
+
+  }
 
   // -----------------------------
   // 2) Filter ตาม session + เลือกถุง
@@ -232,57 +249,67 @@ export default function BagScoresPage() {
               <span className="small text-muted ms-1">
                 ถุงทั้งหมด {filteredBags.length} ใบ
               </span>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                disabled={currentBagIndex === -1 || currentBagIndex >= filteredBags.length - 1}
+                onClick={() => setopendecrypt(true)}
+              >
+                ถอดรหัส
+              </button>
             </div>
 
             {/* เลือกถุง + next / prev + โหมดแสดงผล */}
-  {/* เลือกถุง + next/prev + โหมดแสดงผล */}
-<div className="d-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end">
-  <button
-    type="button"
-    className="btn btn-sm btn-outline-secondary"
-    disabled={currentBagIndex <= 0}
-    onClick={() => handleNavigateBag("prev")}
-  >
-    <ChevronLeft size={16} />
-  </button>
+            {/* เลือกถุง + next/prev + โหมดแสดงผล */}
+            <div className="d-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end">
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                disabled={currentBagIndex <= 0}
+                onClick={() => handleNavigateBag("prev")}
+              >
+                <ChevronLeft size={16} />
+              </button>
 
-  <div className="d-flex align-items-center gap-1 flex-grow-1 flex-md-grow-0">
-    <span className="small text-muted">ถุง:</span>
-    <select
-      className="form-select form-select-sm w-100 w-md-auto"
-      value={selectedBagId ?? ""}
-      onChange={(e) => setSelectedBagId(Number(e.target.value))}
-      disabled={filteredBags.length === 0}
-    >
-      {filteredBags.map((b, idx) => (
-        <option key={b.bagId} value={b.bagId}>
-          {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} – {b.sessionLabel}
-        </option>
-      ))}
-      {filteredBags.length === 0 && <option value="">ไม่มีถุง</option>}
-    </select>
-  </div>
+              <div className="d-flex align-items-center gap-1 flex-grow-1 flex-md-grow-0">
+                <span className="small text-muted">ถุง:</span>
+                <select
+                  className="form-select form-select-sm w-100 w-md-auto"
+                  value={selectedBagId ?? ""}
+                  onChange={(e) => setSelectedBagId(Number(e.target.value))}
+                  disabled={filteredBags.length === 0}
+                >
+                  {filteredBags.map((b, idx) => (
+                    <option key={b.bagId} value={b.bagId}>
+                      {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} – {b.sessionLabel}
+                    </option>
+                  ))}
+                  {filteredBags.length === 0 && <option value="">ไม่มีถุง</option>}
+                </select>
+              </div>
 
-  <button
-    type="button"
-    className="btn btn-sm btn-outline-secondary"
-    disabled={currentBagIndex === -1 || currentBagIndex >= filteredBags.length - 1}
-    onClick={() => handleNavigateBag("next")}
-  >
-    <ChevronRight size={16} />
-  </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary"
+                disabled={currentBagIndex === -1 || currentBagIndex >= filteredBags.length - 1}
+                onClick={() => handleNavigateBag("next")}
+              >
+                <ChevronRight size={16} />
+              </button>
 
-  <button
-    type="button"
-    className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 w-100 w-md-auto"
-    onClick={() => setViewMode((m) => (m === "score" ? "grader" : "score"))}
-  >
-    <Users size={14} />
-    <span className="small">
-      {viewMode === "score" ? "แสดงชื่อผู้ตรวจ" : "แสดงคะแนนตัวเลข"}
-    </span>
-  </button>
-</div>
+
+
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 w-100 w-md-auto"
+                onClick={() => setViewMode((m) => (m === "score" ? "grader" : "score"))}
+              >
+                <Users size={14} />
+                <span className="small">
+                  {viewMode === "score" ? "แสดงชื่อผู้ตรวจ" : "แสดงคะแนนตัวเลข"}
+                </span>
+              </button>
+            </div>
 
           </div>
         </div>
@@ -567,6 +594,50 @@ export default function BagScoresPage() {
                   </table>
                 </div>
               )}
+
+
+            {opendecrypt && (
+              <>
+                {/* Backdrop */}
+                <div
+                  className="modal-backdrop fade show"
+                  onClick={() => setopendecrypt(false)}
+                />
+
+                {/* Modal */}
+                <div
+                  className="modal fade show"
+                  style={{ display: "block" }}
+                  role="dialog"
+                  aria-modal="true"
+                >
+                  <div className="modal-dialog modal-dialog-centered modal-lg">
+                    <div className="modal-content">
+
+                      <div className="modal-header">
+                        <h6 className="modal-title">การถอดรหัส</h6>
+                      </div>
+
+                      <div className="modal-body">
+                        {/* เนื้อหา */}
+                      </div>
+
+                      <div className="modal-footer">
+                        <button
+                          className="btn btn-outline-secondary"
+                          onClick={() => setopendecrypt(false)}
+                        >
+                          ปิด
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+
           </div>
         </div>
       )}
