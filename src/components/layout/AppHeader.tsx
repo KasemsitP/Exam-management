@@ -19,7 +19,7 @@ export function AppHeader({
   theme,
 }: AppHeaderProps) {
   const campaignLabel = activeCampaign
-    ? `${activeCampaign.name ?? activeCampaign.id} - ${activeCampaign.code}`
+    ? `${activeCampaign.name ?? activeCampaign.campaign_size} `
     : null;
 
   return (

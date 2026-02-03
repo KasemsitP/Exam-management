@@ -30,7 +30,7 @@ export function CampaignPickerModal({
     const k = keyword.trim().toLowerCase();
     if (!k) return campaigns;
     return campaigns.filter((c) => {
-      const code = (c.code ?? `${c.id}`).toLowerCase();
+      const code = (c.year_be ?? `${c.id}`).toLowerCase();
       const name = (c.name ?? "").toLowerCase();
       return code.includes(k) || name.includes(k);
     });
@@ -137,11 +137,11 @@ export function CampaignPickerModal({
                         )}
                       </div>
                       <div className="text-secondary small">{c.name}</div>
-                      {c.note && (
+                      {/* {c.note && (
                         <div className="small text-muted fst-italic mt-1">
                           <small>{c.note}</small>
                         </div>
-                      )}
+                      )} */}
                     </div>
                   </label>
                 );

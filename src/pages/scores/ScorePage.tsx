@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+// src/pages/.../BagScoresPage.tsx
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Filter,
   FileText,
   Users,
 } from "lucide-react";
@@ -23,12 +23,16 @@ import type {
   BagQuestionScoreRow,
 } from "./types";
 
-interface FormValues  {
+import Swal from "sweetalert2";
+
+interface FormValues {
   firstKey: string;
-  secondKey : string;
-};
+  secondKey: string;
+  otpCode?: string;
+}
 
 type ViewMode = "score" | "grader";
+type DecryptStep = "keys" | "otp";
 
 export default function BagScoresPage() {
   const dispatch = useAppDispatch();
@@ -45,53 +49,124 @@ export default function BagScoresPage() {
   const [bagScores, setBagScores] = useState<BagScoresApiResponse | null>(null);
   const [loadingScores, setLoadingScores] = useState(false);
   const [errorScores, setErrorScores] = useState<string | null>(null);
+
   const [opendecrypt, setopendecrypt] = useState<boolean>(false);
 
   // โหมดแสดงผลคะแนน / ชื่อผู้ตรวจ
   const [viewMode, setViewMode] = useState<ViewMode>("score");
 
-  const { handleSubmit, register } = useForm<FormValues>({
-    defaultValues: { firstKey: "", secondKey: "" },
+  // ---------- form 2-FA ----------
+  const { handleSubmit, register, reset, getValues } = useForm<FormValues>({
+    defaultValues: { firstKey: "", secondKey: "", otpCode: "" },
   });
+
+  const [decryptStep, setDecryptStep] = useState<DecryptStep>("keys");
+  const [requestingOtp, setRequestingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+
+  const [otpToken, setOtpToken] = useState<string | null>(null);
+  const [otpEmail, setOtpEmail] = useState<string | null>(null);
+  const [otpExpiresIn, setOtpExpiresIn] = useState<number | null>(null); // seconds
+  const [isDecrypted, setIsdecrypted] = useState<boolean>(false)
+
+  const OTP_LENGTH = 6;
+  const [otpDigits, setOtpDigits] = useState<string[]>(
+    Array(OTP_LENGTH).fill("")
+  );
+
+  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+
+  // countdown เวลา OTP
+  useEffect(() => {
+    if (decryptStep !== "otp") return;
+    if (otpExpiresIn == null) return;
+
+    const timer = setInterval(() => {
+      setOtpExpiresIn((prev) => {
+        if (prev == null) return prev;
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [decryptStep, otpExpiresIn]);
+
+  useEffect(() => {
+    if (!activeCampaign?.id) return;
+
+    const fetchIsUnlock = async () => {
+      try {
+        const result = await axios.get(
+          `/api/campaigns/${activeCampaign.id}/is-unlock`
+        );
+
+        console.log(result.data);
+        setIsdecrypted(result.data.isUnlock)
+        console.log(isDecrypted)
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchIsUnlock();
+  }, [activeCampaign?.id]);
+
+
+  const formatOtpTime = (sec: number | null) => {
+    if (sec == null) return "";
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m.toString().padStart(2, "0")}:${s
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   // -----------------------------
   // 1) โหลดถุงทั้งหมดของ campaign
   // -----------------------------
+
+
+
+  const loadBagsForCampaign = async (campaignId: String) => {
+    try {
+      setLoadingBags(true);
+      setErrorBags(null);
+
+      const rawBags = await dispatch(
+        fetchBagsForCampaignThunk(String(campaignId))
+      ).unwrap();
+
+      const mapped: BagScoreBagSummary[] = rawBags.map((b: any) => ({
+        bagId: Number(b.id),
+        bagNo: Number(b.bag_no),
+        campaignId: Number(b.campaignId),
+        sessionId: Number(b.sessionId),
+        sessionLabel: b.sessionLabel,
+        subjectId: b.subjectId ?? 0,
+        subjectName: b.subjectName ?? "",
+        status: b.status,
+        scannedCount: Number(b.scannedCount ?? 0),
+      }));
+
+      setBags(mapped);
+    } catch (err: any) {
+      console.error(err);
+      setErrorBags(err?.message ?? "โหลดข้อมูลถุงไม่สำเร็จ");
+      setBags([]);
+    } finally {
+      setLoadingBags(false);
+    }
+  };
+
   useEffect(() => {
     if (!activeCampaign) return;
+    loadBagsForCampaign((activeCampaign.id));
+  }, [activeCampaign]);
 
-    setLoadingBags(true);
-    setErrorBags(null);
-
-    dispatch(fetchBagsForCampaignThunk(activeCampaign.id))
-      .unwrap()
-      .then((rawBags: any[]) => {
-        const mapped: BagScoreBagSummary[] = rawBags.map((b) => ({
-          bagId: Number(b.id),
-          bagNo: Number(b.bag_no),
-          campaignId: Number(b.campaignId),
-          sessionId: Number(b.sessionId),
-          sessionLabel: b.sessionLabel,
-          subjectId: b.subjectId ?? 0,
-          subjectName: b.subjectName ?? "",
-          status: b.status,
-          scannedCount: Number(b.scannedCount ?? 0),
-        }));
-        setBags(mapped);
-      })
-      .catch((err: any) => {
-        console.error(err);
-        setErrorBags(err?.message ?? "โหลดข้อมูลถุงไม่สำเร็จ");
-        setBags([]);
-      })
-      .finally(() => setLoadingBags(false));
-  }, [activeCampaign, dispatch]);
-
-
-
-  const onSubmitKey = (values : FormValues) => {
-
-  }
 
   // -----------------------------
   // 2) Filter ตาม session + เลือกถุง
@@ -219,103 +294,394 @@ export default function BagScoresPage() {
   };
 
   // -----------------------------
+  // 5) Logic 2-FA decrypt
+  // -----------------------------
+  const openDecryptModal = () => {
+    setopendecrypt(true);
+    setDecryptStep("keys");
+    setOtpToken(null);
+    setOtpEmail(null);
+    setOtpExpiresIn(null);
+    reset({ firstKey: "", secondKey: "", otpCode: "" });
+  };
+
+  const onSubmitDecrypt = async (values: FormValues) => {
+    // console.log(values)
+    if (decryptStep === "keys") {
+      const { firstKey: FirstKey, secondKey: SecondKey } = values;
+      if (FirstKey.length !== 16 || SecondKey.length !== 16) {
+        Swal.fire({
+          icon: "error",
+          title: "คีย์ไม่ถูกต้อง",
+          text: "กรุณากรอกคีย์ให้ครบ 16 ตัวอักษรเท่านั้น",
+        });
+        return;
+      }
+
+      setRequestingOtp(true);
+      try {
+        // NOTE: แก้ URL/field ให้ตรง backend ของคุณ
+        console.log(FirstKey, SecondKey)
+        const result = await axios.post(`/api/campaigns/${activeCampaign.id}/decrypt/request-otp`, {
+          FirstKey,
+          SecondKey,
+        });
+
+        if (result.data?.success) {
+          setDecryptStep("otp");
+          setOtpToken(result.data.otpToken || null);
+          setOtpEmail(result.data.email || null);
+          setOtpExpiresIn(result.data.expiresInSeconds ?? 300); // fallback 5 นาที
+          console.log(result.data)
+
+          Swal.fire({
+            icon: "success",
+            title: "ส่งรหัสยืนยันแล้ว",
+            text:
+              result.data.message ||
+              "กรุณาตรวจสอบรหัสจากอีเมลของคุณ แล้วกรอกด้านล่าง",
+          });
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "ขอรหัสยืนยันไม่สำเร็จ",
+            text: result.data?.message || "ไม่สามารถสร้างรหัสได้",
+          });
+        }
+      } catch (error: any) {
+        Swal.fire({
+          icon: "error",
+          title: "Request failed",
+          text:
+            error?.response?.data?.message ||
+            "Backend error. กรุณาลองใหม่อีกครั้ง",
+        });
+      } finally {
+        setRequestingOtp(false);
+      }
+
+      return;
+    }
+    console.log()
+    // step === "otp"
+    const otpCode = otpDigits.join("");
+
+    if (otpCode.length !== 6) {
+      Swal.fire({
+        icon: "warning",
+        title: "กรุณากรอกรหัสยืนยันให้ครบ 6 หลัก",
+      });
+      return;
+    }
+
+    if (!otpToken) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่พบ token สำหรับยืนยัน",
+        text: "กรุณาขอรหัสใหม่อีกครั้ง",
+      });
+      return;
+    }
+
+
+    setVerifyingOtp(true);
+    try {
+      // NOTE: แก้ URL/field ให้ตรง backend ของคุณ
+      const result = await axios.post(`/api/campaigns/${activeCampaign.id}/decrypt/verify-otp`, {
+        otpToken,
+        otpCode,
+      });
+
+      if (result.data?.success) {
+        await Swal.fire({
+          icon: "success",
+          title: "ถอดรหัสสำเร็จ",
+          text: result.data.message || "ปลดล็อกข้อมูลเรียบร้อย",
+        });
+        setopendecrypt(false);
+        loadBagsForCampaign((activeCampaign.id));
+        // ถ้าถอดรหัสแล้วมีผลกับคะแนน/ข้อมูล ค่อย trigger reload เพิ่มตรงนี้
+        // เช่น: fetchScores(); หรือ dispatch อะไรบางอย่าง
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "ยืนยันรหัสไม่สำเร็จ",
+          text: result.data?.message || "รหัสไม่ถูกต้องหรือหมดอายุ",
+        });
+      }
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Request failed",
+        text:
+          error?.response?.data?.message ||
+          "Backend error. กรุณาลองใหม่อีกครั้ง",
+      });
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    // ใช้ key เดิมจาก form มา request ใหม่
+    const { firstKey, secondKey } = getValues();
+    await onSubmitDecrypt({ firstKey, secondKey });
+  };
+
+
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d?$/.test(value)) return;
+
+    const newOtp = [...otpDigits];
+    newOtp[index] = value;
+    setOtpDigits(newOtp);
+
+    if (value && index < OTP_LENGTH - 1) {
+      inputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+      inputsRef.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePDFperBags = async () => {
+    console.log(selectedBagId)
+    if (!selectedBagId) {
+      Swal.fire({
+        icon: "error",
+        title: "ยังไม่ได้เลือกถุง",
+        text: "กรุณาเลือกถุงก่อน"
+      })
+    }
+    try {
+      const res = await axios.get(`/api/reports/bags/${selectedBagId}/scores/pdf`,
+        {
+          responseType: "blob",
+        }
+      )
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถ export ใบคะแนนได้",
+        text:
+          error?.response?.data?.message ||
+          "Backend error. กรุณาลองใหม่อีกครั้ง",
+      });
+    }
+
+  }
+
+  const handlePDFAllBags = async () => {
+    if (!activeCampaign.id) {
+      Swal.fire({
+        icon: "error",
+        title: "ยังไม่มีรอบสอบ",
+        text: "กรุณาเช็ครอบสอบ"
+      })
+      return;
+    }
+    if (!selectedBagId) {
+      Swal.fire({
+        icon: "error",
+        title: "ยังไม่ได้เลือกถุง",
+        text: "กรุณาเลือกถุงก่อน"
+      })
+    }
+    try {
+      const res = await axios.get(`/api/reports/campaigns/${activeCampaign.id}/scoreall/pdf`,
+        {
+          responseType: "blob",
+        }
+      )
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถ export ใบคะแนนได้",
+        text:
+          error?.response?.data?.message ||
+          "Backend error. กรุณาลองใหม่อีกครั้ง",
+      });
+    }
+
+  }
+
+
+
+
+  // -----------------------------
   // Render
   // -----------------------------
   return (
     <div className="container-fluid px-3 px-sm-4 py-3">
-      {/* BAR ด้านบน: filter + เปลี่ยนถุง */}
-      <div className="card border-0 shadow-sm mb-3">
-        <div className="card-body py-2">
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
-            {/* filter session */}
-            <div className="d-flex flex-wrap align-items-center gap-2">
-              <span className="text-muted small d-flex align-items-center">
-                {/* <Filter size={16} className="me-1" /> */}
-                Session
-              </span>
-              <select
-                className="form-select form-select-sm"
-                style={{ width: 220 }}
-                value={selectedSessionId}
-                onChange={(e) => setSelectedSessionId(e.target.value)}
-              >
-                <option value="all">ทุก session</option>
-                {sessionOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.label || `Session ${s.id}`}
-                  </option>
-                ))}
-              </select>
-              <span className="small text-muted ms-1">
-                ถุงทั้งหมด {filteredBags.length} ใบ
-              </span>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                disabled={currentBagIndex === -1 || currentBagIndex >= filteredBags.length - 1}
-                onClick={() => setopendecrypt(true)}
-              >
-                ถอดรหัส
-              </button>
-            </div>
 
-            {/* เลือกถุง + next / prev + โหมดแสดงผล */}
-            {/* เลือกถุง + next/prev + โหมดแสดงผล */}
-            <div className="d-flex flex-wrap align-items-center gap-2 justify-content-start justify-content-lg-end">
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                disabled={currentBagIndex <= 0}
-                onClick={() => handleNavigateBag("prev")}
-              >
-                <ChevronLeft size={16} />
-              </button>
+      <div className="card shadow-sm mb-3">
+        <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+          <div>
+            <h5 className="mb-1 d-flex align-items-center gap-2">
+              จัดการเข้ารหัส
+            </h5>
+            <small className="text-muted">
+              การเข้ารหัสใน {activeCampaign?.name ?? "-"}
+            </small>
+          </div>
 
-              <div className="d-flex align-items-center gap-1 flex-grow-1 flex-md-grow-0">
-                <span className="small text-muted">ถุง:</span>
-                <select
-                  className="form-select form-select-sm w-100 w-md-auto"
-                  value={selectedBagId ?? ""}
-                  onChange={(e) => setSelectedBagId(Number(e.target.value))}
-                  disabled={filteredBags.length === 0}
-                >
-                  {filteredBags.map((b, idx) => (
-                    <option key={b.bagId} value={b.bagId}>
-                      {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} – {b.sessionLabel}
-                    </option>
-                  ))}
-                  {filteredBags.length === 0 && <option value="">ไม่มีถุง</option>}
-                </select>
+          <div className="d-flex flex-row align-items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              disabled={!selectedBagId}
+              onClick={handlePDFAllBags}
+            >
+              ดาวน์โหลดใบคะแนนรายถุงทั้งหมด
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-outline-primary btn-lg"
+              disabled={!selectedBagId}
+              onClick={handlePDFperBags}
+            >
+              ดาวน์โหลดใบคะแนนรายถุง
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-danger btn-lg"
+              disabled={filteredBags.length === 0 || isDecrypted}
+              onClick={openDecryptModal}
+            >
+              ถอดรหัส
+            </button>
+          </div>
+
+        </div>
+
+        <div className="card-body">
+          <div className="row g-3">
+            {/* Card 1: สถานะการสร้างรอบสอบ */}
+            <div className="col-sm-6 col-lg-12">
+              <div className="card shadow-none border">
+                <div className="card-body">
+                  <div className="text-uppercase small text-muted mb-1">
+                    สถานะการถอดรหัส
+                  </div>
+                  <div
+                    className={`h3 mb-0 ${isDecrypted ? "text-success" : "text-danger"
+                      }`}
+                  >
+                    {isDecrypted ? "ถอดรหัสแล้ว" : "ยังไม่ถอดรหัส"}
+                  </div>
+                  <small className="text-muted">
+                    ถอดรหัสเพื่อเข้าถึงคะแนนและเลขจริงทั้งหมด
+                  </small>
+                </div>
               </div>
-
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                disabled={currentBagIndex === -1 || currentBagIndex >= filteredBags.length - 1}
-                onClick={() => handleNavigateBag("next")}
-              >
-                <ChevronRight size={16} />
-              </button>
-
-
-
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 w-100 w-md-auto"
-                onClick={() => setViewMode((m) => (m === "score" ? "grader" : "score"))}
-              >
-                <Users size={14} />
-                <span className="small">
-                  {viewMode === "score" ? "แสดงชื่อผู้ตรวจ" : "แสดงคะแนนตัวเลข"}
-                </span>
-              </button>
             </div>
+
 
           </div>
         </div>
       </div>
+      {/* BAR ด้านบน: filter + เปลี่ยนถุง */}
+      <div className="card border-0 shadow-sm mb-3">
+        <div className="card-body py-2">
+ <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
 
-      {/* เนื้อหาหลัก */}
+  {/* ========== ซ้าย: Session filter ========== */}
+  <div className="d-flex flex-wrap align-items-center gap-2">
+    <span className="text-muted small">Session</span>
+
+    <select
+      className="form-select form-select-sm"
+      style={{ width: 220 }}
+      value={selectedSessionId}
+      onChange={(e) => setSelectedSessionId(e.target.value)}
+    >
+      <option value="all">ทุก session</option>
+      {sessionOptions.map((s) => (
+        <option key={s.id} value={s.id}>
+          {s.label || `Session ${s.id}`}
+        </option>
+      ))}
+    </select>
+
+    <span className="small text-muted ms-1">
+      ถุงทั้งหมด {filteredBags.length} ใบ
+    </span>
+  </div>
+
+  {/* ========== ขวา: Bag navigation + view mode ========== */}
+  <div className="d-flex flex-wrap align-items-center gap-2">
+
+    {/* Pagination แบบกลุ่มเดียว */}
+    <div className="btn-group" role="group" aria-label="Bag navigation">
+      <button
+        type="button"
+        className="btn btn-sm btn-outline-secondary"
+        disabled={currentBagIndex <= 0}
+        onClick={() => handleNavigateBag("prev")}
+      >
+        <ChevronLeft size={16} />
+      </button>
+
+      <select
+        className="form-select form-select-sm"
+        style={{ minWidth: 260 }}
+        value={selectedBagId ?? ""}
+        onChange={(e) => setSelectedBagId(Number(e.target.value))}
+        disabled={filteredBags.length === 0}
+      >
+        {filteredBags.map((b, idx) => (
+          <option key={b.bagId} value={b.bagId}>
+            {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} – {b.sessionLabel}
+          </option>
+        ))}
+        {filteredBags.length === 0 && <option value="">ไม่มีถุง</option>}
+      </select>
+
+      <button
+        type="button"
+        className="btn btn-sm btn-outline-secondary"
+        disabled={
+          currentBagIndex === -1 ||
+          currentBagIndex >= filteredBags.length - 1
+        }
+        onClick={() => handleNavigateBag("next")}
+      >
+        <ChevronRight size={16} />
+      </button>
+    </div>
+
+    {/* toggle view mode */}
+    <button
+      type="button"
+      className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+      onClick={() =>
+        setViewMode((m) => (m === "score" ? "grader" : "score"))
+      }
+    >
+      <Users size={14} />
+      <span className="small">
+        {viewMode === "score" ? "ชื่อผู้ตรวจ" : "คะแนนตัวเลข"}
+      </span>
+    </button>
+  </div>
+</div>
+
+        </div>
+      </div>
+
+      {/* เนื้อหาหลัก (เดิม) */}
       {loadingBags && (
         <div className="card border-0 shadow-sm">
           <div className="card-body text-center py-5">
@@ -378,7 +744,6 @@ export default function BagScoresPage() {
                 </div>
               )}
 
-            {/* Score Table */}
             {!loadingScores &&
               !errorScores &&
               bagScores &&
@@ -595,7 +960,7 @@ export default function BagScoresPage() {
                 </div>
               )}
 
-
+            {/* -------- Modal ถอดรหัส 2-FA -------- */}
             {opendecrypt && (
               <>
                 {/* Backdrop */}
@@ -611,33 +976,150 @@ export default function BagScoresPage() {
                   role="dialog"
                   aria-modal="true"
                 >
-                  <div className="modal-dialog modal-dialog-centered modal-lg">
+                  <div className="modal-dialog modal-dialog-centered">
                     <div className="modal-content">
-
                       <div className="modal-header">
-                        <h6 className="modal-title">การถอดรหัส</h6>
-                      </div>
-
-                      <div className="modal-body">
-                        {/* เนื้อหา */}
-                      </div>
-
-                      <div className="modal-footer">
+                        <h6 className="modal-title">การถอดรหัส (2 ขั้นตอน)</h6>
                         <button
-                          className="btn btn-outline-secondary"
+                          type="button"
+                          className="btn-close"
                           onClick={() => setopendecrypt(false)}
-                        >
-                          ปิด
-                        </button>
+                        />
                       </div>
 
+                      <form onSubmit={handleSubmit(onSubmitDecrypt)}>
+                        <div className="modal-body">
+                          {/* Step 1: กรอก Key 2 ดอก */}
+                          <div className="mb-3">
+                            <label className="form-label fw-semibold">
+                              คีย์เข้ารหัสที่ 1
+                            </label>
+                            <input
+                              type="password"
+                              className="form-control"
+                              placeholder="คีย์ที่ 1 (16 ตัวอักษร)"
+                              maxLength={16}
+                              {...register("firstKey", { required: true })}
+                              disabled={
+                                decryptStep === "otp" || requestingOtp
+                              }
+                            />
+                          </div>
+
+                          <div className="mb-3">
+                            <label className="form-label fw-semibold">
+                              คีย์เข้ารหัสที่ 2
+                            </label>
+                            <input
+                              type="password"
+                              className="form-control"
+                              placeholder="คีย์ที่ 2 (16 ตัวอักษร)"
+                              maxLength={16}
+
+                              {...register("secondKey", { required: true })}
+                              disabled={
+                                decryptStep === "otp" || requestingOtp
+                              }
+                            />
+                          </div>
+
+                          {/* Step 2: OTP จาก Gmail */}
+                          {decryptStep === "otp" && (
+                            <>
+                              <hr />
+                              <div className="mb-2 small text-muted">
+                                เราได้ส่งรหัสยืนยันไปที่{" "}
+                                <span className="fw-semibold">
+                                  {otpEmail || "อีเมลที่กำหนด"}
+                                </span>{" "}
+                                แล้ว
+                              </div>
+                              <div className="d-flex align-items-center justify-content-between mb-2">
+                                <div className="small">
+                                  เวลาคงเหลือ:{" "}
+                                  <span className="fw-semibold text-danger">
+                                    {formatOtpTime(otpExpiresIn)}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="btn btn-link btn-sm p-0"
+                                  onClick={handleResendOtp}
+                                  disabled={requestingOtp}
+                                >
+                                  ขอรหัสใหม่
+                                </button>
+                              </div>
+                              <div className="mb-3">
+                                <label className="form-label fw-semibold">
+                                  รหัสยืนยันจากอีเมล
+                                </label>
+                                <div className="d-flex gap-2 justify-content-center mb-3">
+                                  {otpDigits.map((digit, index) => (
+                                    <input
+                                      key={index}
+                                      ref={(el) => {
+                                        inputsRef.current[index] = el;
+                                      }}
+                                      type="text"
+                                      inputMode="numeric"
+                                      maxLength={1}
+                                      className="form-control text-center fw-bold"
+                                      style={{ width: 48, height: 48, fontSize: 20 }}
+                                      value={digit}
+                                      onChange={(e) => handleOtpChange(index, e.target.value)}
+                                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                                    />
+                                  ))}
+                                </div>
+
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="modal-footer">
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            onClick={() => setopendecrypt(false)}
+                          >
+                            ปิด
+                          </button>
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={requestingOtp || verifyingOtp}
+                          >
+                            {decryptStep === "keys" ? (
+                              <>
+                                {requestingOtp && (
+                                  <Loader2
+                                    size={16}
+                                    className="me-1 spin-animation"
+                                  />
+                                )}
+                                ขอรหัสยืนยันทางอีเมล
+                              </>
+                            ) : (
+                              <>
+                                {verifyingOtp && (
+                                  <Loader2
+                                    size={16}
+                                    className="me-1 spin-animation"
+                                  />
+                                )}
+                                ยืนยันการถอดรหัส
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
                     </div>
                   </div>
                 </div>
               </>
             )}
-
-
           </div>
         </div>
       )}

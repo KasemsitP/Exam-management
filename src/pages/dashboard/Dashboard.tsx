@@ -49,15 +49,15 @@ const pieColors = [
 //   "avgScorePerQuestion": []
 // }
 
+interface ScoreBucket {
+  label: string; // "0-4", "5-9", ...
+  count: number;
+}
+
 interface ScoreDistributionAPI {
   totalUsers: number;
   noScore: number;
-  buckets: {
-    "0-24": number;
-    "25-49": number;
-    "50-74": number;
-    "75-100": number;
-  };
+  buckets: ScoreBucket[];
 }
 
 interface SummaryAPI {
@@ -213,23 +213,41 @@ export default function Dashboard() {
   }, [dashboardData]);
 
 
-  const buildScoreChartData = (scoreDistribution: any) => {
-    if (!scoreDistribution) return [];
+// 1) กำหนดช่วงทั้งหมดที่อยากให้แสดง 1–150 (ก้าวละ 5 คะแนน)
+const ALL_SCORE_BUCKETS: string[] = [];
+for (let start = 1; start <= 150; start += 5) {
+  const end = start + 4;
+  ALL_SCORE_BUCKETS.push(`${start}-${end}`); // "1-5", "6-10", ..., "146-150"
+}
 
-    const { buckets, noScore } = scoreDistribution;
+// ....
 
-    const bucketData = Object.entries(buckets).map(([range, count]) => ({
-      range,
-      count: Number(count),
-    }));
+const buildScoreChartData = (scoreDistribution: ScoreDistributionAPI) => {
+  if (!scoreDistribution) return [];
 
-    bucketData.push({
-      range: "ยังไม่มีคะแนน",
-      count: Number(noScore),
-    });
+  const { buckets, noScore } = scoreDistribution;
 
-    return bucketData;
-  };
+  // map label -> count (ดึงจาก backend)
+  const bucketMap = new Map<string, number>();
+  for (const b of buckets ?? []) {
+    bucketMap.set(b.label, Number(b.count ?? 0));
+  }
+
+  // สร้างข้อมูลสำหรับทุกช่วง 1–150
+  const bucketData = ALL_SCORE_BUCKETS.map((label) => ({
+    range: label,
+    count: bucketMap.get(label) ?? 0, // ถ้าไม่มีใน backend ให้เป็น 0
+  }));
+
+  // แถมแท่ง "ยังไม่มีคะแนน" อีกช่อง
+  bucketData.push({
+    range: "ยังไม่มีคะแนน",
+    count: Number(noScore ?? 0),
+  });
+
+  return bucketData;
+};
+
 
 
   /* ---------- Derived Data (แปลง API -> UI) ---------- */
