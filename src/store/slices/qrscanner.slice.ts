@@ -65,7 +65,7 @@ export const verifyQrCodeThunk = createAsyncThunk<
   "proctor/verifyQr",
   async (payload, { rejectWithValue }) => {
     try {
-      // (นี่คือ API ใหม่ที่เราจะสร้าง)
+      console.log(payload)
       const response = await axios.post("/api/verify/qr-payload", payload);
       return response.data as VerifyQrResponse;
     } catch (error: unknown) {

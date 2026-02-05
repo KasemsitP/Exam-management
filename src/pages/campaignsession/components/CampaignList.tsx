@@ -39,6 +39,7 @@ interface CampaignListProps {
   onEditSession: (campaignId: string, session: CampaignSession) => void;
   onDeleteSession: (campaignId: string, session: CampaignSession) => void;
   onCreateSubject: (campaignId: string, sessionId: string) => void;
+  onActiveCampaign: (campaign: ExamCampaign) => void,
   onEditSubject: (
     campaignId: string,
     sessionId: string,
@@ -61,6 +62,7 @@ export function CampaignList({
   onCreateSubject,
   onEditSubject,
   onDeleteSubject,
+  onActiveCampaign
 }: CampaignListProps) {
   if (visibleCampaigns.length === 0) {
     return (
@@ -81,10 +83,34 @@ export function CampaignList({
             <div>
               <div className="d-flex align-items-center gap-2">
                 <h6 className="mb-0">{campaign.name}</h6>
-                <span className="badge text-bg-light d-inline-flex align-items-center gap-1">
+                <span className="badge text-bg-light d-inline-flex align-items-center gap-1 ">
                   {/* <CalendarDays size={14} />
                   {formatDateDisplay(campaign.startDate)} -{" "}
                   {formatDateDisplay(campaign.endDate)} */}
+                  <div className="d-flex justify-content-end gap-2">
+                    <button
+                      className={`btn btn-sm d-inline-flex align-items-center rounded gap-2 ${campaign.isActive ? "btn-danger" : "btn-success"
+                        }`}
+                      onClick={() => onActiveCampaign(campaign)}
+                    >
+                      {campaign.isActive ? "ปิดใช้งานรอบสอบ" : "เปิดใช้งานรอบสอบ"}
+                    </button>
+
+                    <button
+                      className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
+                      onClick={() => onEditCampaign(campaign)}
+                    >
+                      <Pencil size={14} />
+                      แก้ไข
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
+                      onClick={() => onDeleteCampaign(campaign)}
+                    >
+                      <Trash2 size={14} />
+                      ลบ
+                    </button>
+                  </div>
                 </span>
               </div>
               {/* {campaign.description && (
@@ -129,7 +155,8 @@ export function CampaignList({
               </div>
             )}
             <div className=" d-flex flex-row justify-content-end mb-2 gap-2">
-              <button
+
+              {/* <button
                 className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
                 onClick={() => onEditCampaign(campaign)}
               >
@@ -142,7 +169,7 @@ export function CampaignList({
               >
                 <Trash2 size={14} />
                 ลบ
-              </button>
+              </button> */}
               <button
                 className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
                 onClick={() => onCreateSession(campaign.id)}

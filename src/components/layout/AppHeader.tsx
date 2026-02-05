@@ -1,6 +1,6 @@
 import { CalendarDays, ChevronRight, LogOut, Menu } from "lucide-react";
 import { ExamCampaign } from "@/store/slices/examData.slice";
-import type { Theme } from "./AppLayout";
+import type { Theme } from "@/components/layout/theme"
 
 interface AppHeaderProps {
   activeCampaign: ExamCampaign | null;
@@ -23,25 +23,48 @@ export function AppHeader({
     ? `${activeCampaign.name ?? activeCampaign.campaign_size} `
     : null;
 
+  // ✅ โทนพื้นของ element บน header (ไม่ใช้ขาวล้วน)
+  const headerSurface = theme.cardBg; // tinted
+  const headerBorder = theme.cardBorder ?? theme.border;
+
   return (
     <header
-      className="px-3 px-md-4 d-flex justify-content-between align-items-center sticky-top shadow-sm"
+      className="px-3 px-md-4 d-flex justify-content-between align-items-center sticky-top"
       style={{
         height: 64,
-        background: theme.headerGradient ?? theme.headerBg, // ✅ ใช้ gradient ถ้ามี
+        background: theme.headerGradient ?? theme.headerBg,
         borderBottom: `1px solid ${theme.border}`,
+        // ✅ ทำให้ header ดู “มีชั้น” ไม่แบน
+        boxShadow: "0 2px 10px rgba(15,23,42,0.06)",
+        position: "sticky",
+        top: 0,
+        zIndex: 1030,
       }}
     >
+      {/* ✅ เส้น role accent ด้านล่าง (ช่วยให้ role ชัดขึ้นทันที) */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 3,
+          background: `linear-gradient(90deg, ${theme.color} 0%, transparent 70%)`,
+          opacity: 0.9,
+          pointerEvents: "none",
+        }}
+      />
 
       <div className="d-flex align-items-center gap-3">
         <button
-          className="btn btn-sm d-lg-none shadow-sm"
+          className="btn btn-sm d-lg-none"
           onClick={onOpenMobileSidebar}
           aria-label="Open menu"
           style={{
-            backgroundColor: theme.surface,
-            border: `1px solid ${theme.border}`,
-            color: theme.color,
+            background: headerSurface,
+            border: `1px solid ${headerBorder}`,
+            color: theme.text,
+            boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
           }}
         >
           <Menu size={20} />
@@ -49,12 +72,29 @@ export function AppHeader({
 
         <div className="d-flex flex-column justify-content-center">
           <div className="d-flex align-items-center gap-2">
-            <span className="small fw-medium d-none d-sm-inline" style={{ color: theme.textMuted }}>
+            {/* ✅ role dot */}
+            <span
+              className="rounded-circle"
+              style={{
+                width: 9,
+                height: 9,
+                backgroundColor: theme.color,
+                boxShadow: "0 0 0 3px rgba(255,255,255,0.8)",
+              }}
+            />
+            <span
+              className="small fw-medium d-none d-sm-inline"
+              style={{ color: theme.textMuted }}
+            >
               Console
             </span>
-            <ChevronRight size={14} className="d-none d-sm-inline" style={{ color: theme.textMuted }} />
+            <ChevronRight
+              size={14}
+              className="d-none d-sm-inline"
+              style={{ color: theme.textMuted }}
+            />
             <h1 className="h6 mb-0 fw-semibold" style={{ color: theme.text }}>
-              {onclickSidebar}
+              {onclickSidebar || "Dashboard"}
             </h1>
           </div>
         </div>
@@ -64,10 +104,11 @@ export function AppHeader({
         <div className="d-none d-md-flex align-items-center me-3">
           {activeCampaign ? (
             <div
-              className="d-flex align-items-center gap-3 px-4 py-2 rounded-pill shadow-sm"
+              className="d-flex align-items-center gap-3 px-4 py-2 rounded-pill"
               style={{
-                backgroundColor: theme.surface,
-                border: `1px solid ${theme.border}`,
+                background: headerSurface, // ✅ tinted แทน white
+                border: `1px solid ${headerBorder}`,
+                boxShadow: "0 1px 6px rgba(15,23,42,0.05)",
               }}
             >
               <span
@@ -75,7 +116,7 @@ export function AppHeader({
                 style={{
                   width: 10,
                   height: 10,
-                  backgroundColor: activeCampaign.isActive ? "#16A34A" : "#64748B",
+                  backgroundColor: activeCampaign.isActive ? theme.success : theme.textMuted,
                 }}
               />
               <span
@@ -101,13 +142,14 @@ export function AppHeader({
 
         <button
           type="button"
-          className="btn btn-sm d-flex align-items-center gap-2 shadow-sm"
+          className="btn btn-sm d-flex align-items-center gap-2"
           style={{
-            backgroundColor: theme.surface,
-            border: `1px solid ${theme.border}`,
+            background: headerSurface, // ✅ tinted
+            border: `1px solid ${headerBorder}`,
             color: theme.text,
-            borderRadius: 8,
-            padding: "8px 16px",
+            borderRadius: 10,
+            padding: "8px 14px",
+            boxShadow: "0 1px 6px rgba(15,23,42,0.05)",
           }}
           onClick={onOpenCampaignModal}
         >
@@ -117,20 +159,25 @@ export function AppHeader({
 
         <div
           className="vr mx-2 d-none d-sm-block"
-          style={{ height: 24, backgroundColor: theme.border, opacity: 1 }}
+          style={{
+            height: 24,
+            backgroundColor: theme.border,
+            opacity: 1,
+          }}
         />
 
-        {/* ✅ Logout ไม่แดงสดแบบสนามเด็กเล่น — ใช้ neutral + border + icon muted red */}
+        {/* ✅ Logout ใช้ tinted + icon muted red */}
         <button
           type="button"
-          className="btn btn-sm d-flex align-items-center gap-2 rounded-3 px-3 shadow-sm"
+          className="btn btn-sm d-flex align-items-center gap-2 rounded-3 px-3"
           onClick={onLogout}
           title="ออกจากระบบ"
           style={{
             height: 36,
-            backgroundColor: theme.surface,
-            border: `1px solid ${theme.border}`,
+            background: headerSurface, // ✅ tinted
+            border: `1px solid ${headerBorder}`,
             color: theme.text,
+            boxShadow: "0 1px 6px rgba(15,23,42,0.05)",
           }}
         >
           <LogOut size={16} style={{ color: "#9B1C1C" }} />

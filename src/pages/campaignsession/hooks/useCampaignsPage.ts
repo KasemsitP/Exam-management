@@ -24,6 +24,7 @@ import { showSuccess } from "@/components/ui/successAlert";
 import { showError } from "@/components/ui/ErrorAlert";
 import { selectAllSubjects, fetchSubjectsThunk } from "@/store/slices/subjects.slice";
 import Swal from "sweetalert2"
+import axios from "axios";
 /* -------------------------------------------------------------------------- */
 /*  Types for forms & view                                                     */
 /* -------------------------------------------------------------------------- */
@@ -154,8 +155,8 @@ export function useCampaignsPage() {
       subjectId: "",
       code: "",
       name: "",
-      startTime: "09:00",
-      endTime: "13:00",
+      startTime: "14:00",
+      endTime: "18:00",
       questions: 0,
     },
   });
@@ -216,8 +217,8 @@ export function useCampaignsPage() {
         subjectId: "",
         code: "",
         name: "",
-        startTime: "09:00",
-        endTime: "13:00",
+        startTime: "14:00",
+        endTime: "18:00",
         questions: 0,
       });
     }
@@ -321,8 +322,8 @@ export function useCampaignsPage() {
   /* ------------------------------- Submit handlers ------------------------- */
 
   const handleCampaignSubmit = async (values: CampaignFormValues) => {
-   // const normalizedCode = values.code.trim().toUpperCase();
-    const name_value = values.campaign_size+" "+values.year_be
+    // const normalizedCode = values.code.trim().toUpperCase();
+    const name_value = values.campaign_size + " " + values.year_be
     console.log(name_value)
     if (editingCampaign) {
       try {
@@ -356,10 +357,12 @@ export function useCampaignsPage() {
         showSuccess("สร้างรอบสอบใหม่เรียบร้อย", values.name);
         setCampaignDialogOpen(false);
       } catch (error) {
-        toast({
-          title: "Failed to create campaign",
-          description: getErrorMessage(error),
-          variant: "destructive",
+
+        Swal.fire({
+          icon: "error",
+          title: "สร้างแคมเปญไม่สำเร็จ",
+          text: getErrorMessage(error),
+          confirmButtonText: "ตกลง",
         });
       }
     }
@@ -380,9 +383,11 @@ export function useCampaignsPage() {
           },
         })
       );
-      toast({
+      Swal.fire({
+        icon: "success",
         title: "อัปเดตเซสชันเรียบร้อย",
-        description: values.label,
+        text: values.label,
+        confirmButtonText: "ตกลง",
       });
       setSessionDialogOpen(false);
       return;
@@ -401,16 +406,20 @@ export function useCampaignsPage() {
           dayNo: (parentCampaign?.sessions.length ?? 0) + 1,
         })
       ).unwrap();
-      toast({
+      Swal.fire({
+        icon: "success",
         title: "สร้างเซสชันใหม่เรียบร้อย",
-        description: values.label,
+        text: values.label,
+        confirmButtonText: "ตกลง",
       });
       setSessionDialogOpen(false);
     } catch (error) {
-      toast({
-        title: "Failed to create session",
-        description: getErrorMessage(error),
-        variant: "destructive",
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถสร้างเซสชันได้",
+        text: getErrorMessage(error),
+        confirmButtonText: "ตกลง",
+        confirmButtonColor: "#dc2626",
       });
     }
   };
@@ -433,10 +442,15 @@ export function useCampaignsPage() {
           },
         })
       );
-      toast({
+
+
+      Swal.fire({
+        icon: "success",
         title: "อัปเดตรายวิชาเรียบร้อย",
-        description: values.name,
+        text: values.name,
+        confirmButtonText: "ตกลง",
       });
+
       setSubjectDialogOpen(false);
       return;
     }
@@ -467,16 +481,19 @@ export function useCampaignsPage() {
         })
       ).unwrap();
 
-      toast({
+      Swal.fire({
+        icon: "success",
         title: "สร้างรายวิชาใหม่เรียบร้อย",
-        description: values.name,
+        text: values.name,
+        confirmButtonText: "ตกลง",
       });
       setSubjectDialogOpen(false);
     } catch (error) {
-      toast({
-        title: "Failed to create subject",
-        description: getErrorMessage(error),
-        variant: "destructive",
+      Swal.fire({
+        icon: "error",
+        title: "สร้างรายวิชาไม่สำเร็จ",
+        text: getErrorMessage(error),
+        confirmButtonText: "ตกลง",
       });
     }
   };
@@ -498,16 +515,18 @@ export function useCampaignsPage() {
     }
     try {
       await dispatch(deleteCampaignThunk(campaign.id)).unwrap();
-      toast({
+      Swal.fire({
+        icon: "success",
         title: "ลบแคมเปญเรียบร้อย",
-        description: campaign.name,
-        variant: "destructive",
+        text: campaign.name,
+        confirmButtonText: "ตกลง",
       });
     } catch (error) {
-      toast({
-        title: "Failed to delete campaign",
-        description: getErrorMessage(error),
-        variant: "destructive",
+      Swal.fire({
+        icon: "error",
+        title: "ลบแคมเปญไม่สำเร็จ",
+        text: getErrorMessage(error),
+        confirmButtonText: "ตกลง",
       });
     }
   };
@@ -532,16 +551,18 @@ export function useCampaignsPage() {
       await dispatch(
         deleteSessionThunk({ campaignId, sessionId: session.id })
       ).unwrap();
-      toast({
+      Swal.fire({
+        icon: "success",
         title: "ลบเซสชันเรียบร้อย",
-        description: session.label,
-        variant: "destructive",
+        text: session.label,
+        confirmButtonText: "ตกลง",
       });
     } catch (error) {
-      toast({
-        title: "Failed to delete session",
-        description: getErrorMessage(error),
-        variant: "destructive",
+      Swal.fire({
+        icon: "error",
+        title: "ลบเซสชันไม่สำเร็จ",
+        text: getErrorMessage(error),
+        confirmButtonText: "ตกลง",
       });
     }
   };
@@ -568,19 +589,82 @@ export function useCampaignsPage() {
       await dispatch(
         deleteSubjectThunk({ campaignId, sessionId, subjectId: subject.id })
       ).unwrap();
-      toast({
+      Swal.fire({
+        icon: "success",
         title: "ลบรายวิชาเรียบร้อย",
-        description: subject.name,
-        variant: "destructive",
+        text: subject.name,
+        confirmButtonText: "ตกลง",
       });
     } catch (error) {
-      toast({
-        title: "Failed to delete subject",
-        description: getErrorMessage(error),
-        variant: "destructive",
+      Swal.fire({
+        icon: "error",
+        title: "ลบรายวิชาไม่สำเร็จ",
+        text: getErrorMessage(error),
+        confirmButtonText: "ตกลง",
       });
     }
   };
+
+
+const handleToggleActive = async (campaign: ExamCampaign) => {
+  const willActivate = !campaign.isActive;
+
+  // ถ้าจะ "เปิด" และมีตัวอื่น active อยู่แล้ว → กันไว้ฝั่งหน้าเว็บก่อน
+  if (willActivate) {
+    const hasOtherActive = campaigns.some(
+      (c) => c.isActive && c.id !== campaign.id
+    );
+    if (hasOtherActive) {
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถเปิดใช้งานรอบสอบนี้",
+        text: "กรุณาปิดรอบสอบที่กำลัง Active อยู่ก่อน",
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
+  }
+
+  const confirmResult = await Swal.fire({
+    icon: "warning",
+    title: willActivate ? "ยืนยันเปิดใช้งานรอบสอบ" : "ยืนยันปิดใช้งานรอบสอบ",
+    text: willActivate
+      ? `คุณต้องการเปิดใช้งานรอบสอบ "${campaign.name}" ใช่หรือไม่?`
+      : `คุณต้องการปิดใช้งานรอบสอบ "${campaign.name}" ใช่หรือไม่?`,
+    showCancelButton: true,
+    confirmButtonText: "ยืนยัน",
+    cancelButtonText: "ยกเลิก",
+    confirmButtonColor: willActivate ? "#16A34A" : "#DC2626",
+  });
+
+  if (!confirmResult.isConfirmed) return;
+
+  try {
+    //  ยิง axios ตรง ๆ ไม่ผ่าน thunk
+    await axios.post(`/api/exam/active/${campaign.id}`);
+
+    await Swal.fire({
+      icon: "success",
+      title: willActivate ? "เปิดใช้งานสำเร็จ" : "ปิดใช้งานสำเร็จ",
+      text: `รอบสอบ "${campaign.name}" ถูก${willActivate ? "เปิดใช้งาน" : "ปิดใช้งาน"}แล้ว`,
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    //  รีโหลดข้อมูลจาก backend อีกทีให้ state redux sync (ใช้ thunk ตัวเดิมได้)
+    dispatch(fetchInitialExamData());
+  } catch (err: any) {
+    console.error(err);
+    await Swal.fire({
+      icon: "error",
+      title: "ไม่สามารถเปลี่ยนสถานะรอบสอบได้",
+      text:
+        err?.response?.data?.message ??
+        "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
+      confirmButtonText: "ตกลง",
+    });
+  }
+};
 
   /* ------------------------------- Dialog close handlers ------------------- */
 
@@ -669,6 +753,7 @@ export function useCampaignsPage() {
       confirmAndRemoveCampaign,
       confirmAndRemoveSession,
       confirmAndRemoveSubject,
+      handleToggleActive,
     },
   };
 }

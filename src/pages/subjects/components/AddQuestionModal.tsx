@@ -4,11 +4,10 @@ interface AddQuestionModalProps {
   open: boolean;
   subjectCode?: string;
   subjectName?: string;
-  maxQuestionNo: number; 
+  maxQuestionNo: number;
   onClose: () => void;
-  onConfirm: (payload: { label: string; questionNo: number }) => void;
+  onConfirm: (payload: { label: string; questionNo: number; maxScore: number }) => void;
 }
-
 const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
   open,
   subjectCode,
@@ -19,28 +18,36 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
 }) => {
   const [label, setLabel] = useState("");
   const [questionNo, setQuestionNo] = useState<number>(maxQuestionNo + 1 || 1);
+  const [maxScore, setMaxScore] = useState<string>("1");
 
   useEffect(() => {
     if (open) {
       setLabel("");
-      setQuestionNo(maxQuestionNo + 1 || 1); 
+      setQuestionNo(maxQuestionNo + 1 || 1);
+      setMaxScore("1");
     }
   }, [open, maxQuestionNo]);
-
   if (!open) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = label.trim();
-    if (!trimmed) return;
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  const trimmed = label.trim();
+  if (!trimmed) return;
 
-    let targetNo = questionNo || maxQuestionNo + 1;
-    if (targetNo < 1) targetNo = 1;
-    if (targetNo > maxQuestionNo + 1) targetNo = maxQuestionNo + 1;
+  let targetNo = questionNo || maxQuestionNo + 1;
+  if (targetNo < 1) targetNo = 1;
+  if (targetNo > maxQuestionNo + 1) targetNo = maxQuestionNo + 1;
 
-    onConfirm({ label: trimmed, questionNo: targetNo });
-  };
+  const scoreStr = maxScore.trim();
+  const score = Number(scoreStr);
 
+  // กันเคสว่าง / ไม่ใช่ตัวเลข / น้อยกว่าหรือเท่ากับ 0
+  if (!scoreStr || Number.isNaN(score) || score <= 0) {
+    return;
+  }
+
+  onConfirm({ label: trimmed, questionNo: targetNo, maxScore: score });
+};
   return (
     <>
       <div
@@ -83,6 +90,19 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                     onChange={(e) => setQuestionNo(Number(e.target.value))}
                     disabled
                   />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">คะแนนเต็มของข้อนี้</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    min={1}
+                    value={maxScore}
+                    onChange={(e) => setMaxScore(e.target.value)}  
+                    placeholder="เช่น 5 หรือ 10"
+                  />
+                </div>
 
                 <div className="mb-3">
                   <label className="form-label">ชื่อหัวข้อของข้อสอบ</label>
@@ -93,12 +113,10 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     autoFocus
-                    
                   />
                 </div>
-
-                </div>
               </div>
+
 
               <div className="modal-footer">
                 <button
@@ -111,7 +129,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={!label.trim()}
+                  disabled={!label.trim() || !maxScore ||  Number(maxScore) <= 0}
                 >
                   บันทึกข้อสอบ
                 </button>

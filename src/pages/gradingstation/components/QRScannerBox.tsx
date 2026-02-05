@@ -41,7 +41,10 @@ const QrScannerBox = React.memo(function QrScannerBox({
   return (
     <div
       className="rounded overflow-hidden border bg-black mb-2 position-relative"
-      style={{ minHeight: 220 }}
+      style={{
+        width: 320,
+        height: 320,
+      }}
     >
       {!scannerEnabled && (
         <div

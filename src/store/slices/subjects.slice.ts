@@ -9,6 +9,7 @@ export interface SubjectQuestion {
   id: string;          // key ใน React
   questionNo: number;  // เลขข้อ 1,2,3,...
   label: string;       // ชื่อหัวข้อ เช่น "กฎหมายรัฐธรรมนูญ"
+  maxScore? : number
 }
 
 export interface Subject {
@@ -46,7 +47,7 @@ export const fetchSubjectsThunk = createAsyncThunk<
 >("subjects/fetch", async (_, { rejectWithValue }) => {
   try {
     const response = await axios.get<Subject[]>("/api/subjects");
-    //console.log(response.data)
+    console.log(response.data)
     return response.data;
   } catch (error: unknown) {
     return rejectWithValue("Failed to fetch subjects");
@@ -116,16 +117,18 @@ export const deleteSubjectThunk = createAsyncThunk<
 });
 export const addQuestionToSubjectThunk = createAsyncThunk<
   Subject,
-  { subjectId: number; label: string; questionNo: number },
+  { subjectId: number; label: string; questionNo: number, maxScore : number },
   { rejectValue: string }
 >(
   "subjects/addQuestionToSubject",
-  async ({ subjectId, label, questionNo }, { rejectWithValue }) => {
+  async ({ subjectId, label, questionNo ,maxScore}, { rejectWithValue }) => {
     try {
-      console.log(questionNo)
+    
+      //console.log(questionNo)
+      console.log(subjectId, label, questionNo ,maxScore)
       const { data } = await axios.post<Subject>(
         `/api/subjects/${subjectId}/questions`,
-        { label, questionNo }
+        { label, questionNo, maxScore}
       );
       return data;
     } catch (err) {

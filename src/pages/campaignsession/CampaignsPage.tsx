@@ -25,6 +25,7 @@ export default function CampaignsPage() {
     sessionDialog,
     subjectDialog,
     actions,
+    
   } = useCampaignsPage();
 
   return (
@@ -45,6 +46,7 @@ export default function CampaignsPage() {
           visibleCampaigns={pagedCampaigns}
           onEditCampaign={actions.openCampaignDialog}
           onDeleteCampaign={actions.confirmAndRemoveCampaign}
+          onActiveCampaign={actions.handleToggleActive}
           onCreateSession={(campaignId) =>
             actions.openSessionDialog(campaignId)
           }

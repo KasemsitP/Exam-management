@@ -52,7 +52,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "view_sessions",
     "view_qr",
   ],
-  grader: ["grade_exams", "view_sessions"],
+  grader: ["grade_exams",],
 };
 
 const ADMIN_ROLE: Role = "admin";

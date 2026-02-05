@@ -12,6 +12,7 @@ import {
   selectUserImportStatus,
 } from "@/store/slices/users.slice";
 import { useToast } from "@/components/ui/use-toast";
+import Swal from "sweetalert2";
 
 export const PREVIEW_ROW_OPTIONS = [5, 10, 20, 50] as const;
 export const ENCODINGS = [
@@ -91,10 +92,11 @@ export const useUserImport = () => {
     if (!file) return;
 
     if (!supportsImport) {
-      toast({
-        title: "No campaign selected",
-        description: "Please choose an active campaign before importing.",
-        variant: "destructive",
+      Swal.fire({
+        icon: "error",
+        title: "ยังไม่ได้เลือกแคมเปญ",
+        text: "กรุณาเลือกแคมเปญที่ต้องการก่อนทำการนำเข้าข้อมูล",
+        confirmButtonText: "ตกลง",
       });
       event.target.value = "";
       return;
@@ -187,36 +189,53 @@ export const useUserImport = () => {
     }
   }, [excelBuffer, excelSelectedSheet]);
 
-  const handleConfirm = async () => {
-    if (!parsed || !activeCampaign) return;
-    try {
-      const result = await dispatch(
-        importUsersThunk({
-          campaignId: activeCampaign.id,
-          rows: parsed.rows,
-        })
-      ).unwrap();
+const handleConfirm = async () => {
+  if (!parsed || !activeCampaign) return;
 
-      const parts = [
-        "Created " + result.totalUsersCreated,
-        "Existing " + result.totalUsersFound,
-        "Campaign links " + result.totalCampaignLinks,
-      ];
+  // 🔄 เปิด loading
+  Swal.fire({
+    title: "กำลังนำเข้าข้อมูล",
+    text: "กรุณารอสักครู่ ระบบกำลังประมวลผล",
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => {
+      Swal.showLoading();
+    },
+  });
 
-      toast({
-        title: "Import completed",
-        description: parts.join(" · "),
-      });
+  try {
+    const result = await dispatch(
+      importUsersThunk({
+        campaignId: activeCampaign.id,
+        rows: parsed.rows,
+      })
+    ).unwrap();
 
-      resetState();
-    } catch (err) {
-      toast({
-        title: "Failed to import users",
-        description: getErrorMessage(err),
-        variant: "destructive",
-      });
-    }
-  };
+    const parts = [
+      `สร้างผู้ใช้งานใหม่ ${result.totalUsersCreated} รายการ`,
+      `พบผู้ใช้งานเดิม ${result.totalUsersFound} รายการ`,
+      `ผูกแคมเปญ ${result.totalCampaignLinks} รายการ`,
+    ];
+
+    //  ปิด loading แล้วเปิด success
+    Swal.fire({
+      icon: "success",
+      title: "นำเข้าข้อมูลสำเร็จ",
+      text: parts.join(" · "),
+      confirmButtonText: "ตกลง",
+    });
+
+    resetState();
+  } catch (err) {
+    // ปิด loading แล้วเปิด error
+    Swal.fire({
+      icon: "error",
+      title: "นำเข้าผู้ใช้งานไม่สำเร็จ",
+      text: getErrorMessage(err),
+      confirmButtonText: "ตกลง",
+    });
+  }
+};
 
   const preview = useMemo(() => {
     if (!parsed) return [];
@@ -228,10 +247,10 @@ export const useUserImport = () => {
 
   const statsParts = importStats
     ? [
-        "Created " + importStats.totalUsersCreated,
-        "Existing " + importStats.totalUsersFound,
-        "Campaign links " + importStats.totalCampaignLinks,
-      ]
+      "Created " + importStats.totalUsersCreated,
+      "Existing " + importStats.totalUsersFound,
+      "Campaign links " + importStats.totalCampaignLinks,
+    ]
     : [];
 
   const statsText = statsParts.length ? statsParts.join(" · ") : null;

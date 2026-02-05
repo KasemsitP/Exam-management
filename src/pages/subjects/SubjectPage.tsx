@@ -96,21 +96,44 @@ const SubjectPage: React.FC = () => {
   };
 
   // เวลา user กดยืนยันใน modal
-  const handleConfirmAddQuestion = (payload: { label: string; questionNo: number }) => {
+  // const handleConfirmAddQuestion = (payload: { label: string; questionNo: number }) => {
+  //   if (!questionModalSubjectId) return;
+
+  //   const { label, questionNo } = payload;
+
+  //   dispatch(
+  //     addQuestionToSubjectThunk({
+  //       subjectId: questionModalSubjectId,
+  //       label,
+  //       questionNo,
+  //     }) as any
+  //   )
+  //     .unwrap()
+  //     .then(() => {
+  //       showSuccess("เพิ่มข้อสำเร็จ", `ได้เพิ่มข้อที่ ${questionNo} : "${label}" แล้ว`);
+  //       setQuestionModalOpen(false);
+  //       setQuestionModalSubjectId(null);
+  //     })
+  //     .catch(() => {
+  //       Swal.fire("เพิ่มข้อไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
+  //     });
+  // };
+  const handleConfirmAddQuestion = (payload: { label: string; questionNo: number; maxScore: number }) => {
     if (!questionModalSubjectId) return;
 
-    const { label, questionNo } = payload;
+    const { label, questionNo, maxScore } = payload;
 
     dispatch(
       addQuestionToSubjectThunk({
         subjectId: questionModalSubjectId,
         label,
         questionNo,
+        maxScore,              // ✅ เพิ่มไปที่ thunk
       }) as any
     )
       .unwrap()
       .then(() => {
-        showSuccess("เพิ่มข้อสำเร็จ", `ได้เพิ่มข้อที่ ${questionNo} : "${label}" แล้ว`);
+        showSuccess("เพิ่มข้อสำเร็จ", `ได้เพิ่มข้อที่ ${questionNo} : "${label}" (เต็ม ${maxScore} คะแนน) แล้ว`);
         setQuestionModalOpen(false);
         setQuestionModalSubjectId(null);
       })
@@ -118,6 +141,7 @@ const SubjectPage: React.FC = () => {
         Swal.fire("เพิ่มข้อไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
       });
   };
+
 
 
   /* --------------------- เปลี่ยน label ของข้อ (แก้ในตาราง) --------------------- */
@@ -256,94 +280,94 @@ const SubjectPage: React.FC = () => {
 
       {/* ฟอร์มสร้างวิชาใหม่ */}
       {showCreateForm && (
-  <>
-    {/* Backdrop */}
-    <div
-      className="modal-backdrop show"
-      style={{ zIndex: 1050 }}
-      onClick={() => {
-        if (!loading) setShowCreateForm(false);
-      }}
-    />
+        <>
+          {/* Backdrop */}
+          <div
+            className="modal-backdrop show"
+            style={{ zIndex: 1050 }}
+            onClick={() => {
+              if (!loading) setShowCreateForm(false);
+            }}
+          />
 
-    {/* Modal */}
-    <div
-      className="modal show"
-      style={{ display: "block", zIndex: 1055 }}
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={(e) => {
-        // คลิกนอกกล่องเพื่อปิด (optional)
-        if (e.target === e.currentTarget && !loading) setShowCreateForm(false);
-      }}
-    >
-      <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h6 className="modal-title">สร้างวิชาใหม่</h6>
-            <button
-              type="button"
-              className="btn-close"
-              aria-label="Close"
-              disabled={loading}
-              onClick={() => setShowCreateForm(false)}
-            />
-          </div>
-
-          <form onSubmit={handleCreateSubject}>
-            <div className="modal-body">
-              <div className="row g-3">
-                <div className="col-12 col-md-4">
-                  <label className="form-label mb-1">รหัสวิชา</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={newCode}
-                    onChange={(e) => setNewCode(e.target.value)}
-                    placeholder="เช่น LAW1002"
+          {/* Modal */}
+          <div
+            className="modal show"
+            style={{ display: "block", zIndex: 1055 }}
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(e) => {
+              // คลิกนอกกล่องเพื่อปิด (optional)
+              if (e.target === e.currentTarget && !loading) setShowCreateForm(false);
+            }}
+          >
+            <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h6 className="modal-title">สร้างวิชาใหม่</h6>
+                  <button
+                    type="button"
+                    className="btn-close"
+                    aria-label="Close"
                     disabled={loading}
-                    autoFocus
+                    onClick={() => setShowCreateForm(false)}
                   />
                 </div>
 
-                <div className="col-12 col-md-8">
-                  <label className="form-label mb-1">ชื่อวิชา</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="เช่น กฎหมายแพ่ง"
-                    disabled={loading}
-                  />
-                </div>
+                <form onSubmit={handleCreateSubject}>
+                  <div className="modal-body">
+                    <div className="row g-3">
+                      <div className="col-12 col-md-4">
+                        <label className="form-label mb-1">รหัสวิชา</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={newCode}
+                          onChange={(e) => setNewCode(e.target.value)}
+                          placeholder="เช่น LAW1002"
+                          disabled={loading}
+                          autoFocus
+                        />
+                      </div>
+
+                      <div className="col-12 col-md-8">
+                        <label className="form-label mb-1">ชื่อวิชา</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          placeholder="เช่น กฎหมายแพ่ง"
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="modal-footer">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary"
+                      onClick={() => setShowCreateForm(false)}
+                      disabled={loading}
+                    >
+                      ยกเลิก
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="btn btn-success"
+                      disabled={loading || !newCode.trim() || !newName.trim()}
+                    >
+                      บันทึกวิชา
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
-
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn btn-outline-secondary"
-                onClick={() => setShowCreateForm(false)}
-                disabled={loading}
-              >
-                ยกเลิก
-              </button>
-
-              <button
-                type="submit"
-                className="btn btn-success"
-                disabled={loading || !newCode.trim() || !newName.trim()}
-              >
-                บันทึกวิชา
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </>
-)}
+          </div>
+        </>
+      )}
 
       {/* <div className="card mb-4">
   <div className="card-body bg-white"> */}
@@ -368,6 +392,7 @@ const SubjectPage: React.FC = () => {
               <div className="text-muted small">
                 รหัสวิชา: <strong>{sub.code}</strong>
               </div>
+
             </div>
 
             <div className="d-flex gap-2">
@@ -401,48 +426,59 @@ const SubjectPage: React.FC = () => {
             ) : (
               <div className="table-responsive">
                 <table className="table mb-0 align-middle">
-                  <thead className="table-light">
-                    <tr>
-                      <th style={{ width: "80px" }}>ข้อ</th>
-                      <th>ชื่อหัวข้อ</th>
-                      <th style={{ width: "120px" }} className="text-center">
-                        การจัดการ
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sub.questions.map((q) => (
-                      <tr key={q.id}>
-                        <td>{q.questionNo}</td>
-                        <td>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm"
-                            placeholder="เช่น กฎหมายรัฐธรรมนูญ"
-                            value={q.label}
-                            onChange={(e) =>
-                              handleChangeQuestionLabel(
-                                sub.id,
-                                q.id,
-                                e.target.value
-                              )
-                            }
-                            disabled={loading}
-                          />
-                        </td>
-                        <td className="text-center">
-                          <button
-                            type="button"
-                            className="btn btn-outline-danger btn-sm"
-                            onClick={() => handleRemoveQuestion(sub.id, q.id)}
-                            disabled={loading}
-                          >
-                            ลบ
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+<thead className="table-light">
+  <tr className="align-middle">
+    <th style={{ width: 80 }} className="text-center">ข้อ</th>
+    <th className="text-start">ชื่อหัวข้อ</th>
+    <th style={{ width: 120 }} className="text-center">คะแนนเต็ม</th>
+    <th style={{ width: 80 }} className="text-center">การจัดการ</th>
+  </tr>
+</thead>
+
+<tbody>
+  {sub.questions.map((q) => (
+    <tr key={q.id} className="align-middle">
+      <td
+        className="text-center"
+        style={{
+          fontVariantNumeric: "tabular-nums",
+          fontFeatureSettings: '"tnum" 1',
+          whiteSpace: "nowrap",
+        }}
+      >
+        {q.questionNo}
+      </td>
+
+      <td>
+        <input
+          type="text"
+          className="form-control form-control-sm"
+          placeholder="เช่น กฎหมายรัฐธรรมนูญ"
+          value={q.label}
+          onChange={(e) =>
+            handleChangeQuestionLabel(sub.id, q.id, e.target.value)
+          }
+          disabled={loading}
+        />
+      </td>
+
+      <td className="text-center" style={{ fontVariantNumeric: "tabular-nums" }}>
+        {q.maxScore}
+      </td>
+
+      <td className="text-center">
+        <button
+          type="button"
+          className="btn btn-outline-danger btn-sm"
+          onClick={() => handleRemoveQuestion(sub.id, q.id)}
+          disabled={loading}
+        >
+          ลบ
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
                 </table>
               </div>
             )}

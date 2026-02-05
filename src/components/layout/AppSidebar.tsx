@@ -4,7 +4,7 @@ import { NavLink } from "react-router-dom";
 import type { NavItem } from "./navItems";
 import type { AuthUser } from "@/store/slices/auth.slice";
 import Logo from "../../assets/kmutnblogo.png";
-import type { Theme } from "./AppLayout";
+import type { Theme } from "@/components/layout/theme";
 
 interface AppSidebarProps {
   user: AuthUser | null;
@@ -17,22 +17,17 @@ interface AppSidebarProps {
 }
 
 const SB = {
-  // ✅ ลายเฉียงแบบไม่ถี่ + จาง (ดูแพงกว่า)
-  bg: `
-    repeating-linear-gradient(
-      -45deg,
-      rgba(15,23,42,0.02) 0px,
-      rgba(15,23,42,0.02) 34px,
-      rgba(15,23,42,0.00) 34px,
-      rgba(15,23,42,0.00) 68px
-    ),
-    linear-gradient(180deg, #FFFFFF 0%, #FAFAF8 100%)
-  `,
-  border: "rgba(15,23,42,0.10)",
+  // ✅ ไม่มีลายแล้ว (soft gradient เรียบๆ)
+  bg: `linear-gradient(180deg, #F8FAFC 0%, #F3F4F6 100%)`,
+  border: "rgba(15,23,42,0.12)",
   text: "#0F172A",
   muted: "#64748B",
-  hover: "rgba(15,23,42,0.04)",
-  active: "rgba(15,23,42,0.06)",
+
+  // hover/active ชัดขึ้นนิดนึง
+  hover: "rgba(15,23,42,0.055)",
+  active: "rgba(15,23,42,0.085)",
+
+  activeBorder: "rgba(15,23,42,0.14)",
 };
 
 export function AppSidebar({
@@ -48,7 +43,6 @@ export function AppSidebar({
     <>
       <style>{styleScrollbar}</style>
 
-      {/* ✅ ใช้ background ไม่ใช่ backgroundColor */}
       <div className="d-flex flex-column h-100 sidebar-shell" style={{ background: SB.bg }}>
         {/* Logo / Title */}
         <div
@@ -59,7 +53,7 @@ export function AppSidebar({
             top: 0,
             zIndex: 10,
             borderBottom: `1px solid ${SB.border}`,
-            background: SB.bg, // ✅
+            background: SB.bg,
           }}
         >
           <div className="d-flex align-items-center gap-3 w-100">
@@ -71,6 +65,8 @@ export function AppSidebar({
               >
                 ระบบจัดการข้อสอบ
               </h2>
+
+              {/* ✅ เส้นคั่นเบาๆ ดู clean */}
               <div
                 style={{
                   marginTop: 10,
@@ -112,9 +108,15 @@ export function AppSidebar({
                   style={({ isActive }) => ({
                     background: isActive ? SB.active : "transparent",
                     color: SB.text,
-                    border: `1px solid ${isActive ? "rgba(15,23,42,0.10)" : "transparent"}`,
-                    borderLeft: isActive ? `4px solid ${theme.color}` : "4px solid transparent",
-                    boxShadow: isActive ? "inset 0 0 0 1px rgba(255,255,255,0.6)" : "none",
+                    border: `1px solid ${
+                      isActive ? SB.activeBorder : "transparent"
+                    }`,
+                    borderLeft: isActive
+                      ? `4px solid ${theme.color}`
+                      : "4px solid transparent",
+                    boxShadow: isActive
+                      ? "0 1px 0 rgba(255,255,255,0.7) inset"
+                      : "none",
                   })}
                   onClick={() => {
                     setOnClickMobileSidebar?.(label);
@@ -142,7 +144,7 @@ export function AppSidebar({
                             width: 7,
                             height: 7,
                             background: theme.color,
-                            boxShadow: "0 0 0 3px rgba(255,255,255,0.7)",
+                            boxShadow: "0 0 0 3px rgba(255,255,255,0.75)",
                           }}
                         />
                       )}
@@ -179,9 +181,15 @@ export function AppSidebar({
                   style={({ isActive }) => ({
                     background: isActive ? SB.active : "transparent",
                     color: SB.text,
-                    border: `1px solid ${isActive ? "rgba(15,23,42,0.10)" : "transparent"}`,
-                    borderLeft: isActive ? `4px solid ${theme.color}` : "4px solid transparent",
-                    boxShadow: isActive ? "inset 0 0 0 1px rgba(255,255,255,0.6)" : "none",
+                    border: `1px solid ${
+                      isActive ? SB.activeBorder : "transparent"
+                    }`,
+                    borderLeft: isActive
+                      ? `4px solid ${theme.color}`
+                      : "4px solid transparent",
+                    boxShadow: isActive
+                      ? "0 1px 0 rgba(255,255,255,0.7) inset"
+                      : "none",
                   })}
                   onClick={() => {
                     setOnClickMobileSidebar?.(label);
@@ -209,7 +217,7 @@ export function AppSidebar({
                             width: 7,
                             height: 7,
                             background: theme.color,
-                            boxShadow: "0 0 0 3px rgba(255,255,255,0.7)",
+                            boxShadow: "0 0 0 3px rgba(255,255,255,0.75)",
                           }}
                         />
                       )}
@@ -237,10 +245,16 @@ export function AppSidebar({
             </div>
 
             <div className="overflow-hidden">
-              <p className="mb-0 fw-bold text-truncate" style={{ fontSize: "0.92rem", color: SB.text }}>
+              <p
+                className="mb-0 fw-bold text-truncate"
+                style={{ fontSize: "0.92rem", color: SB.text }}
+              >
                 {user?.name ?? "Admin User"}
               </p>
-              <p className="mb-0 small text-truncate" style={{ fontSize: "0.8rem", color: SB.muted }}>
+              <p
+                className="mb-0 small text-truncate"
+                style={{ fontSize: "0.8rem", color: SB.muted }}
+              >
                 {user?.username || "admin"}
               </p>
             </div>
@@ -280,7 +294,7 @@ export function AppSidebar({
           zIndex: 1060,
           transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
           transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
-          background: SB.bg, // ✅ ไม่บางแล้ว
+          background: SB.bg,
         }}
         aria-hidden={!mobileOpen}
       >
@@ -313,41 +327,23 @@ export function AppSidebar({
 }
 
 const styleScrollbar = `
-/* Mobile: scroll ได้ตลอด */
-.sidebar-scroll {
-  overflow-y: auto;
-}
+.sidebar-scroll { overflow-y: auto; }
 
-/* Desktop (lg+): ซ่อนไว้ก่อน โชว์ตอน hover */
 @media (min-width: 992px) {
-  .sidebar-scroll {
-    overflow: hidden;
-  }
-  .sidebar-scroll:hover {
-    overflow-y: auto;
-  }
+  .sidebar-scroll { overflow: hidden; }
+  .sidebar-scroll:hover { overflow-y: auto; }
 }
 
-/* Custom scrollbar */
-.sidebar-scroll::-webkit-scrollbar {
-  width: 6px;
-}
+.sidebar-scroll::-webkit-scrollbar { width: 6px; }
 .sidebar-scroll::-webkit-scrollbar-thumb {
   background-color: rgba(15,23,42,0.18);
   border-radius: 3px;
 }
-.sidebar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
 
-/* Smooth hover */
 .sidebar-item {
   transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
-.sidebar-item:hover {
-  background: rgba(15,23,42,0.04) !important;
-}
-.sidebar-item:active {
-  transform: translateY(0.5px);
-}
+.sidebar-item:hover { background: rgba(15,23,42,0.055) !important; }
+.sidebar-item:active { transform: translateY(0.5px); }
 `;

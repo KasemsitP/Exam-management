@@ -1,5 +1,5 @@
 // components/ScannerPanel.tsx
-import { Scanner, boundingBox } from "@yudiel/react-qr-scanner";
+
 import { CrmGrader } from "@/store/slices/graders.slice";
 import {
   Camera,
@@ -186,13 +186,16 @@ export default function ScannerPanel({
 
       <div className="card-body">
         {/* Scanner */}
-        <QrScannerBox
-          scannerEnabled={scannerEnabled}
-          pause={pause}
-          facingMode={facingMode}
-          cooldownMs={cooldownMs}
-          onScan={onScan}
-        />
+        <div className="card-body d-flex justify-content-center">
+          <QrScannerBox
+            scannerEnabled={scannerEnabled}
+            pause={pause}
+            facingMode={facingMode}
+            cooldownMs={cooldownMs}
+            onScan={onScan}
+          />
+
+        </div>
 
         {/* Manual input */}
         <div className="mt-3">
