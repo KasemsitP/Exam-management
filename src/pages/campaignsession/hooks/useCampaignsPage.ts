@@ -111,7 +111,6 @@ export function useCampaignsPage() {
     null
   );
 
-
   const [sessionContext, setSessionContext] = useState<{
     campaignId: string;
     session: CampaignSession | null;
@@ -200,6 +199,7 @@ export function useCampaignsPage() {
       });
     }
   };
+
 
   const resetSubjectForm = (subject?: CampaignSubject | null) => {
     if (subject) {

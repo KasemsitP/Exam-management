@@ -33,6 +33,7 @@ export interface RecordedScore {
   slotId: number;
   score: number;
   enteredAt: string;
+  qr_payload: string
 }
 
 export const useGradingStation = () => {
@@ -158,6 +159,10 @@ export const useGradingStation = () => {
           .map((r) => ({
             slotId: r.slotId ?? 0,
             score: r.score,
+            qr_payload:
+              r.qr_payload.length > 50
+                ? r.qr_payload.slice(0, 50) + "..."
+                : r.qr_payload,
             enteredAt:
               (r as any).enteredAt ??
               new Date().toLocaleTimeString("th-TH"),
@@ -170,165 +175,166 @@ export const useGradingStation = () => {
 
   // --- 8. Handlers ---
 
-const handleScan = async (value: string) => {
-  const now = Date.now();
-  if (!canScan) return;
+  const handleScan = async (value: string) => {
+    const now = Date.now();
+    if (!canScan) return;
 
-  if (!questionNo) {
-    await Swal.fire({
-      icon: "warning",
-      title: "ยังไม่ได้เลือกข้อ",
-      text: "กรุณาเลือกข้อคำถามก่อนดำเนินการต่อ",
-      confirmButtonText: "ตกลง",
-    });
-    return;
-  }
-
-  if (now - lastScanRef.current < cooldownMs) return;
-  lastScanRef.current = now;
-
-  if (!activeAssignment || !graderProfile) return;
-
-  setScannerEnabled(false);
-  setPause(true);
-
-  const result = await dispatch(
-    verifyAndAllocateThunk({
-      qrPayload: value,
-      campaignId: Number(DeleteCamp(activeCampaign.id)),
-      graderId: graderProfile.grader_id,
-      questionNo: questionNo,
-    })
-  );
-
-  if (verifyAndAllocateThunk.rejected.match(result)) {
-    await Swal.fire({
-      icon: "error",
-      title: "สแกนไม่สำเร็จ",
-      text: gradingError|| "เกิดข้อผิดพลาดในการตรวจสอบ QR",
-    });
-    return;
-  }
-
-  setScanData(value ?? null);
-
-  await Swal.fire({
-    icon: "success",
-    title: "สแกนสำเร็จ",
-    text: `พบรหัสผู้เข้าสอบ: ${value ?? "ไม่ระบุ"}`,
-    timer: 1500,
-    showConfirmButton: false,
-  });
-
-  if (pauseAfterSuccess) return;
-
-  setTimeout(() => {
-    setPause(false);
-    setScannerEnabled(true);
-  }, cooldownMs);
-};
-
-const handleClear = () => {
-  setManualPayload("");
-  setScanData(null);
-  setPause(false);
-  setScannerEnabled(true);
-};
-
-const verifyManualPayload = async () => {
-  const value = manualPayload.trim();
-  if (!value) {
-    await Swal.fire({
-      icon: "error",
-      title: "ไม่มีข้อมูล",
-      text: "กรุณาวางหรือพิมพ์ QR payload ก่อน",
-    });
-    return;
-  }
-
-  setScannerEnabled(false);
-  setPause(true);
-  await handleScan(value);
-};
-
-// const handleConfirmScore = () => {
-  
-//   //console.log( scanData , user,  activeAssignment , score)
-//   if (!scanData || !user || !activeAssignment || !score) {
-//     Swal.fire({
-//       icon: "error",
-//       title: "ข้อมูลไม่ครบ",
-//       text: "กรุณาสแกน QR, ตรวจสอบโปรไฟล์ผู้ตรวจ และกรอกคะแนนก่อน",
-//     });
-//     return;
-//   }
-  
-
-//   setIsConfirmOpen(true);
-// };
-
-const handleSaveScore = async () => {
-  console.log("TEST SAVE SCORE")
-  if (!scanData || !user || !activeAssignment || !score) {
-    setIsConfirmOpen(false);
-    return;
-  }
-
-  const payload: PayloadScore = {
-    slotId: lastSlotId,
-    qrPayload: scanData,
-    campaignId: activeAssignment.campaign_id,
-    graderId: activeAssignment.grader_id,
-    score: Number(score),
-    question_no: questionNo,
-  };
-
-  try {
-    const resultAction = await dispatch(submitScoreThunk(payload));
-
-    if (resultAction.type.endsWith("/rejected")) {
-      const errorPayload = resultAction.payload as string;
-      throw new Error(errorPayload);
+    if (!questionNo) {
+      await Swal.fire({
+        icon: "warning",
+        title: "ยังไม่ได้เลือกข้อ",
+        text: "กรุณาเลือกข้อคำถามก่อนดำเนินการต่อ",
+        confirmButtonText: "ตกลง",
+      });
+      return;
     }
 
-    const result = resultAction.payload as {
-      slotId: number;
-      score: number;
-    };
+    if (now - lastScanRef.current < cooldownMs) return;
+    lastScanRef.current = now;
 
-    const record: RecordedScore = {
-      slotId: lastSlotId,
-      score: Number(score),
-      enteredAt: new Date().toLocaleTimeString("th-TH"),
-    };
+    if (!activeAssignment || !graderProfile) return;
 
-    setRecent((prev) => [record, ...prev].slice(0, 6));
-    setScanData(null);
-    setScore("");
+    setScannerEnabled(false);
+    setPause(true);
+
+    const result = await dispatch(
+      verifyAndAllocateThunk({
+        qrPayload: value,
+        campaignId: Number(DeleteCamp(activeCampaign.id)),
+        graderId: graderProfile.grader_id,
+        questionNo: questionNo,
+      })
+    );
+
+    if (verifyAndAllocateThunk.rejected.match(result)) {
+      await Swal.fire({
+        icon: "error",
+        title: "สแกนไม่สำเร็จ",
+        text: gradingError || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
+      });
+      return;
+    }
+
+    setScanData(value ?? null);
 
     await Swal.fire({
       icon: "success",
-      title: "บันทึกคะแนนสำเร็จ!",
-      text: `Slot ID: ${result.slotId} | คะแนน: ${result.score}`,
+      title: "สแกนสำเร็จ",
+      text: `พบรหัสผู้เข้าสอบ: ${value ?? "ไม่ระบุ"}`,
+      timer: 1500,
+      showConfirmButton: false,
     });
 
-    if (pauseAfterSuccess) {
+    if (pauseAfterSuccess) return;
+
+    setTimeout(() => {
       setPause(false);
       setScannerEnabled(true);
+    }, cooldownMs);
+  };
+
+  const handleClear = () => {
+    setManualPayload("");
+    setScanData(null);
+    setPause(false);
+    setScannerEnabled(true);
+  };
+
+  const verifyManualPayload = async () => {
+    const value = manualPayload.trim();
+    if (!value) {
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่มีข้อมูล",
+        text: "กรุณาวางหรือพิมพ์ QR payload ก่อน",
+      });
+      return;
     }
 
-    handleClear();
-  } catch (error: any) {
-    console.error("Failed to save score:", error);
-    await Swal.fire({
-      icon: "error",
-      title: "บันทึกคะแนนไม่สำเร็จ",
-      text: error.message || "เกิดข้อผิดพลาด",
-    });
-  } finally {
-    setIsConfirmOpen(false);
-  }
-};
+    setScannerEnabled(false);
+    setPause(true);
+    await handleScan(value);
+  };
+
+  // const handleConfirmScore = () => {
+
+  //   //console.log( scanData , user,  activeAssignment , score)
+  //   if (!scanData || !user || !activeAssignment || !score) {
+  //     Swal.fire({
+  //       icon: "error",
+  //       title: "ข้อมูลไม่ครบ",
+  //       text: "กรุณาสแกน QR, ตรวจสอบโปรไฟล์ผู้ตรวจ และกรอกคะแนนก่อน",
+  //     });
+  //     return;
+  //   }
+
+
+  //   setIsConfirmOpen(true);
+  // };
+
+  const handleSaveScore = async () => {
+    console.log("TEST SAVE SCORE")
+    if (!scanData || !user || !activeAssignment || !score) {
+      setIsConfirmOpen(false);
+      return;
+    }
+
+    const payload: PayloadScore = {
+      slotId: lastSlotId,
+      qrPayload: scanData,
+      campaignId: activeAssignment.campaign_id,
+      graderId: activeAssignment.grader_id,
+      score: Number(score),
+      question_no: questionNo,
+    };
+
+    try {
+      const resultAction = await dispatch(submitScoreThunk(payload));
+
+      if (resultAction.type.endsWith("/rejected")) {
+        const errorPayload = resultAction.payload as string;
+        throw new Error(errorPayload);
+      }
+
+      const result = resultAction.payload as {
+        slotId: number;
+        score: number;
+      };
+
+      const record: RecordedScore = {
+        slotId: lastSlotId,
+        score: Number(score),
+        enteredAt: new Date().toLocaleTimeString("th-TH"),
+        qr_payload: scanData
+      };
+
+      setRecent((prev) => [record, ...prev].slice(0, 6));
+      setScanData(null);
+      setScore("");
+
+      await Swal.fire({
+        icon: "success",
+        title: "บันทึกคะแนนสำเร็จ!",
+        text: `Slot ID: ${result.slotId} | คะแนน: ${result.score}`,
+      });
+
+      if (pauseAfterSuccess) {
+        setPause(false);
+        setScannerEnabled(true);
+      }
+
+      handleClear();
+    } catch (error: any) {
+      console.error("Failed to save score:", error);
+      await Swal.fire({
+        icon: "error",
+        title: "บันทึกคะแนนไม่สำเร็จ",
+        text: error.message || "เกิดข้อผิดพลาด",
+      });
+    } finally {
+      setIsConfirmOpen(false);
+    }
+  };
 
   const toggleScanner = () => {
     setScannerEnabled((prev) => {

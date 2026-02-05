@@ -17,16 +17,144 @@ import { AppHeader } from "./AppHeader";
 import { CampaignPickerModal } from "./CampaignPickerModal";
 import { showSuccess } from "../ui/successAlert";
 
-// 🔴 1. Import Role type (ปรับ path ให้ตรงกับโปรเจกต์ของคุณ)
+// 🔴 Import Role type
 import type { Role } from "@/store/slices/auth.slice";
 
-// 🔴 2. ย้าย Config สีมาไว้ที่นี่ หรือจะแยกเป็นไฟล์ constants.ts ก็ได้
-const ROLE_THEMES: Record<Role | "DEFAULT", { color: string; bg: string }> = {
-  admin: { color: "#7c3aed", bg: "#f3e8ff" },
-  manager: { color: "#0284c7", bg: "#e0f2fe" },
-  staff: { color: "#0f766e", bg: "#ccfbf1" },
-  grader: { color: "#d97706", bg: "#fef3c7" },
-  DEFAULT: { color: "#6366f1", bg: "#e0e7ff" },
+export type Theme = {
+  color: string;          // role accent
+  accent: string;
+  headerBg: string;       // fallback
+  headerGradient?: string;
+  mainBg: string;
+  surface: string;
+  border: string;
+  text: string;
+  textMuted: string;
+  // Properties ที่เพิ่มเข้ามาใหม่
+  cardBg: string;
+  cardBorder: string;
+  buttonPrimary: string;
+  buttonPrimaryHover: string;
+  success: string;
+  warning: string;
+  error: string;
+};
+
+export const UNIVERSAL_SIDEBAR = {
+  sidebarBg: "#ffffff",
+  sidebarBorder: "#E5E7EB",
+  sidebarText: "#111827",
+  sidebarMuted: "#6B7280",
+  sidebarHover: "#F3F4F6",
+};
+
+export const BASE: Omit<Theme, 'color' | 'accent' | 'headerGradient'> = {
+  headerBg: "#FFFFFF",
+  mainBg: "#F9FAFB",
+  surface: "#FFFFFF",
+  border: "#E5E7EB",
+  text: "#111827",
+  textMuted: "#6B7280",
+  // เพิ่ม default values สำหรับ properties ใหม่
+  cardBg: "#FFFFFF",
+  cardBorder: "#F3F4F6",
+  buttonPrimary: "#6B7280",
+  buttonPrimaryHover: "#4B5563",
+  success: "#059669",
+  warning: "#D97706",
+  error: "#DC2626",
+};
+
+const makeRoleHeaderGradient = (roleColor: string) =>
+  `linear-gradient(180deg, ${roleColor}08 0%, ${roleColor}02 100%)`;
+
+const SURFACE_BG = "#FFFFFF";
+
+export const ROLE_THEMES: Record<Role | "DEFAULT", Theme> = {
+  admin: {
+    ...BASE,
+    color: "#2563EB",
+    accent: "#1D4ED8",
+    headerBg: SURFACE_BG,
+    headerGradient: makeRoleHeaderGradient("#2563EB"),
+    mainBg: "#F0F9FF",
+    cardBg: "#FFFFFF",
+    cardBorder: "#DBEAFE",
+    buttonPrimary: "#2563EB",
+    buttonPrimaryHover: "#1D4ED8",
+    success: "#059669",
+    warning: "#D97706",
+    error: "#DC2626",
+  },
+  manager: {
+    ...BASE,
+    color: "#7C3AED",
+    accent: "#6D28D9",
+    headerBg: SURFACE_BG,
+    headerGradient: makeRoleHeaderGradient("#7C3AED"),
+    mainBg: "#F5F3FF",
+    cardBg: "#FFFFFF",
+    cardBorder: "#EDE9FE",
+    buttonPrimary: "#7C3AED",
+    buttonPrimaryHover: "#6D28D9",
+    success: "#059669",
+    warning: "#D97706",
+    error: "#DC2626",
+  },
+  staff: {
+    ...BASE,
+    color: "#0D9488",
+    accent: "#0F766E",
+    headerBg: SURFACE_BG,
+    headerGradient: makeRoleHeaderGradient("#0D9488"),
+    mainBg: "#F0FDFA",
+    cardBg: "#FFFFFF",
+    cardBorder: "#CCFBF1",
+    buttonPrimary: "#0D9488",
+    buttonPrimaryHover: "#0F766E",
+    success: "#059669",
+    warning: "#D97706",
+    error: "#DC2626",
+  },
+  grader: {
+    ...BASE,
+    color: "#EA580C",
+    accent: "#C2410C",
+    headerBg: SURFACE_BG,
+    headerGradient: makeRoleHeaderGradient("#EA580C"),
+    mainBg: "#FFF7ED",
+    cardBg: "#FFFFFF",
+    cardBorder: "#FFEDD5",
+    buttonPrimary: "#EA580C",
+    buttonPrimaryHover: "#C2410C",
+    success: "#059669",
+    warning: "#D97706",
+    error: "#DC2626",
+  },
+  DEFAULT: {
+    ...BASE,
+    color: "#6B7280",
+    accent: "#4B5563",
+    headerBg: SURFACE_BG,
+    headerGradient: "none",
+    mainBg: "#F9FAFB",
+    cardBg: "#FFFFFF",
+    cardBorder: "#F3F4F6",
+    buttonPrimary: "#6B7280",
+    buttonPrimaryHover: "#4B5563",
+    success: "#059669",
+    warning: "#D97706",
+    error: "#DC2626",
+  },
+};
+
+// Utility functions สำหรับใช้งานสีใน components อื่น
+export const getRoleColor = (role: Role): string => {
+  return ROLE_THEMES[role]?.color || ROLE_THEMES.DEFAULT.color;
+};
+
+export const getRoleTheme = (role: Role): Theme => {
+  return ROLE_THEMES[role] || ROLE_THEMES.DEFAULT;
 };
 
 export function AppLayout() {
@@ -45,17 +173,18 @@ export function AppLayout() {
     console.log("ad", onClickMobileSidebar);
   }, [onClickMobileSidebar]);
 
-  // 🔴 3. ย้าย Logic การคำนวณ Theme มาไว้ที่ Layout
+  // Theme calculation logic
   const theme = useMemo(() => {
+    const roles = user?.roles ?? [];
     const hasRole = (role: Role) => roles.includes(role);
 
     if (hasRole("admin")) return ROLE_THEMES.admin;
-    if (hasRole("manager") || hasRole("staff")) return ROLE_THEMES.manager;
-    if (hasRole("grader")) return ROLE_THEMES.grader;
+    if (hasRole("manager")) return ROLE_THEMES.manager;
     if (hasRole("staff")) return ROLE_THEMES.staff;
+    if (hasRole("grader")) return ROLE_THEMES.grader;
 
     return ROLE_THEMES.DEFAULT;
-  }, [roles]);
+  }, [user?.roles]);
 
   useEffect(() => {
     if (examDataStatus === "idle") {
@@ -80,14 +209,20 @@ export function AppLayout() {
   };
 
   return (
-    <div className="d-flex min-vh-100 font-sans bg-light app-compact">
-      {/* Desktop Sidebar (ถ้าใน AppSidebar ใช้ user.roles คำนวณเองอยู่แล้ว ก็ไม่ต้องส่ง prop เพิ่ม) */}
-      <AppSidebar user={user} navItems={allowedNavItems} setOnClickMobileSidebar={setOnClickMobileSidebar} />
+    <div className="d-flex min-vh-100 font-sans app-compact" style={{ background: theme.mainBg }}>
+      {/* Desktop Sidebar */}
+      <AppSidebar
+        user={user}
+        navItems={allowedNavItems}
+        theme={theme}
+        setOnClickMobileSidebar={setOnClickMobileSidebar}
+      />
 
       {/* Mobile Sidebar */}
       <AppSidebar
         user={user}
         navItems={allowedNavItems}
+        theme={theme}
         mobile
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
@@ -97,16 +232,16 @@ export function AppLayout() {
       {/* Main area */}
       <div
         className="flex-grow-1 d-flex flex-column"
-        style={{ backgroundColor: "#f9fafb", minWidth: 0 }}
+        style={{ backgroundColor: theme.mainBg, minWidth: 0 }}
       >
-        {/* 🔴 4. ส่งค่าสี theme ไปให้ AppHeader */}
+        {/* AppHeader with theme */}
         <AppHeader
           onclickSidebar={onClickMobileSidebar}
           activeCampaign={activeCampaign ?? null}
           onOpenCampaignModal={() => setModalOpen(true)}
           onLogout={handleLogout}
           onOpenMobileSidebar={() => setMobileSidebarOpen(true)}
-          theme={theme} // <--- เพิ่ม Prop นี้
+          theme={theme}
         />
 
         <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-lg-4">

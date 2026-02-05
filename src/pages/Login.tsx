@@ -41,7 +41,8 @@ export default function Login() {
     if (status === "authenticated" && user) {
       showLoginSuccessAlert(user.name);
       const redirect = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
-      navigate(redirect ?? "/dashboard", { replace: true });
+      // navigate(redirect ?? "/dashboard", { replace: true });
+      navigate("/dashboard", { replace: true });
     }
       if (status === "error" && error) {
       showError("ล็อคอินไม่สำเร็จ", "ชื่อผู้ใช้หรือรหัสผ่านผิด");

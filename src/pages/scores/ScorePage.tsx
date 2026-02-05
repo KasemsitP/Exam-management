@@ -217,6 +217,12 @@ export default function BagScoresPage() {
     }
   };
 
+  const calcDiff = (a: number | string | null | undefined, b: number | string | null | undefined) => {
+    const n1 = Number(a);
+    const n2 = Number(b);
+    if (!Number.isFinite(n1) || !Number.isFinite(n2)) return null;
+    return Math.abs(n1 - n2); // ถ้าอยากได้ signed ใช้ (n1 - n2)
+  };
   // -----------------------------
   // 3) โหลดคะแนนของถุงที่เลือก
   // -----------------------------
@@ -595,88 +601,88 @@ export default function BagScoresPage() {
       {/* BAR ด้านบน: filter + เปลี่ยนถุง */}
       <div className="card border-0 shadow-sm mb-3">
         <div className="card-body py-2">
- <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
 
-  {/* ========== ซ้าย: Session filter ========== */}
-  <div className="d-flex flex-wrap align-items-center gap-2">
-    <span className="text-muted small">Session</span>
+            {/* ========== ซ้าย: Session filter ========== */}
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              <span className="text-muted small">Session</span>
 
-    <select
-      className="form-select form-select-sm"
-      style={{ width: 220 }}
-      value={selectedSessionId}
-      onChange={(e) => setSelectedSessionId(e.target.value)}
-    >
-      <option value="all">ทุก session</option>
-      {sessionOptions.map((s) => (
-        <option key={s.id} value={s.id}>
-          {s.label || `Session ${s.id}`}
-        </option>
-      ))}
-    </select>
+              <select
+                className="form-select form-select-sm"
+                style={{ width: 220 }}
+                value={selectedSessionId}
+                onChange={(e) => setSelectedSessionId(e.target.value)}
+              >
+                <option value="all">ทุก session</option>
+                {sessionOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.label || `Session ${s.id}`}
+                  </option>
+                ))}
+              </select>
 
-    <span className="small text-muted ms-1">
-      ถุงทั้งหมด {filteredBags.length} ใบ
-    </span>
-  </div>
+              <span className="small text-muted ms-1">
+                ถุงทั้งหมด {filteredBags.length} ใบ
+              </span>
+            </div>
 
-  {/* ========== ขวา: Bag navigation + view mode ========== */}
-  <div className="d-flex flex-wrap align-items-center gap-2">
+            {/* ========== ขวา: Bag navigation + view mode ========== */}
+            <div className="d-flex flex-wrap align-items-center gap-2">
 
-    {/* Pagination แบบกลุ่มเดียว */}
-    <div className="btn-group" role="group" aria-label="Bag navigation">
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-secondary"
-        disabled={currentBagIndex <= 0}
-        onClick={() => handleNavigateBag("prev")}
-      >
-        <ChevronLeft size={16} />
-      </button>
+              {/* Pagination แบบกลุ่มเดียว */}
+              <div className="btn-group" role="group" aria-label="Bag navigation">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  disabled={currentBagIndex <= 0}
+                  onClick={() => handleNavigateBag("prev")}
+                >
+                  <ChevronLeft size={16} />
+                </button>
 
-      <select
-        className="form-select form-select-sm"
-        style={{ minWidth: 260 }}
-        value={selectedBagId ?? ""}
-        onChange={(e) => setSelectedBagId(Number(e.target.value))}
-        disabled={filteredBags.length === 0}
-      >
-        {filteredBags.map((b, idx) => (
-          <option key={b.bagId} value={b.bagId}>
-            {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} – {b.sessionLabel}
-          </option>
-        ))}
-        {filteredBags.length === 0 && <option value="">ไม่มีถุง</option>}
-      </select>
+                <select
+                  className="form-select form-select-sm"
+                  style={{ minWidth: 260 }}
+                  value={selectedBagId ?? ""}
+                  onChange={(e) => setSelectedBagId(Number(e.target.value))}
+                  disabled={filteredBags.length === 0}
+                >
+                  {filteredBags.map((b, idx) => (
+                    <option key={b.bagId} value={b.bagId}>
+                      {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} – {b.sessionLabel}
+                    </option>
+                  ))}
+                  {filteredBags.length === 0 && <option value="">ไม่มีถุง</option>}
+                </select>
 
-      <button
-        type="button"
-        className="btn btn-sm btn-outline-secondary"
-        disabled={
-          currentBagIndex === -1 ||
-          currentBagIndex >= filteredBags.length - 1
-        }
-        onClick={() => handleNavigateBag("next")}
-      >
-        <ChevronRight size={16} />
-      </button>
-    </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  disabled={
+                    currentBagIndex === -1 ||
+                    currentBagIndex >= filteredBags.length - 1
+                  }
+                  onClick={() => handleNavigateBag("next")}
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
 
-    {/* toggle view mode */}
-    <button
-      type="button"
-      className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-      onClick={() =>
-        setViewMode((m) => (m === "score" ? "grader" : "score"))
-      }
-    >
-      <Users size={14} />
-      <span className="small">
-        {viewMode === "score" ? "ชื่อผู้ตรวจ" : "คะแนนตัวเลข"}
-      </span>
-    </button>
-  </div>
-</div>
+              {/* toggle view mode */}
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                onClick={() =>
+                  setViewMode((m) => (m === "score" ? "grader" : "score"))
+                }
+              >
+                <Users size={14} />
+                <span className="small">
+                  {viewMode === "score" ? "ชื่อผู้ตรวจ" : "คะแนนตัวเลข"}
+                </span>
+              </button>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -783,27 +789,17 @@ export default function BagScoresPage() {
                         {headerQuestions.map((hq) => (
                           <th
                             key={hq.questionNo}
-                            colSpan={viewMode === "score" ? 3 : 2}
+                            colSpan={viewMode === "score" ? 4 : 2}  // ✅ 4 คอลัมน์ต่อข้อ
                             className="text-center"
-                            style={{
-                              border: "1px solid #dee2e6",
-                              backgroundColor: "#f8fafc",
-                            }}
+                            style={{ border: "1px solid #dee2e6", backgroundColor: "#f8fafc" }}
                           >
-                            <div className="fw-semibold">
-                              ข้อ {hq.questionNo}
-                            </div>
-                            <div
-                              className="text-muted"
-                              style={{
-                                fontSize: "0.72rem",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
+                            <div className="fw-semibold">ข้อ {hq.questionNo}</div>
+                            <div className="text-muted" style={{ fontSize: "0.72rem", whiteSpace: "nowrap" }}>
                               {hq.label}
                             </div>
                           </th>
                         ))}
+
 
                         <th
                           rowSpan={2}
@@ -823,39 +819,30 @@ export default function BagScoresPage() {
                       <tr>
                         {headerQuestions.map((hq) => (
                           <React.Fragment key={`subhead-${hq.questionNo}`}>
-                            <th
-                              className="text-center"
-                              style={{
-                                border: "1px solid #dee2e6",
-                                backgroundColor: "#fdfdfd",
-                              }}
-                            >
+                            <th className="text-center" style={{ border: "1px solid #dee2e6", backgroundColor: "#fdfdfd" }}>
                               {viewMode === "score" ? "คะแนน 1" : "ผู้ตรวจ 1"}
                             </th>
-                            <th
-                              className="text-center"
-                              style={{
-                                border: "1px solid #dee2e6",
-                                backgroundColor: "#fdfdfd",
-                              }}
-                            >
+
+                            <th className="text-center" style={{ border: "1px solid #dee2e6", backgroundColor: "#fdfdfd" }}>
                               {viewMode === "score" ? "คะแนน 2" : "ผู้ตรวจ 2"}
                             </th>
 
+                            {/* ✅ เพิ่มหัวผลต่าง */}
                             {viewMode === "score" && (
-                              <th
-                                className="text-center"
-                                style={{
-                                  border: "1px solid #dee2e6",
-                                  backgroundColor: "#fdfdfd",
-                                }}
-                              >
+                              <th className="text-center" style={{ border: "1px solid #dee2e6", backgroundColor: "#fdfdfd" }}>
+                                ผลต่าง
+                              </th>
+                            )}
+
+                            {viewMode === "score" && (
+                              <th className="text-center" style={{ border: "1px solid #dee2e6", backgroundColor: "#fdfdfd" }}>
                                 รวม(ข้อ)
                               </th>
                             )}
                           </React.Fragment>
                         ))}
                       </tr>
+
                     </thead>
 
                     <tbody>
@@ -880,9 +867,14 @@ export default function BagScoresPage() {
                               (qq) => qq.questionNo === hq.questionNo
                             );
 
-                            const score1 = formatScore(q?.grader1Score ?? null);
-                            const score2 = formatScore(q?.grader2Score ?? null);
-                            const total = formatScore(q?.finalScore ?? null);
+                            const score1 = q?.grader1Score ?? null;
+                            const score2 = q?.grader2Score ?? null;
+                            const diff = calcDiff(score1, score2);
+
+                            const score1Text = formatScore(score1);
+                            const score2Text = formatScore(score2);
+                            const diffText = diff == null ? "-" : formatScore(diff);
+                            const totalText = formatScore(q?.finalScore ?? null);
 
                             const name1 = q?.grader1Name || "-";
                             const name2 = q?.grader2Name || "-";
@@ -915,21 +907,26 @@ export default function BagScoresPage() {
                             }
 
                             return (
-                              <React.Fragment
-                                key={`${bk.bookletId}-${hq.questionNo}`}
-                              >
+                              <React.Fragment key={`${bk.bookletId}-${hq.questionNo}`}>
+                                <td className="text-end" style={{ border: "1px solid #edeff2" }}>
+                                  {score1Text}
+                                </td>
+
+                                <td className="text-end" style={{ border: "1px solid #edeff2" }}>
+                                  {score2Text}
+                                </td>
+
+                                {/* ✅ ผลต่าง อยู่ขวาคะแนน2 */}
                                 <td
                                   className="text-end"
-                                  style={{ border: "1px solid #edeff2" }}
+                                  style={{
+                                    border: "1px solid #edeff2",
+                                    backgroundColor: diff != null && diff >= 3 ? "#fff5f5" : undefined, // optional highlight
+                                  }}
                                 >
-                                  {score1}
+                                  {diffText}
                                 </td>
-                                <td
-                                  className="text-end"
-                                  style={{ border: "1px solid #edeff2" }}
-                                >
-                                  {score2}
-                                </td>
+
                                 <td
                                   className="text-end fw-semibold"
                                   style={{
@@ -937,10 +934,11 @@ export default function BagScoresPage() {
                                     backgroundColor: "#fafbff",
                                   }}
                                 >
-                                  {total}
+                                  {totalText}
                                 </td>
                               </React.Fragment>
                             );
+
                           })}
 
                           {/* คะแนนรวมทั้งเล่ม */}

@@ -13,8 +13,8 @@ import {
   Keyboard,
 } from "lucide-react";
 
-import { UserSessionData } from "@/store/slices/userSessions.slice";
 import { useProctorScan } from "./hooks/useProctorScan";
+import { userQR } from "@/store/slices/qrscanner.slice"
 
 /* --------------------------- Scan Result Card --------------------------- */
 const ScanResult = ({
@@ -25,7 +25,7 @@ const ScanResult = ({
 }: {
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
-  user: UserSessionData | null;
+  user: userQR | null;
   onClear: () => void;
 }) => {
   if (status === "loading") {
@@ -65,6 +65,14 @@ const ScanResult = ({
           </div>
           <ul className="list-group list-group-flush">
             <li className="list-group-item d-flex justify-content-between">
+              <span className="text-muted">รอบสอบ</span>
+              <span className="fw-semibold">{user.campaignName ?? "N/A"}</span>
+            </li>
+            <li className="list-group-item d-flex justify-content-between">
+              <span className="text-muted">รอบสอบและวิชา </span>
+              <span className="fw-semibold">{user.session_code} { user.subjectName?? "N/A"}</span>
+            </li>
+            <li className="list-group-item d-flex justify-content-between">
               <span className="text-muted">ชื่อ-สกุล:</span>
               <span className="fw-semibold text-end">
                 {user.firstName} {user.lastName}
@@ -77,6 +85,10 @@ const ScanResult = ({
             <li className="list-group-item d-flex justify-content-between">
               <span className="text-muted">ห้องสอบ:</span>
               <span className="fw-semibold">{user.roomName ?? "N/A"}</span>
+            </li>
+            <li className="list-group-item d-flex justify-content-between">
+              <span className="text-muted">แถว:</span>
+              <span className="fw-semibold">{user.rowNo ?? "N/A"}</span>
             </li>
           </ul>
           <div className="text-center mt-3">
@@ -127,102 +139,101 @@ export default function ProctorScanPage() {
   return (
     <div className="container py-4">
       {/* Header */}
-<div className="card shadow-sm mb-4">
-  {/* Header */}
-  <div className="card-header bg-white">
-    <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-      {/* Title */}
-      <div>
-        <h5 className="mb-1">สแกนยืนยันตัวตนผู้สอบ</h5>
-        <div className="small text-muted">
-          <span className="fw-semibold">{campaignLabel}</span>
+      <div className="card shadow-sm mb-4">
+        {/* Header */}
+        <div className="card-header bg-white">
+          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            {/* Title */}
+            <div>
+              <h5 className="mb-1">สแกนยืนยันตัวตนผู้สอบ</h5>
+              <div className="small text-muted">
+                <span className="fw-semibold">{campaignLabel}</span>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              <div className="form-check form-switch me-2">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="pauseAfterSuccess"
+                  checked={pauseAfterSuccess}
+                  onChange={(e) => setPauseAfterSuccess(e.target.checked)}
+                />
+                <label
+                  className="form-check-label small"
+                  htmlFor="pauseAfterSuccess"
+                >
+                  พักกล้องเมื่อสำเร็จ
+                </label>
+              </div>
+
+              <select
+                className="form-select form-select-sm"
+                style={{ width: 140 }}
+                value={cooldownMs}
+                onChange={(e) => setCooldownMs(Number(e.target.value))}
+              >
+                <option value={800}>Cooldown 0.8s</option>
+                <option value={1200}>Cooldown 1.2s</option>
+                <option value={1600}>Cooldown 1.6s</option>
+                <option value={2000}>Cooldown 2.0s</option>
+              </select>
+
+              <button
+                className={`btn btn-sm ${scannerEnabled ? "btn-outline-secondary" : "btn-success"
+                  } d-inline-flex align-items-center gap-1`}
+                onClick={toggleScanner}
+              >
+                {scannerEnabled ? <Pause size={16} /> : <Play size={16} />}
+                {scannerEnabled ? "หยุด" : "เริ่ม"}
+              </button>
+
+              <button
+                className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+                onClick={toggleFacingMode}
+              >
+                <Camera size={16} /> สลับ
+              </button>
+
+              <button
+                className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+                onClick={handleClear}
+              >
+                <RotateCcw size={16} /> ล้าง
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="">
+          {status === "loading" && (
+            <div className="alert alert-primary py-2 d-flex align-items-center gap-2 mb-0">
+              <Loader2 className="spin-animation" size={16} />
+              <span className="small">กำลังตรวจสอบข้อมูล…</span>
+            </div>
+          )}
+
+          {status === "failed" && (
+            <div className="alert alert-danger py-2 d-flex align-items-center gap-2 mb-0">
+              <AlertTriangle size={16} />
+              <span className="small">{error ?? "ตรวจสอบไม่สำเร็จ"}</span>
+            </div>
+          )}
+
+          {status === "succeeded" && scannedUser && (
+            <div className="alert alert-success py-2 d-flex align-items-center gap-2 mb-0">
+              <CheckCircle2 size={16} />
+              <span className="small">
+                ยืนยัน: {scannedUser.firstName} {scannedUser.lastName} (
+                {scannedUser.userCode})
+              </span>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Controls */}
-      <div className="d-flex flex-wrap align-items-center gap-2">
-        <div className="form-check form-switch me-2">
-          <input
-            className="form-check-input"
-            type="checkbox"
-            id="pauseAfterSuccess"
-            checked={pauseAfterSuccess}
-            onChange={(e) => setPauseAfterSuccess(e.target.checked)}
-          />
-          <label
-            className="form-check-label small"
-            htmlFor="pauseAfterSuccess"
-          >
-            พักกล้องเมื่อสำเร็จ
-          </label>
-        </div>
-
-        <select
-          className="form-select form-select-sm"
-          style={{ width: 140 }}
-          value={cooldownMs}
-          onChange={(e) => setCooldownMs(Number(e.target.value))}
-        >
-          <option value={800}>Cooldown 0.8s</option>
-          <option value={1200}>Cooldown 1.2s</option>
-          <option value={1600}>Cooldown 1.6s</option>
-          <option value={2000}>Cooldown 2.0s</option>
-        </select>
-
-        <button
-          className={`btn btn-sm ${
-            scannerEnabled ? "btn-outline-secondary" : "btn-success"
-          } d-inline-flex align-items-center gap-1`}
-          onClick={toggleScanner}
-        >
-          {scannerEnabled ? <Pause size={16} /> : <Play size={16} />}
-          {scannerEnabled ? "หยุด" : "เริ่ม"}
-        </button>
-
-        <button
-          className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
-          onClick={toggleFacingMode}
-        >
-          <Camera size={16} /> สลับ
-        </button>
-
-        <button
-          className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
-          onClick={handleClear}
-        >
-          <RotateCcw size={16} /> ล้าง
-        </button>
-      </div>
-    </div>
-  </div>
-
-  {/* Body */}
-  <div className="">
-    {status === "loading" && (
-      <div className="alert alert-primary py-2 d-flex align-items-center gap-2 mb-0">
-        <Loader2 className="spin-animation" size={16} />
-        <span className="small">กำลังตรวจสอบข้อมูล…</span>
-      </div>
-    )}
-
-    {status === "failed" && (
-      <div className="alert alert-danger py-2 d-flex align-items-center gap-2 mb-0">
-        <AlertTriangle size={16} />
-        <span className="small">{error ?? "ตรวจสอบไม่สำเร็จ"}</span>
-      </div>
-    )}
-
-    {status === "succeeded" && scannedUser && (
-      <div className="alert alert-success py-2 d-flex align-items-center gap-2 mb-0">
-        <CheckCircle2 size={16} />
-        <span className="small">
-          ยืนยัน: {scannedUser.firstName} {scannedUser.lastName} (
-          {scannedUser.userCode})
-        </span>
-      </div>
-    )}
-  </div>
-</div>
 
 
       {/* Content */}

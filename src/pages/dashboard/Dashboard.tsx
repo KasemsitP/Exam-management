@@ -213,40 +213,40 @@ export default function Dashboard() {
   }, [dashboardData]);
 
 
-// 1) กำหนดช่วงทั้งหมดที่อยากให้แสดง 1–150 (ก้าวละ 5 คะแนน)
-const ALL_SCORE_BUCKETS: string[] = [];
-for (let start = 1; start <= 150; start += 5) {
-  const end = start + 4;
-  ALL_SCORE_BUCKETS.push(`${start}-${end}`); // "1-5", "6-10", ..., "146-150"
-}
-
-// ....
-
-const buildScoreChartData = (scoreDistribution: ScoreDistributionAPI) => {
-  if (!scoreDistribution) return [];
-
-  const { buckets, noScore } = scoreDistribution;
-
-  // map label -> count (ดึงจาก backend)
-  const bucketMap = new Map<string, number>();
-  for (const b of buckets ?? []) {
-    bucketMap.set(b.label, Number(b.count ?? 0));
+  // 1) กำหนดช่วงทั้งหมดที่อยากให้แสดง 1–150 (ก้าวละ 5 คะแนน)
+  const ALL_SCORE_BUCKETS: string[] = [];
+  for (let start = 1; start <= 150; start += 5) {
+    const end = start + 4;
+    ALL_SCORE_BUCKETS.push(`${start}-${end}`); // "1-5", "6-10", ..., "146-150"
   }
 
-  // สร้างข้อมูลสำหรับทุกช่วง 1–150
-  const bucketData = ALL_SCORE_BUCKETS.map((label) => ({
-    range: label,
-    count: bucketMap.get(label) ?? 0, // ถ้าไม่มีใน backend ให้เป็น 0
-  }));
+  // ....
 
-  // แถมแท่ง "ยังไม่มีคะแนน" อีกช่อง
-  bucketData.push({
-    range: "ยังไม่มีคะแนน",
-    count: Number(noScore ?? 0),
-  });
+  const buildScoreChartData = (scoreDistribution: ScoreDistributionAPI) => {
+    if (!scoreDistribution) return [];
 
-  return bucketData;
-};
+    const { buckets, noScore } = scoreDistribution;
+
+    // map label -> count (ดึงจาก backend)
+    const bucketMap = new Map<string, number>();
+    for (const b of buckets ?? []) {
+      bucketMap.set(b.label, Number(b.count ?? 0));
+    }
+
+    // สร้างข้อมูลสำหรับทุกช่วง 1–150
+    const bucketData = ALL_SCORE_BUCKETS.map((label) => ({
+      range: label,
+      count: bucketMap.get(label) ?? 0, // ถ้าไม่มีใน backend ให้เป็น 0
+    }));
+
+    // แถมแท่ง "ยังไม่มีคะแนน" อีกช่อง
+    bucketData.push({
+      range: "ยังไม่มีคะแนน",
+      count: Number(noScore ?? 0),
+    });
+
+    return bucketData;
+  };
 
 
 
@@ -291,8 +291,17 @@ const buildScoreChartData = (scoreDistribution: ScoreDistributionAPI) => {
   const subjectCount = dashboardData?.summary?.subjectCount ?? 0;
 
   // 5) จำนวนผู้เข้าสอบรวมทั้ง campaign (ใช้จาก summary โดยตรงจะไม่ซ้ำคน)
-  const totalUsersInCampaign = dashboardData?.summary?.scoreDistribution
-    ?.totalUsers ?? 0;
+  const totalUsersInCampaign = useMemo(() => {
+    if (!dashboardData?.sessions) return 0;
+
+    const sessionsArr = Object.values(dashboardData.sessions);
+
+    // เผื่ออนาคตบาง session หลุดข้อมูล ใช้ค่ามากสุดกันพลาด
+    return sessionsArr.reduce(
+      (max, s) => Math.max(max, s.users.inCampaign),
+      0
+    );
+  }, [dashboardData]);
 
   // 6) จำนวนถุงรวมทั้ง campaign
   const totalBags = useMemo(() => {
@@ -462,7 +471,7 @@ const buildScoreChartData = (scoreDistribution: ScoreDistributionAPI) => {
                     {totalUsersInCampaign.toLocaleString()}
                   </div>
                   <div className="small" style={{ color: muted }}>
-                    คน (จากสรุป Score Distribution)
+                    คน
                   </div>
                 </div>
               </div>

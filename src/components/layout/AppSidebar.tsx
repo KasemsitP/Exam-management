@@ -1,108 +1,97 @@
-import { useMemo } from "react";
-import { NavLink } from "react-router-dom";
+// AppSidebar.tsx
 import { X } from "lucide-react";
+import { NavLink } from "react-router-dom";
 import type { NavItem } from "./navItems";
 import type { AuthUser } from "@/store/slices/auth.slice";
 import Logo from "../../assets/kmutnblogo.png";
-import type { Role } from "@/store/slices/auth.slice";
-import { set } from "react-hook-form";
-
-const ROLE_THEMES: Record<Role | "DEFAULT", { color: string; bg: string }> = {
-admin: {
-  color: "#6b5cff", // ม่วงอ่อน อ่านชัด
-  bg: "#f4f3ff",    // ม่วงพาสเทล
-},
-
-manager: {
-  color: "#3b82f6", // ฟ้าอ่อน สุภาพ
-  bg: "#eff6ff",    // ฟ้าขาว
-},
-
-staff: {
-  color: "#0d9488", // เขียวอมฟ้าอ่อน
-  bg: "#ecfdf5",    // เขียวพาสเทลมาก
-},
-
-grader: {
-  color: "#f59e0b", // ส้มอ่อน ไม่แสบตา
-  bg: "#fffbeb",    // ครีมเหลือง
-},
-
-DEFAULT: {
-  color: "#64748b", // เทาอมฟ้า อ่านง่าย
-  bg: "#f8fafc",    // ขาวนวล
-},
-
-};
+import type { Theme } from "./AppLayout";
 
 interface AppSidebarProps {
   user: AuthUser | null;
   navItems: NavItem[];
+  theme: Theme; // role accent
   mobile?: boolean;
   mobileOpen?: boolean;
   onCloseMobile?: () => void;
   setOnClickMobileSidebar?: (label: string) => void;
 }
 
+const SB = {
+  // ✅ ลายเฉียงแบบไม่ถี่ + จาง (ดูแพงกว่า)
+  bg: `
+    repeating-linear-gradient(
+      -45deg,
+      rgba(15,23,42,0.02) 0px,
+      rgba(15,23,42,0.02) 34px,
+      rgba(15,23,42,0.00) 34px,
+      rgba(15,23,42,0.00) 68px
+    ),
+    linear-gradient(180deg, #FFFFFF 0%, #FAFAF8 100%)
+  `,
+  border: "rgba(15,23,42,0.10)",
+  text: "#0F172A",
+  muted: "#64748B",
+  hover: "rgba(15,23,42,0.04)",
+  active: "rgba(15,23,42,0.06)",
+};
+
 export function AppSidebar({
   user,
   navItems,
+  theme,
   mobile = false,
   mobileOpen = false,
   onCloseMobile,
   setOnClickMobileSidebar,
 }: AppSidebarProps) {
-  const theme = useMemo(() => {
-    const roles = user?.roles ?? [];
-
-    const hasRole = (role: Role) => roles.includes(role);
-
-    if (hasRole("admin")) return ROLE_THEMES.admin;
-
-    if (hasRole("manager") || hasRole("staff"))
-      return ROLE_THEMES.manager;
-
-    if (hasRole("grader")) return ROLE_THEMES.grader;
-    if (hasRole("staff")) return ROLE_THEMES.staff;
-
-    return ROLE_THEMES.DEFAULT;
-  }, [user?.roles]);
-
   const SidebarInner = (
     <>
       <style>{styleScrollbar}</style>
-      {/* 🔴 1. เปลี่ยนพื้นหลังของ Sidebar ทั้งหมดเป็นสีอ่อนของ Role นั้นๆ */}
-      <div className="d-flex flex-column h-100" style={{ backgroundColor: theme.bg }}>
-        
+
+      {/* ✅ ใช้ background ไม่ใช่ backgroundColor */}
+      <div className="d-flex flex-column h-100 sidebar-shell" style={{ background: SB.bg }}>
         {/* Logo / Title */}
         <div
           className="px-4 py-4 d-flex align-items-center"
           style={{
-            height: "150px",
+            height: 150,
             position: "sticky",
             top: 0,
             zIndex: 10,
-            // เปลี่ยนสีเส้นขอบให้เป็นสีเข้มแบบจางๆ
-            borderBottom: `1px solid ${theme.color}33`, 
+            borderBottom: `1px solid ${SB.border}`,
+            background: SB.bg, // ✅
           }}
         >
           <div className="d-flex align-items-center gap-3 w-100">
             <div className="px-0 d-flex align-items-center w-100 flex-column text-center">
-              <img src={Logo} alt="Logo" style={{ width: 100, height: "auto" }} />
-              {/* 🔴 2. เปลี่ยนสีข้อความชื่อระบบ เป็นสีเข้มของ Role */}
-              <h2 className="h6 mb-0 fw-bold mt-2" style={{ fontSize: "1.1rem", color: theme.color }}>
+              <img src={Logo} alt="Logo" style={{ width: 96, height: "auto" }} />
+              <h2
+                className="h6 mb-0 fw-bold mt-2"
+                style={{ fontSize: "1.05rem", color: SB.text, letterSpacing: 0.2 }}
+              >
                 ระบบจัดการข้อสอบ
               </h2>
+              <div
+                style={{
+                  marginTop: 10,
+                  height: 1,
+                  width: "70%",
+                  background: `linear-gradient(90deg, transparent, ${SB.border}, transparent)`,
+                }}
+              />
             </div>
           </div>
         </div>
 
         {/* Menu */}
-        <div className="flex-grow-1 px-3 py-2 custom-scrollbar sidebar-scroll">
+        <div className="flex-grow-1 px-3 py-2 sidebar-scroll">
           <p
             className="px-3 mb-2 mt-2 small text-uppercase fw-bold"
-            // 🔴 3. เปลี่ยนสีหัวข้อเมนู (Menu Title)
-            style={{ fontSize: "0.8rem", letterSpacing: "1.5px", color: theme.color, opacity: 0.7 }}
+            style={{
+              fontSize: "0.78rem",
+              letterSpacing: "1.4px",
+              color: SB.muted,
+            }}
           >
             Menu จัดการสอบ
           </p>
@@ -116,31 +105,45 @@ export function AppSidebar({
                   to={to}
                   className={({ isActive }) =>
                     [
-                      "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none transition-all",
-                      isActive ? "fw-semibold shadow-sm" : "",
+                      "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none sidebar-item",
+                      isActive ? "fw-semibold is-active" : "",
                     ].join(" ")
                   }
-                  // 🔴 4. ปรับสีปุ่ม: ถ้าเลือกอยู่ ให้พื้นหลังเข้ม/ตัวหนังสือขาว, ถ้ายังไม่เลือกให้เป็นสีเข้มของ Role
                   style={({ isActive }) => ({
-                    backgroundColor: isActive ? theme.color : "transparent",
-                    color: isActive ? "#ffffff" : theme.color,
+                    background: isActive ? SB.active : "transparent",
+                    color: SB.text,
+                    border: `1px solid ${isActive ? "rgba(15,23,42,0.10)" : "transparent"}`,
+                    borderLeft: isActive ? `4px solid ${theme.color}` : "4px solid transparent",
+                    boxShadow: isActive ? "inset 0 0 0 1px rgba(255,255,255,0.6)" : "none",
                   })}
-
                   onClick={() => {
                     setOnClickMobileSidebar?.(label);
-                    mobile && onCloseMobile?.()
+                    mobile && onCloseMobile?.();
                   }}
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon size={14} strokeWidth={2} style={{ opacity: isActive ? 1 : 0.8 }} />
-                      <div className="text-wrap">
-                        <span className="menu-title">{label}</span>
-                      </div>
+                      <Icon
+                        size={16}
+                        strokeWidth={2}
+                        style={{
+                          color: theme.color,
+                          opacity: isActive ? 1 : 0.78,
+                        }}
+                      />
+                      <span className="menu-title" style={{ color: SB.text }}>
+                        {label}
+                      </span>
+
                       {isActive && (
                         <div
-                          className="ms-auto rounded-circle bg-white"
-                          style={{ width: 6, height: 6 }}
+                          className="ms-auto rounded-circle"
+                          style={{
+                            width: 7,
+                            height: 7,
+                            background: theme.color,
+                            boxShadow: "0 0 0 3px rgba(255,255,255,0.7)",
+                          }}
                         />
                       )}
                     </>
@@ -148,14 +151,19 @@ export function AppSidebar({
                 </NavLink>
               ))}
 
-            {/* เส้นแบ่ง */}
-            <div className="my-2" style={{ borderTop: `1px solid ${theme.color}33` }} />
+            <div className="my-2" style={{ borderTop: `1px solid ${SB.border}` }} />
+
             <p
               className="px-3 mb-2 small text-uppercase fw-bold"
-              style={{ fontSize: "0.8rem", letterSpacing: "1.5px", color: theme.color, opacity: 0.7 }}
+              style={{
+                fontSize: "0.78rem",
+                letterSpacing: "1.4px",
+                color: SB.muted,
+              }}
             >
               Menu จัดการภายในรอบสอบ
             </p>
+
             {navItems
               .filter((item) => !item.notRequiredCampaignActive)
               .map(({ to, label, icon: Icon }) => (
@@ -164,29 +172,45 @@ export function AppSidebar({
                   to={to}
                   className={({ isActive }) =>
                     [
-                      "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none transition-all",
-                      isActive ? "fw-semibold shadow-sm" : "",
+                      "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none sidebar-item",
+                      isActive ? "fw-semibold is-active" : "",
                     ].join(" ")
                   }
                   style={({ isActive }) => ({
-                    backgroundColor: isActive ? theme.color : "transparent",
-                    color: isActive ? "#ffffff" : theme.color,
+                    background: isActive ? SB.active : "transparent",
+                    color: SB.text,
+                    border: `1px solid ${isActive ? "rgba(15,23,42,0.10)" : "transparent"}`,
+                    borderLeft: isActive ? `4px solid ${theme.color}` : "4px solid transparent",
+                    boxShadow: isActive ? "inset 0 0 0 1px rgba(255,255,255,0.6)" : "none",
                   })}
                   onClick={() => {
                     setOnClickMobileSidebar?.(label);
-                    mobile && onCloseMobile?.()
+                    mobile && onCloseMobile?.();
                   }}
                 >
                   {({ isActive }) => (
                     <>
-                      <Icon size={14} strokeWidth={2} style={{ opacity: isActive ? 1 : 0.8 }} />
-                      <div className="text-wrap">
-                        <span className="menu-title">{label}</span>
-                      </div>
+                      <Icon
+                        size={16}
+                        strokeWidth={2}
+                        style={{
+                          color: theme.color,
+                          opacity: isActive ? 1 : 0.78,
+                        }}
+                      />
+                      <span className="menu-title" style={{ color: SB.text }}>
+                        {label}
+                      </span>
+
                       {isActive && (
                         <div
-                          className="ms-auto rounded-circle bg-white"
-                          style={{ width: 6, height: 6 }}
+                          className="ms-auto rounded-circle"
+                          style={{
+                            width: 7,
+                            height: 7,
+                            background: theme.color,
+                            boxShadow: "0 0 0 3px rgba(255,255,255,0.7)",
+                          }}
                         />
                       )}
                     </>
@@ -197,26 +221,26 @@ export function AppSidebar({
         </div>
 
         {/* User footer */}
-        <div className="p-4" style={{ borderTop: `1px solid ${theme.color}33` }}>
+        <div className="p-4" style={{ borderTop: `1px solid ${SB.border}` }}>
           <div className="d-flex align-items-center gap-3">
             <div
               className="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
-              // 🔴 5. สีไอคอน User
               style={{
-                width: 48,
-                height: 48,
-                backgroundColor: theme.color,
-                color: "#ffffff",
-                fontSize: "1.2rem"
+                width: 46,
+                height: 46,
+                background: `linear-gradient(180deg, ${theme.color}, ${theme.accent ?? theme.color})`,
+                color: "#fff",
+                fontSize: "1.1rem",
               }}
             >
               {user?.name?.charAt(0) ?? "A"}
             </div>
+
             <div className="overflow-hidden">
-              <p className="mb-0 fw-bold text-truncate" style={{ fontSize: "0.95rem", color: theme.color }}>
+              <p className="mb-0 fw-bold text-truncate" style={{ fontSize: "0.92rem", color: SB.text }}>
                 {user?.name ?? "Admin User"}
               </p>
-              <p className="mb-0 small text-truncate" style={{ fontSize: "0.8rem", color: theme.color, opacity: 0.7 }}>
+              <p className="mb-0 small text-truncate" style={{ fontSize: "0.8rem", color: SB.muted }}>
                 {user?.username || "admin"}
               </p>
             </div>
@@ -226,6 +250,7 @@ export function AppSidebar({
     </>
   );
 
+  // Desktop Sidebar
   if (!mobile) {
     return (
       <aside
@@ -236,7 +261,8 @@ export function AppSidebar({
           flexShrink: 0,
           height: "100vh",
           zIndex: 1020,
-          borderColor: `${theme.color}33`, // ขอบกลืนไปกับธีม
+          borderColor: SB.border,
+          background: SB.bg,
         }}
       >
         {SidebarInner}
@@ -244,7 +270,7 @@ export function AppSidebar({
     );
   }
 
-  // mobile drawer ... (โค้ดส่วนนี้เหมือนเดิม แค่เอา bg-white ออก)
+  // Mobile drawer
   return (
     <>
       <div
@@ -252,8 +278,9 @@ export function AppSidebar({
         style={{
           width: 280,
           zIndex: 1060,
-          transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: "transform 0.28s cubic-bezier(0.4, 0, 0.2, 1)",
           transform: mobileOpen ? "translateX(0)" : "translateX(-100%)",
+          background: SB.bg, // ✅ ไม่บางแล้ว
         }}
         aria-hidden={!mobileOpen}
       >
@@ -265,13 +292,19 @@ export function AppSidebar({
           >
             <X size={18} />
           </button>
+
           {SidebarInner}
         </div>
       </div>
+
       {mobileOpen && (
         <div
           className="d-lg-none position-fixed top-0 start-0 w-100 h-100"
-          style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(2px)", zIndex: 1050 }}
+          style={{
+            background: "rgba(0,0,0,0.28)",
+            backdropFilter: "blur(2px)",
+            zIndex: 1050,
+          }}
           onClick={onCloseMobile}
         />
       )}
@@ -279,40 +312,14 @@ export function AppSidebar({
   );
 }
 
-
 const styleScrollbar = `
-/* เริ่มต้นซ่อน scroll */
-.sidebar-scroll {
-  overflow: hidden;
-}
-
-/* hover บน desktop ให้ scroll ปรากฏ */
-@media (min-width: 992px) { /* lg ขึ้นไป = desktop */
-  .sidebar-scroll:hover {
-    overflow-y: auto;
-  }
-}
-
-/* Custom scrollbar */
-.sidebar-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-scroll::-webkit-scrollbar-thumb {
-  background-color: rgb(170,170,170);
-  border-radius: 3px;
-}
-
-.sidebar-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-/* บน Mobile ให้ scroll ได้ตลอดเวลา */
+/* Mobile: scroll ได้ตลอด */
 .sidebar-scroll {
   overflow-y: auto;
 }
 
-/* บน Desktop (lg ขึ้นไป) ให้ซ่อนไว้ก่อนแล้วค่อยโชว์ตอน hover */
-@media (min-width: 992px) { 
+/* Desktop (lg+): ซ่อนไว้ก่อน โชว์ตอน hover */
+@media (min-width: 992px) {
   .sidebar-scroll {
     overflow: hidden;
   }
@@ -325,13 +332,22 @@ const styleScrollbar = `
 .sidebar-scroll::-webkit-scrollbar {
   width: 6px;
 }
-
 .sidebar-scroll::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.1); /* ปรับให้จางลงหน่อยเพื่อความสวยงาม */
+  background-color: rgba(15,23,42,0.18);
   border-radius: 3px;
 }
-
 .sidebar-scroll::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* Smooth hover */
+.sidebar-item {
+  transition: background 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+.sidebar-item:hover {
+  background: rgba(15,23,42,0.04) !important;
+}
+.sidebar-item:active {
+  transform: translateY(0.5px);
 }
 `;

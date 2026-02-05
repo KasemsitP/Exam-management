@@ -17,7 +17,8 @@ export type Permission =
   | "manage_accounts"
   | "manage_bagshandover"
   | "importcsv"
-  | "signshheets";
+  | "signshheets"
+  | "manage_grading";
 
 const ALL_PERMISSIONS: Permission[] = [
 "manage_bags",
@@ -36,6 +37,7 @@ const ALL_PERMISSIONS: Permission[] = [
 "manage_bagshandover",
 "importcsv",
 "signshheets",
+"manage_grading"
 ];
 
 const rolePermissions: Record<Role, Permission[]> = {

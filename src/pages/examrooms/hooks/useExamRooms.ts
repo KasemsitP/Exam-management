@@ -19,7 +19,6 @@ export interface RoomFormValues {
   roomCode: string;
   capacity: number;
 }
-
 export const useExamRooms = () => {
   const dispatch = useAppDispatch();
   const { toast } = useToast();

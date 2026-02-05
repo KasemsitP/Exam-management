@@ -31,8 +31,10 @@ import QrPage from '@/pages/scan-check/ProctorScanPage';
 import SignSheetsPage from "@/pages/signsheets/SignSheetsPage";
 import SubjectPage from "./pages/subjects/SubjectPage";
 import GraderPage from "@/pages/grader/GradersPage";
+import AdminResetPage from "@/pages/admin-reset/AdminResetScorePage";
 //import UserSearchPage from "@/pages/UserSearch";
 import ScoreReviewPage from "./pages/scores/ScorePage"
+// import GradingRecheckPage from "./pages/gradingrecheck/GradingRecheckPage"
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BootstrapToastViewport } from "@/components/ui/bootstrap-toast";
 import{OverlayLoader} from "@/components/ui/Loading";
@@ -89,12 +91,13 @@ function AppContent() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/campaign-sessions" element={<CampaignsPage />} />
           <Route path="/seat-allocation" element={<SeatAllocationPage />} />
-          <Route path="/exam-rooms" element={<ExamRoomsPage />} />
+          {/* <Route path="/exam-rooms" element={<ExamRoomsPage />} /> */}
           <Route path="/bags" element={<BagsPage />} />
           <Route path="/bag-handover" element={<BagHandoverPage />} />
           <Route path="/import-csv" element={<ImportCsvPage />} />
           <Route path="/keys" element={<KeyManagementPage />} />
           <Route path="/sign-sheets" element={<SignSheetsPage />} />
+           {/* <Route path="/grading-recheck" element={<GradingRecheckPage />} /> */}
           {/* <Route path="/graders" element={<GraderManagementPage />} /> */}
           <Route path="/grading-station" element={<GradingStationPage />} />
           <Route path="/score-review" element={<ScoreReviewPage />} />
@@ -103,6 +106,7 @@ function AppContent() {
           <Route path="/qrscanner" element={<QrPage />} />
           <Route path="/subject" element={<SubjectPage/>}/>
            <Route path="/graders" element={<GraderPage/>}/>
+            <Route path="/admin-reset" element={< AdminResetPage/>}/>
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<NotFound />} />

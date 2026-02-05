@@ -118,7 +118,7 @@ export function CampaignPickerModal({
                     <div className="flex-grow-1">
                       <div className="d-flex align-items-center justify-content-between mb-1">
                         <span className={`fw-bold ${isSelected ? "text-primary" : "text-dark"}`}>
-                          {c.code ?? idNum}
+                          {c.name ?? idNum}
                         </span>
                         {c.isActive ? (
                           <span

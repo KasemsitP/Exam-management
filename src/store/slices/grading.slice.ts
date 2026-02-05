@@ -40,6 +40,7 @@ export interface GradingRecord {
   slotId: number;
   score: number;
   enteredAt: string;
+  qr_payload:string
 }
 
 export const verifyAndAllocateThunk = createAsyncThunk<
@@ -92,7 +93,8 @@ export const fetchRecordThunk = createAsyncThunk<
       const records: GradingRecord[] = res.data.map((r: any) => ({
         slotId: r.slot_id,
         score: r.score,
-        enteredAt: new Date(r.entered_at).toLocaleString("th-TH", {
+        qr_payload : r.qr_payload,
+        enteredAt: new Date(r.enteredAT).toLocaleString("th-TH", {
           timeZone: "Asia/Bangkok",
           year: "numeric",
           month: "2-digit",

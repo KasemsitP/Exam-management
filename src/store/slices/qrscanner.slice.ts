@@ -4,87 +4,108 @@ import { RootState } from "../index"; // (ต้อง Import RootState)
 
 export interface QRverification {
   user_session_id: number;
-  session_id : number;
+  session_id: number;
   user_id: number;
   userCode: string;
   firstName: string;
   lastName: string;
-  roomName: string | null; 
-  qr_payload: string | null; 
+  roomName: string | null;
+  qr_payload: string | null;
+  rowNo: number | null
+  session_code: string
+  subjectName: string
+  campaignName: string
+
+}
+
+
+export interface userQR {
+  user_session_id: number;
+  session_id: number;
+  user_id: number;
+  userCode: string;
+  firstName: string;
+  lastName: string;
+  roomName: string | null;
+  qr_payload: string | null;
+  rowNo: number | null
+  session_code: string
+  subjectName: string
+  campaignName: string
 }
 
 interface VerifyQrPayload {
-  qrPayload: string;   // (Base64 string)
-  campaignId: string; // (e.g., "camp-1")
+  qrPayload: string;   // (Base64 string)
+  campaignId: string; // (e.g., "camp-1")
 }
 
 // (Backend ควรตอบกลับเป็น UserSessionData)
 type VerifyQrResponse = QRverification
 
 interface ProctorState {
-  status: "idle" | "loading" | "succeeded" | "failed";
-  error: string | null;
-  scannedUser: QRverification | null;
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
+  scannedUser: QRverification | null;
 }
 
 const initialState: ProctorState = {
-  status: "idle",
-  error: null,
-  scannedUser: null,
+  status: "idle",
+  error: null,
+  scannedUser: null,
 };
 
 // ------------------------------
 // Thunk (API Call)
 // ------------------------------
 export const verifyQrCodeThunk = createAsyncThunk<
-  VerifyQrResponse,
-  VerifyQrPayload,
-  { rejectValue: string }
+  VerifyQrResponse,
+  VerifyQrPayload,
+  { rejectValue: string }
 >(
-  "proctor/verifyQr",
-  async (payload, { rejectWithValue }) => {
-    try {
-      // (นี่คือ API ใหม่ที่เราจะสร้าง)
-      const response = await axios.post("/api/verify/qr-payload", payload);
-      return response.data as VerifyQrResponse;
-    } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
-        return rejectWithValue(error.response?.data?.message ?? "Verify failed");
-      }
-      return rejectWithValue("Verify failed");
-    }
-  }
+  "proctor/verifyQr",
+  async (payload, { rejectWithValue }) => {
+    try {
+      // (นี่คือ API ใหม่ที่เราจะสร้าง)
+      const response = await axios.post("/api/verify/qr-payload", payload);
+      return response.data as VerifyQrResponse;
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        return rejectWithValue(error.response?.data?.message ?? "Verify failed");
+      }
+      return rejectWithValue("Verify failed");
+    }
+  }
 );
 
 // ------------------------------
 // Slice
 // ------------------------------
 const qrSlice = createSlice({
-  name: "qr",
-  initialState,
-  reducers: {
-    clearScanResult: (state) => {
-      state.status = "idle";
-      state.error = null;
-      state.scannedUser = null;
-    },
-  },
-  extraReducers: (builder) => {
-    builder
-      .addCase(verifyQrCodeThunk.pending, (state) => {
-        state.status = "loading";
-        state.error = null;
-        state.scannedUser = null;
-      })
-      .addCase(verifyQrCodeThunk.fulfilled, (state, action) => {
-        state.status = "succeeded";
-        state.scannedUser = action.payload;
-      })
-      .addCase(verifyQrCodeThunk.rejected, (state, action) => {
-        state.status = "failed";
-        state.error = action.payload ?? "Failed";
-      });
-  },
+  name: "qr",
+  initialState,
+  reducers: {
+    clearScanResult: (state) => {
+      state.status = "idle";
+      state.error = null;
+      state.scannedUser = null;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(verifyQrCodeThunk.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+        state.scannedUser = null;
+      })
+      .addCase(verifyQrCodeThunk.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.scannedUser = action.payload;
+      })
+      .addCase(verifyQrCodeThunk.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Failed";
+      });
+  },
 });
 
 export const { clearScanResult } = qrSlice.actions;
@@ -94,4 +115,4 @@ export const { clearScanResult } = qrSlice.actions;
 // ------------------------------
 export const selectProctorScanState = (state: RootState) => state.qr;
 
-export {qrSlice}
+export { qrSlice }

@@ -41,6 +41,11 @@ import type { CreateBagForm } from "./bags.types";
 // ปรับ payload ให้เทียบเท่ากันเสมอ
 const normalizePayload = (s: string) => s.trim();
 
+// type ScanEntry = {
+//   payload: string;
+//   scannedAt: Date;
+// };
+
 export default function BagsPage() {
   const dispatch = useAppDispatch();
   const { toast } = useToast();
@@ -65,6 +70,7 @@ export default function BagsPage() {
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const [IsScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [qrPayloads, setQrPayloads] = useState<string[]>([]);
+  const [DatePayloads, setDatePaylaods] = useState<Date[]>([]);
   const deviceId: string | undefined = undefined;
 
   const isLoading = bagStatus === "loading";
@@ -244,7 +250,16 @@ export default function BagsPage() {
   const handleScan = (raw: string) => {
     if (!activeCampaign || !scannerEnabled) return;
 
+
     const data = normalizePayload(raw);
+    //console.log("TEST PAYLOAD" , data)
+
+    const dateTime = new Date()
+    // const thaiTime = dateTime.toLocaleString("th-TH", {
+    //   timeZone: "Asia/Bangkok",
+    // });
+
+     console.log(dateTime);
 
     // กันสแกนถี่
     if (recentScanSetRef.current.has(data)) return;
@@ -254,17 +269,28 @@ export default function BagsPage() {
       RECENT_WINDOW_MS
     );
 
+
     // กันซ้ำใน local list
     if (qrPayloads.includes(data)) {
-      toast({
-        title: "สแกนซ้ำ",
-        description: "QR Code นี้ถูกสแกนแล้ว",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "สแกนซ้ำ",
+      //   description: "QR Code นี้ถูกสแกนแล้ว",
+      //   variant: "destructive",
+      // });
+      Swal.fire({
+        icon : "error",
+        title : "QR code นี้ถูกสแกนแล้ว",
+        text  : "กรุณาสแกนอีกครั้ง"
+      })
       return;
     }
 
+
+
     setQrPayloads((prev) => [...prev, data]);
+    setDatePaylaods((prev) => [...prev , dateTime])
+
+    // console.log(qrPayloads)
 
 
     setManualCode("");
@@ -293,6 +319,7 @@ export default function BagsPage() {
         CreateBagAndAddQrPayload({
           campaignId: Number(activeCampaign.id),
           payload: qrPayloads,
+          datetime : DatePayloads
         })
       ).unwrap();
 
@@ -417,7 +444,7 @@ export default function BagsPage() {
       <ModalBackdrop open={IsScannerModalOpen} />
       <BagScannerModal
         open={IsScannerModalOpen}
-        onClose={() => { setIsScannerModalOpen(false); setQrPayloads([]); }}
+        onClose={() => { setIsScannerModalOpen(false); setQrPayloads([]); setDatePaylaods([]);  }}
         canScan={canScan}
         isSealed={isSealed}
         scannerEnabled={scannerEnabled}
@@ -431,6 +458,7 @@ export default function BagsPage() {
         onClearCodes={handleClearCodes}
         onFinalize={handleFinalizeAndLink}
         scannedPayloads={qrPayloads}
+        scannedDate = {DatePayloads}
         bagStatus={bagStatus}
         bookletsInBag={bookletsInBag}
       />

@@ -32,13 +32,11 @@ export const Header: React.FC<HeaderProps> = ({
           {/* ปุ่มชิดขวา */}
           <button
             type="button"
-            className="btn btn-primary  ms-auto"
+            className="btn btn-primary ms-auto"
             onClick={() => {
-              setShowCreateForm((s) => !s);
-              if (!showCreateForm) {
-                setNewCode("");
-                setNewName("");
-              }
+              setShowCreateForm(true);   // เปิดอย่างเดียว ไม่ toggle
+              setNewCode("");
+              setNewName("");
             }}
             disabled={loading}
           >

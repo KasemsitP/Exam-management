@@ -201,6 +201,7 @@ export const fetchInitialExamData = createAsyncThunk<ExamCampaign[], void, { rej
   }
 );
 
+
 interface CreateCampaignInput {
   year_be: string;
   site: string
@@ -517,11 +518,13 @@ const examDataSlice = createSlice({
         state.status = "loading";
         state.error = null;
       })
-      .addCase(fetchInitialExamData.fulfilled, (state, action) => {
-        state.status = "succeeded";
-        state.list = action.payload;
-        state.activeCampaignId = action.payload[0]?.id ?? null;
-      })
+.addCase(fetchInitialExamData.fulfilled, (state, action) => {
+  state.status = "succeeded";
+  state.list = action.payload;
+
+  const firstActive = action.payload.find((c) => c.isActive);
+  state.activeCampaignId = firstActive?.id ?? action.payload[0]?.id ?? null;
+})
       .addCase(fetchInitialExamData.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload ?? "Failed to fetch exam data";
@@ -646,8 +649,10 @@ export { examDataSlice };
  * ======================================================= */
 export const selectCampaigns = (state: RootState) => state.examData.list;
 
+
 export const selectActiveCampaign = (state: RootState) =>
   state.examData.list.find((c) => c.id === state.examData.activeCampaignId) ?? null;
+
 
 export const selectSessionsForCampaign =
   (campaignId: string | null) =>

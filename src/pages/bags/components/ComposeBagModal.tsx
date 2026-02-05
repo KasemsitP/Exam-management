@@ -100,22 +100,41 @@ export default function ComposeBagModal({
                           <ul className="list-group list-group-flush">
                             {isSealed
                               ? bookletsInBag.map((bk: any) => (
+                                // <li key={bk.id} className="list-group-item">
+                                //   <div className="d-flex justify-content-between align-items-start">
+                                //     <div className="d-flex flex-column">
+                                //       <span className="fw-medium">
+                                //         {bk.id}
+                                //       </span>
+                                //       <span
+                                //         className="small text-muted text-truncate"
+                                //         style={{ maxWidth: "100%" }}
+                                //       >
+                                //         {bk.qrPayload}
+                                //       </span>
+                                //     </div>
+
+                                //     <span className="small text-muted text-nowrap ms-3">
+                                //       {bk.created_at}
+                                //     </span>
+                                //   </div>
+                                // </li>
                                 <li
                                   key={bk.id}
-                                  className="list-group-item"
+                                  className="list-group-item d-flex align-items-center gap-3"
                                 >
-                                  <div className="d-flex flex-column">
-                                    <span className="fw-medium">
-                                      {bk.id} {/*  — {bk.fullName} */}
-                                    </span>
-                                    <span
-                                      className="small text-muted text-truncate"
-                                      style={{ maxWidth: "100%" }}
-                                    >
-                                      {bk.qrPayload}
-                                    </span>
-                                  </div>
+                                  {/* เวลา ซ้าย */}
+                                  <span
+                                    className="text-muted small"
+                                    style={{ minWidth: 50 }}
+                                  >
+                                    {new Date(bk.created_at).toLocaleTimeString("th-TH")}
+                                  </span>
+
+                                  {/* payload / id ขวา */}
+                                  <span>{bk.qrPayload}</span>
                                 </li>
+
                               ))
                               : composeBag.scanned.map((code: string) => (
                                 <li

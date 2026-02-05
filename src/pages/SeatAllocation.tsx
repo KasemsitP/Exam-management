@@ -13,6 +13,9 @@ import {
 } from "@/store/slices/examRooms.slice";
 import axios from "axios";
 import Swal from "sweetalert2";
+import { ExamRoom, deleteRoomThunk, saveRoomThunk } from "@/store/slices/examRooms.slice";
+import { Search, Plus } from "lucide-react";
+import { useForm } from 'react-hook-form';
 
 type SeatCell = {
   seatNo: number;
@@ -28,6 +31,7 @@ type AssignedSummary = {
 
 
 type RoomLike = {
+  campaign_id?: number;
   roomCode: string;
   capacity: number;
 };
@@ -46,6 +50,12 @@ type SeatApiResponse = {
   }>;
 };
 
+export interface RoomFormValues {
+  campaign_id: string;
+  roomCode: string;
+  capacity: number;
+}
+
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -53,7 +63,7 @@ function clamp(n: number, min: number, max: number) {
 export default function SeatAllocationPage() {
   const dispatch = useAppDispatch();
   const campaign = useAppSelector(selectActiveCampaign);
-  const roomsState = useAppSelector(selectExamRoomsSlice);
+  const { rooms = [], status: roomStatus } = useAppSelector(selectExamRoomsSlice);
 
   // cache layout แต่ละห้อง: key = roomCode
   const [roomSeats, setRoomSeats] = useState<Record<string, SeatCell[]>>({});
@@ -66,10 +76,12 @@ export default function SeatAllocationPage() {
 
   const [totaluser, setTotalUsers] = useState<number>(0);
   const [totaluserAssigned, setTotalUsersAssigned] = useState<number>(0);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<RoomFormValues | null>(null);
 
 
 
-  const rooms: RoomLike[] = (roomsState?.rooms ?? []) as any;
+  //  const rooms: RoomLike[] = (roomsState?.rooms ?? []) as any;
 
   const roomsTotal = useMemo(() => {
     if (!rooms.length) return 0;
@@ -85,32 +97,82 @@ export default function SeatAllocationPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil((rooms?.length || 0) / itemsPerPage)),
-    [rooms?.length]
-  );
-
-  const currentRooms = useMemo(() => {
-    const indexOfLastRoom = currentPage * itemsPerPage;
-    const indexOfFirstRoom = indexOfLastRoom - itemsPerPage;
-    return rooms.slice(indexOfFirstRoom, indexOfLastRoom);
-  }, [rooms, currentPage]);
-
   // ===== Modal state =====
   const [selectedRoom, setSelectedRoom] = useState<RoomLike | null>(null);
   const [modalSearch, setModalSearch] = useState("");
   const [modalColsPerPage, setModalColsPerPage] = useState(6);
   const [modalPage, setModalPage] = useState(1);
   const [modalSeatsPerRow, setModalSeatsPerRow] = useState(30);
+  const [Room, setRoom] = useState<ExamRoom[]>([])
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const handleSetSeatsPerColumn = () => {
-    const value = Number(inputSeatsPerColumn);
-    if (Number.isFinite(value) && value > 0) {
-      setSeatsPerColumn(value);
-    } else {
-      alert("จำนวนที่นั่งต่อคอลัมน์ต้องมากกว่า 0");
+  // const handleSetSeatsPerColumn = () => {
+  //   const value = Number(inputSeatsPerColumn);
+  //   if (Number.isFinite(value) && value > 0) {
+  //     setSeatsPerColumn(value);
+  //   } else {
+  //     alert("จำนวนที่นั่งต่อคอลัมน์ต้องมากกว่า 0");
+  //   }
+  // };
+
+  const form = useForm<RoomFormValues>({
+    defaultValues: {
+      campaign_id: String(campaign?.id ?? editingRoom?.campaign_id ?? ""),
+      roomCode: editingRoom?.roomCode ?? "",
+      capacity: editingRoom?.capacity ?? 30,
+    },
+  });
+  const filteredRooms = useMemo(() => {
+    const campaignId = campaign?.id;
+    let list = Array.isArray(rooms) ? rooms : [];
+    if (campaignId != null) {
+      list = list.filter(
+        (r) => Number(r.campaign_id) === Number(campaignId)
+      );
+
     }
-  };
+    console.log(list)
+
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return list;
+
+    return list.filter(
+      (r) =>
+        r.roomCode.toLowerCase().includes(term) ||
+        String(r.capacity).includes(term)
+    );
+  }, [rooms, campaign, searchTerm]);
+
+  const summary = useMemo(() => {
+    const totalRooms = filteredRooms.length;
+    const totalCapacity = filteredRooms.reduce(
+      (sum, r) => sum + (Number(r.capacity) || 0),
+      0
+    );
+    return { totalRooms, totalCapacity };
+  }, [filteredRooms]);
+
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredRooms.length / itemsPerPage)),
+    [filteredRooms.length]
+  );
+
+  const currentRooms = useMemo(() => {
+    const indexOfLastRoom = currentPage * itemsPerPage;
+    const indexOfFirstRoom = indexOfLastRoom - itemsPerPage;
+    return filteredRooms.slice(indexOfFirstRoom, indexOfLastRoom);
+  }, [filteredRooms, currentPage]);
+
+  useEffect(() => {
+    if (!dialogOpen) return;
+
+    form.reset({
+      campaign_id: String(campaign?.id ?? editingRoom?.campaign_id ?? ""),
+      roomCode: editingRoom?.roomCode ?? "",
+      capacity: editingRoom?.capacity ?? 30,
+    });
+  }, [dialogOpen, editingRoom, campaign?.id]);
 
   useEffect(() => {
     if (!campaign?.id) return;
@@ -119,10 +181,14 @@ export default function SeatAllocationPage() {
     dispatch(fetchRoomsByCampaignThunk(cid));
     loadAssignedCounts(cid);
     fetchUserAssigned(cid);
+    fetchRoom(cid)
   }, [campaign?.id, dispatch]);
   useEffect(() => {
     setModalPage(1);
   }, [modalSearch, selectedRoom]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (!campaign?.id) return;
@@ -174,6 +240,24 @@ export default function SeatAllocationPage() {
 
       setTotalUsers(total);
       setTotalUsersAssigned(assigned);
+    } catch (err) {
+      console.error("fetch user assigned error", err);
+    }
+  };
+
+  const fetchRoom = async (campaignId: number) => {
+    try {
+      const res = await axios.get(
+        `/api/exam-rooms/campaign/${campaignId}`
+      );
+      const rooms: ExamRoom[] = res.data.map((r: any) => ({
+        campaign_id: r.campaignId,
+        roomCode: r.roomCode,
+        capacity: r.capacity,
+      }));
+      setRoom(rooms)
+      console.log(rooms)
+
     } catch (err) {
       console.error("fetch user assigned error", err);
     }
@@ -268,7 +352,148 @@ export default function SeatAllocationPage() {
       fullName: s.full_name,
       lastNameKey: s.last_name,
     }));
+
+
   };
+
+  // const filteredRooms = useMemo(() => {
+  //   const campaignId = campaign?.id;
+  //   let list = Array.isArray(rooms) ? rooms : [];
+  //   if (campaignId != null) {
+  //     list = list.filter(
+  //       (r) => Number(r.campaign_id) === Number(campaignId)
+  //     );
+
+  //   }
+  //   console.log(list)
+
+  //   const term = searchTerm.trim().toLowerCase();
+  //   if (!term) return list;
+
+  //   return list.filter(
+  //     (r) =>
+  //       r.roomCode.toLowerCase().includes(term) ||
+  //       String(r.capacity).includes(term)
+  //   );
+  // }, [rooms, activeCampaign, searchTerm]);
+
+
+  // const summary = useMemo(() => {
+  //   const totalRooms = filteredRooms.length;
+  //   const totalCapacity = filteredRooms.reduce(
+  //     (sum, r) => sum + (Number(r.capacity) || 0),
+  //     0
+  //   );
+  //   return { totalRooms, totalCapacity };
+  // }, [filteredRooms]);
+  const watchRoomCode = form.watch("roomCode");
+
+  // reset เมื่อเปิด dialog / campaign เปลี่ยน / editingRoom เปลี่ยน
+  useEffect(() => {
+    if (!dialogOpen) return;
+
+    form.reset({
+      campaign_id: String(campaign?.id ?? editingRoom?.campaign_id ?? ""),
+      roomCode: editingRoom?.roomCode ?? "",
+      capacity: editingRoom?.capacity ?? 30,
+    });
+  }, [dialogOpen, campaign?.id, editingRoom, form]);
+  const openCreate = () => {
+    setEditingRoom(null);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (room: RoomFormValues) => {
+    setEditingRoom(room);
+    setDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    form.reset({
+      campaign_id: String(campaign?.id ?? editingRoom?.campaign_id ?? ""),
+      roomCode: editingRoom?.roomCode ?? "",
+      capacity: editingRoom?.capacity ?? 30,
+    });
+
+    setDialogOpen(false);
+    setEditingRoom(null);
+  };
+
+  // -------- Actions ----------
+  const handleRemove = async (campaign_id: string, roomCode: string) => {
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "ยืนยันการลบห้องสอบ",
+      text: `คุณต้องการลบห้องสอบ ${roomCode} หรือไม่`,
+      showCancelButton: true,
+      confirmButtonText: "ลบ",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#d33",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await dispatch(deleteRoomThunk({ campaign_id, roomCode })).unwrap();
+
+      await Swal.fire({
+        icon: "success",
+        title: "ลบห้องสอบแล้ว",
+        text: `ห้องสอบ ${roomCode} ถูกลบเรียบร้อย`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "ลบล้มเหลว",
+        text: error?.message ?? "API Error",
+      });
+    }
+  };
+  const handleSubmit = async (values: RoomFormValues) => {
+    const roomCode = values.roomCode.trim();
+    if (!roomCode) {
+      await Swal.fire({ icon: "error", title: "ข้อมูลไม่ครบ", text: "กรุณาระบุรหัสห้องสอบ" });
+      return;
+    }
+
+    const capacity = Number(values.capacity);
+    if (Number.isNaN(capacity) || capacity <= 0) {
+      await Swal.fire({ icon: "error", title: "ข้อมูลไม่ถูกต้อง", text: "จำนวนที่รองรับต้องมากกว่า 0" });
+      return;
+    }
+
+    const payload: RoomFormValues = {
+      campaign_id: values.campaign_id || String(campaign?.id ?? ""),
+      roomCode,
+      capacity,
+    };
+
+    if (!payload.campaign_id) {
+      await Swal.fire({ icon: "error", title: "ไม่พบข้อมูลรอบสอบ", text: "กรุณาเลือกแคมเปญก่อน" });
+      return;
+    }
+
+    try {
+      await dispatch(saveRoomThunk(payload)).unwrap();
+
+      await Swal.fire({
+        icon: "success",
+        title: editingRoom ? "บันทึกห้องสอบเรียบร้อย" : "เพิ่มห้องสอบสำเร็จ",
+        text: `${roomCode} รองรับ ${capacity.toLocaleString()} คน`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      if (campaign?.id) dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
+      closeDialog();
+    } catch (error: any) {
+      await Swal.fire({ icon: "error", title: "บันทึกล้มเหลว", text: error?.message ?? "API Error" });
+    }
+  };
+
+
 
 
   const handleOpenRoomPreview = async (room: RoomLike) => {
@@ -333,7 +558,63 @@ export default function SeatAllocationPage() {
     const ok = await Swal.fire({
       icon: "warning",
       title: "รีเซ็ตผังที่นั่งทั้งหมด",
-      text: `ระบบจะลบผังที่นั่งของแคมเปญ${campaign.name ?? campaign.code} ทุกห้อง`,
+      text: `ระบบจะลบผังที่นั่งของแคมเปญ${campaign.name ?? campaign.campaign_size} ทุกห้อง`,
+      showCancelButton: true,
+      confirmButtonText: "ตกลง",
+      cancelButtonText: "ยกเลิก",
+    }).then((r) => r.isConfirmed);
+
+    if (!ok) return;
+
+    try {
+      await axios.delete(`/api/seat/reset/${campaign.id}`);
+
+      // 1) เคลียร์ state layout ที่ cache ไว้ทั้งหมด
+      setRoomSeats({});       // ถ้าคุณใช้ useState<Record<string, SeatCell[]>>({})
+      setSelectedRoom(null);  // ปิด modal ถ้ามี
+      setModalSearch("");
+      setModalPage(1);
+
+      // 2) รีเซ็ตตัวเลขที่คุณใช้โชว์จำนวนคน (แล้วแต่ที่ประกาศ state ไว้)
+      setAssignedCounts({});
+      // ถ้าอนาคตเปลี่ยนเป็น per-room ก็ใช้ setAssignedCounts({}) แล้วค่อย reload ใหม่
+
+      // 3) refresh รายการห้องจาก backend (จะได้ allocatedCount = 0)
+      dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
+      loadAssignedCounts(Number(campaign.id));
+      fetchUserAssigned(Number(campaign.id));
+
+
+      await Swal.fire({
+        icon: "success",
+        title: "รีเซ็ตผังที่นั่งเรียบร้อย",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error(error);
+      Swal.fire({
+        icon: "error",
+        title: "จัดที่นั่งไม่สำเร็จ",
+        text: "กรุณาลองใหม่อีกครั้ง",
+      });
+    }
+  };
+
+  const handleCreateRoom = async () => {
+    if (!campaign?.id) {
+      await Swal.fire({
+        icon: "error",
+        title: "เกิดข้อผิดพลาด",
+        text: "ไม่พบข้อมูลแคมเปญ",
+      });
+      return;
+    }
+
+    const ok = await Swal.fire({
+      icon: "warning",
+      title: "รีเซ็ตผังที่นั่งทั้งหมด",
+      text: `ระบบจะลบผังที่นั่งของแคมเปญ${campaign.name ?? campaign.campaign_size} ทุกห้อง`,
       showCancelButton: true,
       confirmButtonText: "ตกลง",
       cancelButtonText: "ยกเลิก",
@@ -393,13 +674,42 @@ export default function SeatAllocationPage() {
             <div>
               <h5 className="mb-1 d-flex align-items-center gap-2">จัดการที่นั่งสอบ</h5>
             </div>
+            <div className="d-flex flex-wrap align-items-center gap-2">
+              {/* Search */}
+              <div className="position-relative">
+                <Search
+                  size={16}
+                  className="position-absolute"
+                  style={{
+                    left: 10,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    pointerEvents: "none",
+                  }}
+                />
+                <input
+                  className="form-control ps-5"
+                  style={{ width: 220 }}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="ค้นหาห้องสอบ"
+                />
+              </div>
+
+              <button
+                className="btn btn-primary d-inline-flex align-items-center gap-2"
+                onClick={openCreate}
+              >
+                <Plus size={16} /> เพิ่มห้องสอบ
+              </button>
+            </div>
           </div>
 
           {/* Card Body */}
           <div className="card-body">
             <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
               <span className="badge text-bg-light border">
-                Campaign: {campaign?.name ?? campaign?.id ?? "-"}
+                รอบสอบ: {campaign?.name ?? campaign?.id ?? "-"}
               </span>
             </div>
 
@@ -475,7 +785,7 @@ export default function SeatAllocationPage() {
                     <th style={{ width: "10%" }}>ความจุ (ที่นั่ง)</th>
                     <th style={{ width: "20%" }}>สถานะการจัดสรร</th>
                     <th style={{ width: "20%" }}>จัดแล้ว / ความจุ</th>
-                    <th className="text-end" style={{ width: "15%" }}>
+                    <th className="text-end " style={{ width: "15%" }}>
                       การจัดการ
                     </th>
                   </tr>
@@ -531,23 +841,50 @@ export default function SeatAllocationPage() {
                         <td>
                           {allocatedCount} / {room.capacity} คน
                         </td>
-                        <td className="text-end">
-                          <button
-                            className="btn btn-sm btn-outline-success me-2"
-                            onClick={() => {
-                              setCreateRoom(room);  // ใช้ modal สร้างผังตามที่เขียนไว้แล้ว
-                            }}
-                          >
-                            สร้างผังที่นั่ง
-                          </button>
+                        <td>
+                          <div className="d-flex justify-content-center gap-2 ">
+                            <button
+                              className="btn btn-sm btn-outline-success"
+                              onClick={() => setCreateRoom(room)}
+                            >
+                              สร้างผังที่นั่ง
+                            </button>
 
-                          <button
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => handleOpenRoomPreview(room)}
-                          >
-                            ดูผังที่นั่ง
-                          </button>
+                            <button
+                              className="btn btn-sm btn-outline-primary"
+                              onClick={() => handleOpenRoomPreview(room)}
+                            >
+                              ดูผังที่นั่ง
+                            </button>
+
+                            <button
+                              className="btn btn-sm btn-outline-secondary"
+                              onClick={() =>
+                                openEdit({
+                                  campaign_id: String(room.campaign_id ?? campaign?.id ?? ""),
+                                  roomCode: room.roomCode,
+                                  capacity: Number(room.capacity ?? 0),
+                                })
+                              }
+                            >
+                              แก้ไข
+                            </button>
+
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() =>
+                                handleRemove(
+                                  String(room.campaign_id ?? campaign?.id ?? ""),
+                                  room.roomCode
+                                )
+                              }
+                            >
+                              ลบ
+                            </button>
+                          </div>
                         </td>
+
+
                       </tr>
                     );
                   })}
@@ -910,6 +1247,100 @@ export default function SeatAllocationPage() {
             </div>
           </div>
         )}
+        {dialogOpen && (
+          <>
+            <div className="modal-backdrop show" style={{ zIndex: 1050 }} />
+            <div
+              className="modal show"
+              style={{ display: "block", zIndex: 1055 }}
+              role="dialog"
+              aria-modal="true"
+              onMouseDown={(e) => {
+                // คลิกพื้นหลังให้ปิด
+                if (e.target === e.currentTarget) closeDialog();
+              }}
+            >
+              <div className="modal-dialog modal-dialog-centered">
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h6 className="modal-title">
+                      {editingRoom ? "แก้ไขข้อมูลห้องสอบ" : "เพิ่มห้องสอบใหม่"}
+                    </h6>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      onClick={closeDialog}
+                      aria-label="Close"
+                    />
+                  </div>
+
+                  {/* ✅ สำคัญ: ใช้ form.handleSubmit */}
+                  <form onSubmit={form.handleSubmit(handleSubmit)}>
+                    <div className="modal-body">
+                      {/* campaign_id ซ่อน */}
+                      <input type="hidden" {...form.register("campaign_id")} />
+
+                      {/* Room code */}
+                      <div className="mb-3">
+                        <label htmlFor="room-code" className="form-label">
+                          รหัสห้องสอบหรือชื่อห้องสอบ
+                        </label>
+                        <input
+                          id="room-code"
+                          className="form-control"
+                          placeholder="THE DECK 1"
+                          {...form.register("roomCode", { required: true })}
+                          disabled={Boolean(editingRoom)} // ตอนแก้ไขห้ามเปลี่ยน roomCode
+                        />
+                      </div>
+
+                      {/* Capacity */}
+                      <div className="mb-3">
+                        <label htmlFor="room-capacity" className="form-label">
+                          จำนวนที่รองรับ (คน)
+                        </label>
+                        <input
+                          id="room-capacity"
+                          type="number"
+                          min={1}
+                          className="form-control"
+                          {...form.register("capacity", {
+                            valueAsNumber: true,
+                            min: 1,
+                          })}
+                        />
+                      </div>
+
+                      <p className="text-muted small mb-0">
+                        ห้อง <strong>{form.watch("roomCode") || "(ระบุรหัสห้อง)"}</strong>
+                      </p>
+                    </div>
+
+                    <div className="modal-footer">
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary"
+                        onClick={closeDialog}
+                      >
+                        ยกเลิก
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={roomStatus === "loading"} // หรือใช้ isSubmitting ก็ได้
+                      >
+                        {editingRoom ? "บันทึก" : "เพิ่มห้องสอบ"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+
 
       </div>
     </div>

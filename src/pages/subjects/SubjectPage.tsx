@@ -256,14 +256,44 @@ const SubjectPage: React.FC = () => {
 
       {/* ฟอร์มสร้างวิชาใหม่ */}
       {showCreateForm && (
-        <div className="card mb-4">
-          <div className="card-header">
-            <strong>สร้างวิชาใหม่</strong>
+  <>
+    {/* Backdrop */}
+    <div
+      className="modal-backdrop show"
+      style={{ zIndex: 1050 }}
+      onClick={() => {
+        if (!loading) setShowCreateForm(false);
+      }}
+    />
+
+    {/* Modal */}
+    <div
+      className="modal show"
+      style={{ display: "block", zIndex: 1055 }}
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={(e) => {
+        // คลิกนอกกล่องเพื่อปิด (optional)
+        if (e.target === e.currentTarget && !loading) setShowCreateForm(false);
+      }}
+    >
+      <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div className="modal-content">
+          <div className="modal-header">
+            <h6 className="modal-title">สร้างวิชาใหม่</h6>
+            <button
+              type="button"
+              className="btn-close"
+              aria-label="Close"
+              disabled={loading}
+              onClick={() => setShowCreateForm(false)}
+            />
           </div>
-          <div className="card-body">
-            <form onSubmit={handleCreateSubject}>
-              <div className="row g-3 align-items-end">
-                <div className="col-12 col-md-3">
+
+          <form onSubmit={handleCreateSubject}>
+            <div className="modal-body">
+              <div className="row g-3">
+                <div className="col-12 col-md-4">
                   <label className="form-label mb-1">รหัสวิชา</label>
                   <input
                     type="text"
@@ -272,9 +302,11 @@ const SubjectPage: React.FC = () => {
                     onChange={(e) => setNewCode(e.target.value)}
                     placeholder="เช่น LAW1002"
                     disabled={loading}
+                    autoFocus
                   />
                 </div>
-                <div className="col-12 col-md-5">
+
+                <div className="col-12 col-md-8">
                   <label className="form-label mb-1">ชื่อวิชา</label>
                   <input
                     type="text"
@@ -285,31 +317,35 @@ const SubjectPage: React.FC = () => {
                     disabled={loading}
                   />
                 </div>
-                <div className="col-12 col-md-2">
-                  <button
-                    type="submit"
-                    className="btn btn-success w-100"
-                    disabled={loading || !newCode.trim() || !newName.trim()}
-                  >
-                    บันทึกวิชา
-                  </button>
-                </div>
-                <div className="col-12 col-md-2">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary w-100"
-                    onClick={() => setShowCreateForm(false)}
-                    disabled={loading}
-                  >
-                    ยกเลิก
-                  </button>
-                </div>
               </div>
-            </form>
-          </div>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={() => setShowCreateForm(false)}
+                disabled={loading}
+              >
+                ยกเลิก
+              </button>
+
+              <button
+                type="submit"
+                className="btn btn-success"
+                disabled={loading || !newCode.trim() || !newName.trim()}
+              >
+                บันทึกวิชา
+              </button>
+            </div>
+          </form>
         </div>
-      )}
-{/* <div className="card mb-4">
+      </div>
+    </div>
+  </>
+)}
+
+      {/* <div className="card mb-4">
   <div className="card-body bg-white"> */}
       {/* ถ้ายังไม่มีวิชาเลย */}
       {subjects.length === 0 && !showCreateForm && !loading && (
@@ -413,7 +449,7 @@ const SubjectPage: React.FC = () => {
           </div>
         </div>
       ))}
-        {/* </div>
+      {/* </div>
   </div> */}
       {/* Modal เพิ่มข้อ */}
       <AddQuestionModal

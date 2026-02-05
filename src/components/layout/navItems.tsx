@@ -60,12 +60,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: FolderKanban,
     permissions: ["allocate_seats"],
   },
-  {
-    to: "/exam-rooms",
-    label: "ห้องสอบ",
-    icon: ClipboardCheck,
-    permissions: ["manage_rooms"],
-  },
+  // {
+  //   to: "/exam-rooms",
+  //   label: "ห้องสอบ",
+  //   icon: ClipboardCheck,
+  //   permissions: ["manage_rooms"],
+  // },
 
   {
     to: "/bags",
@@ -73,12 +73,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: PackageCheck,
     permissions: ["manage_bags"],
   },
-  {
-    to: "/bag-handover",
-    label: "ส่งมอบถุง",
-    icon: HandCoins,
-    permissions: ["manage_bagshandover"],
-  },
+  // {
+  //   to: "/bag-handover",
+  //   label: "ส่งมอบถุง",
+  //   icon: HandCoins,
+  //   permissions: ["manage_bagshandover"],
+  // },
   {
     to: "/import-csv",
     label: "นำเข้าข้อมูล",
@@ -103,6 +103,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: GraduationCap,
     permissions: ["grade_exams"],
   },
+  //   {
+  //   to: "/grading-recheck",
+  //   label: "ตรวจคะแนน",
+  //   icon: GraduationCap,
+  //   permissions: ["grade_exams"],
+  // },
   {
     to: "/score-review",
     label: "ใบสรุปคะแนน",
@@ -126,5 +132,11 @@ export const NAV_ITEMS: NavItem[] = [
     label: "สแกนคิวอาร์โค้ด",
     icon: QrCode,
     permissions: ["view_qr"],
+  },
+  {
+    to: "/admin-reset",
+    label: "รีเซ็ตคะแนน",
+    icon: QrCode,
+    permissions: ["manage_grading"],
   },
 ];

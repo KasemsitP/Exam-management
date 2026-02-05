@@ -33,7 +33,7 @@ export default function RecentScoresCard({ recent }: RecentScoresCardProps) {
                 {recent.map((r, idx) => (
                   <tr key={`${r.slotId}-${idx}`}>
                     <td>{r.enteredAt}</td>
-                    <td>{r.slotId}</td>
+                    <td>{r.qr_payload}</td>
                     <td className="text-end fw-semibold">{r.score}</td>
                   </tr>
                 ))}

@@ -67,6 +67,7 @@ interface BagPayloadRecord {
     userCode: string;
     fullName: string;
     qrPayload: string;
+    created_at : Date
 }
 
 
@@ -207,16 +208,17 @@ export const deleteBagThunk = createAsyncThunk<
 
 export const CreateBagAndAddQrPayload = createAsyncThunk<
     { bagId: number; campaignId: number; bagNo: number },
-    { campaignId: number; payload: string[] },
+    { campaignId: number; payload: string[] , datetime : Date[]},
     { rejectValue: string }
 >(
     "bags/createAndAddQrPayload",
-    async ({ campaignId, payload }, { rejectWithValue }) => {
+    async ({ campaignId, payload , datetime }, { rejectWithValue }) => {
         try {
-            console.log(campaignId, payload);
+            console.log(campaignId, payload , "date" , datetime);
             const res = await axios.post("/api/bags/create-insert", {
                 campaignId,
                 payload,
+                datetime
             });
             console.log("API RESULT", res.data);
 
@@ -414,6 +416,7 @@ const bagsSlice = createSlice({
                     userCode: row.userCode,
                     fullName: row.fullName,
                     qrPayload: row.qrPayload,
+                    created_at : row.created_at
                 }));
             })
             .addCase(ScannedPayloadThunk.rejected, (state, action) => {

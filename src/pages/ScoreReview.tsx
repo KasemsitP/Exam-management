@@ -4,11 +4,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import { useAppSelector } from "@/store/hook";
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
+import React from "react";
 import { selectScriptsByBag } from "@/store/slices/scoreReview.slice";
 
 type ViewMode = "overview" | "details";
 
-const FLAG_THRESHOLD = 3;
+const FLAG_THRESHOLD = 4;
 
 const BAG_OPTIONS = [
   { id: "BAG001", label: "BAG001 - รอบจำลอง 1" },
@@ -92,61 +93,89 @@ export default function ScoreReviewPage() {
     URL.revokeObjectURL(url);
   };
 
-  const renderOverviewTable = () => (
-    <div className="table-responsive border rounded-3">
-      <table className="table align-middle mb-0">
-        <thead className="table-light text-muted small text-uppercase">
-          <tr>
-            <th
-              className="bg-light"
-              style={{ position: "sticky", left: 0, zIndex: 2 }}
-            >
-              รหัสสอบ
+const renderOverviewTable = () => (
+  <div className="table-responsive border rounded-3">
+    <table className="table align-middle mb-0">
+      <thead className="table-light text-muted small text-uppercase">
+        {/* แถวหัวตารางหลัก: ข้อ 1-10 กิน 3 คอลัมน์ต่อข้อ */}
+        <tr>
+          <th
+            className="bg-light"
+            style={{ position: "sticky", left: 0, zIndex: 2 }}
+            rowSpan={2}
+          >
+            รหัสสอบ
+          </th>
+
+          {Array.from({ length: 10 }, (_, idx) => (
+            <th key={idx} colSpan={3} className="text-center">
+              ข้อ {idx + 1}
             </th>
-            {Array.from({ length: 10 }, (_, idx) => (
-              <th key={idx}>ข้อ {idx + 1}</th>
-            ))}
-            <th>คะแนนรวม (ผลรวมค่าเฉลี่ย)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredScripts.map((script) => {
-            const total = script.questions.reduce((sum, q) => sum + q.average, 0);
-            return (
-              <tr key={script.examCode}>
-                <td
-                  className="fw-semibold bg-white"
-                  style={{ position: "sticky", left: 0, zIndex: 1 }}
-                >
-                  {script.examCode}
-                </td>
-                {script.questions.map((q) => {
-                  const diff = Math.abs(q.scoreA - q.scoreB);
-                  const flagged = diff >= FLAG_THRESHOLD;
-                  return (
-                    <td key={`${script.examCode}-${q.questionNo}`}>
-                      <div className="d-flex flex-column gap-1 small">
-                        <span>เฉลี่ย {formatScore(q.average)}</span>
-                        <span className="text-muted">
-                          {formatScore(q.scoreA)} / {formatScore(q.scoreB)}
+          ))}
+
+          <th rowSpan={2}>คะแนนรวม (ผลรวมค่าเฉลี่ย)</th>
+        </tr>
+
+        {/* แถวหัวตารางย่อย: คะแนน1 / คะแนน2 / ผลต่าง */}
+        <tr>
+          {Array.from({ length: 10 }, (_, idx) => (
+            <React.Fragment key={`sub-${idx}`}>
+              <th className="text-end">คะแนน 1</th>
+              <th className="text-end">คะแนน 2</th>
+              <th className="text-end">ผลต่าง</th>
+            </React.Fragment>
+          ))}
+        </tr>
+      </thead>
+
+      <tbody>
+        {filteredScripts.map((script) => {
+          const total = script.questions.reduce((sum, q) => sum + q.average, 0);
+
+          return (
+            <tr key={script.examCode}>
+              <td
+                className="fw-semibold bg-white"
+                style={{ position: "sticky", left: 0, zIndex: 1 }}
+              >
+                {script.examCode}
+              </td>
+
+              {script.questions.map((q) => {
+                const diff = Math.abs(q.scoreA - q.scoreB);
+                const flagged = diff >= FLAG_THRESHOLD;
+
+                return (
+                  <React.Fragment key={`${script.examCode}-${q.questionNo}`}>
+                    {/* คะแนน 1 */}
+                    <td className="text-end">{formatScore(q.scoreA)}</td>
+
+                    {/* คะแนน 2 */}
+                    <td className="text-end">{formatScore(q.scoreB)}</td>
+
+                    {/* ✅ ผลต่าง (อยู่ขวาของคะแนน 2) */}
+                    <td className="text-end">
+                      {flagged ? (
+                        <span className="badge text-bg-danger rounded-pill px-2 py-1">
+                          {formatScore(diff)}
                         </span>
-                        {flagged && (
-                          <span className="badge text-bg-danger rounded-pill px-2 py-1">
-                            ส่วนต่าง {formatScore(diff)}
-                          </span>
-                        )}
-                      </div>
+                      ) : (
+                        formatScore(diff)
+                      )}
                     </td>
-                  );
-                })}
-                <td className="fw-semibold">{formatScore(total)}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
+                  </React.Fragment>
+                );
+              })}
+
+              <td className="fw-semibold">{formatScore(total)}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+);
+
 
   const renderDetailsTable = () => (
     <div className="table-responsive border rounded-3">

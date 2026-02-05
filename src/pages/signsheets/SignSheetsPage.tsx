@@ -50,6 +50,7 @@ type SignSheetRow = {
   roomName: string | null;
   seat_code: string | null;
   qr_payload: string | null;
+  row_no: number
 };
 
 type SignSheetApiResponse = {
@@ -204,7 +205,7 @@ export default function SignSheetsPage() {
           },
         }
       );
-
+      console.log(res.data)
       setRows(res.data.data);
       setTotalCount(res.data.meta.total);
       setTotalPages(res.data.meta.totalPages || 1);
@@ -310,8 +311,8 @@ export default function SignSheetsPage() {
     }
   };
 
-const handleDownloadSeatPlanNameList = async () => {
-    if (!activeCampaign?.id ) return;
+  const handleDownloadSeatPlanNameList = async () => {
+    if (!activeCampaign?.id) return;
 
     // const numericSessionId = parseInt(
     //   String(selectedSessionId).replace("sess-", ""),
@@ -438,7 +439,7 @@ const handleDownloadSeatPlanNameList = async () => {
                   />
                 </div>
                 <button
-                  className="btn btn-primary d-inline-flex align-items-center gap-2"
+                  className="btn btn-success d-inline-flex align-items-center gap-2"
                   onClick={handleDownloadSeatPlanNameList}
                   disabled={isExportingPdf || !selectedSessionId}
                 >
@@ -449,8 +450,9 @@ const handleDownloadSeatPlanNameList = async () => {
                   )}
                   ดาวน์โหลดรายชื่อผู้มีสิทธิ์สอบ
                 </button>
+
                 <button
-                  className="btn btn-primary d-inline-flex align-items-center gap-2"
+                  className="btn btn-warning d-inline-flex align-items-center gap-2"
                   onClick={handleDownloadSeatPlan}
                   disabled={isExportingPdf || !selectedSessionId}
                 >
@@ -463,7 +465,7 @@ const handleDownloadSeatPlanNameList = async () => {
                 </button>
 
                 <button
-                  className="btn btn-primary d-inline-flex align-items-center gap-2"
+                  className="btn btn-info d-inline-flex align-items-center gap-2 text-white"
                   onClick={handleDownloadPdf}
                   disabled={isExportingPdf || !selectedSessionId}
                 >
@@ -601,16 +603,23 @@ const handleDownloadSeatPlanNameList = async () => {
           <div className="card-body p-0">
             <div className="table-responsive">
               <table className="table table-hover align-middle mb-0">
-                <thead className="table-light">
+                <thead className="table-light sticky-top">
                   <tr>
-                    <th style={{ width: 60 }} className="text-center">
+                    <th style={{ width: 60 }} className="text-center text-nowrap">
                       ลำดับ
                     </th>
-                    <th style={{ width: 140 }}>รหัสผู้เข้าสอบ</th>
+                    <th style={{ width: 140 }} className="text-nowrap">
+                      รหัสผู้เข้าสอบ
+                    </th>
                     <th>ชื่อ - นามสกุล</th>
-                    <th style={{ width: 170 }}>ห้อง / ที่นั่ง</th>
+                    <th style={{ width: 50 }} className="text-center">
+                      แถว
+                    </th>
+                    <th style={{ width: 180 }}>
+                      ห้อง / ที่นั่ง
+                    </th>
                     <th style={{ width: 140 }} className="text-center">
-                      QR (preview)
+                      QR
                     </th>
                   </tr>
                 </thead>
@@ -619,7 +628,7 @@ const handleDownloadSeatPlanNameList = async () => {
                   {/* Loading */}
                   {rows.length === 0 && isLoading && (
                     <tr>
-                      <td colSpan={5} className="text-center py-4 text-muted">
+                      <td colSpan={6} className="text-center py-5 text-muted">
                         <Loader2
                           size={20}
                           className="me-2 spin-animation align-text-bottom"
@@ -632,7 +641,7 @@ const handleDownloadSeatPlanNameList = async () => {
                   {/* Empty */}
                   {rows.length === 0 && !isLoading && (
                     <tr>
-                      <td colSpan={5} className="text-center py-4 text-muted">
+                      <td colSpan={6} className="text-center py-5 text-muted">
                         ไม่พบข้อมูลผู้เข้าสอบในหน้านี้
                       </td>
                     </tr>
@@ -641,31 +650,51 @@ const handleDownloadSeatPlanNameList = async () => {
                   {/* Data */}
                   {rows.map((r, idx) => (
                     <tr key={r.user_session_id}>
-                      <td className="text-center text-muted">
+                      <td className="text-center text-muted small">
                         {(page - 1) * ITEMS_PER_PAGE + idx + 1}
                       </td>
-                      <td className="fw-semibold text-primary">{r.userCode}</td>
-                      <td>
-                        {r.firstName} {r.lastName}
+
+                      <td className="fw-semibold text-nowrap">
+                        {r.userCode}
                       </td>
+
                       <td>
-                        <span className="badge bg-secondary-subtle text-secondary-emphasis me-1">
-                          ห้อง {r.roomName ?? "-"}
+                        <div className="fw-medium">
+                          {r.firstName} {r.lastName}
+                        </div>
+                      </td>
+
+                      <td className="text-center">
+                        <span className="badge bg-light text-dark">
+                          {r.row_no ?? "-"}
                         </span>
-                        {r.seat_code && (
-                          <small className="text-muted">ที่นั่ง: {r.seat_code}</small>
-                        )}
                       </td>
+
+                      <td>
+                        <div className="d-flex flex-column gap-1">
+                          <span className="badge bg-secondary-subtle text-secondary-emphasis align-self-start">
+                            ห้อง {r.roomName ?? "-"}
+                          </span>
+
+                          {r.seat_code && (
+                            <small className="text-muted">
+                              ที่นั่ง: {r.seat_code}
+                            </small>
+                          )}
+                        </div>
+                      </td>
+
                       <td className="text-center">
                         {r.qr_payload ? (
                           <QrPreview
                             value={r.qr_payload}
-                            size={56}
-                            onClick={() => setEnlargedQr(r.qr_payload!)}
+                            size={52}
+
+                            onClick={() => setEnlargedQr(r.qr_payload)}
                           />
                         ) : (
                           <span className="badge bg-danger-subtle text-danger-emphasis">
-                            NULL
+                            ไม่มี QR
                           </span>
                         )}
                       </td>

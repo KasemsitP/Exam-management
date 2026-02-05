@@ -18,6 +18,7 @@ interface ComposeBagModalProps {
     onClearCodes: () => void;
     onFinalize: () => void;
     scannedPayloads: string[];
+    scannedDate: Date[];
     bagStatus: string;
     bookletsInBag: any[];
     mode?: "existing" | "draft";
@@ -40,6 +41,7 @@ export default function ComposeBagModal({
     onFinalize,
     bagStatus,
     bookletsInBag,
+    scannedDate,
 }: ComposeBagModalProps) {
     if (!open) return null;
     return (
@@ -82,14 +84,23 @@ export default function ComposeBagModal({
                                                         ยังไม่มีการสแกน QR Code
                                                     </li>
                                                 ) : (
-                                                    scannedPayloads.map((code) => (
-                                                        <li key={code} className="list-group-item">
-                                                            {code}
+                                                    scannedPayloads.map((code, index) => (
+                                                        <li
+                                                            key={`${code}-${index}`}
+                                                            className="list-group-item d-flex align-items-center gap-3"
+                                                        >
+                                                            <span
+                                                                className="text-muted small"
+                                                                style={{ minWidth: 50 }}
+                                                            >
+                                                                {scannedDate[index]?.toLocaleTimeString("th-TH")}
+                                                            </span>
+
+                                                            <span>{code}</span>
                                                         </li>
                                                     ))
                                                 )}
                                             </ul>
-
                                         </div>
 
                                         <div className="d-flex justify-content-end mt-2">
