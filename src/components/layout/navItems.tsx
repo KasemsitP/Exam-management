@@ -52,7 +52,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
 
 
-  { to: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
+  { to: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard , permissions: ["dashboard"]},
 
   {
     to: "/seat-allocation",

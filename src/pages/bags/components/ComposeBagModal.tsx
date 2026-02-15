@@ -99,7 +99,7 @@ export default function ComposeBagModal({
                         >
                           <ul className="list-group list-group-flush">
                             {isSealed
-                              ? bookletsInBag.map((bk: any) => (
+                              ? bookletsInBag.map((bk: any, index: number) => (
                                 // <li key={bk.id} className="list-group-item">
                                 //   <div className="d-flex justify-content-between align-items-start">
                                 //     <div className="d-flex flex-column">
@@ -119,10 +119,14 @@ export default function ComposeBagModal({
                                 //     </span>
                                 //   </div>
                                 // </li>
+
                                 <li
                                   key={bk.id}
                                   className="list-group-item d-flex align-items-center gap-3"
                                 >
+                                  <span className="fw-bold" style={{ width: 24 }}>
+                                    {index + 1}.
+                                  </span>
                                   {/* เวลา ซ้าย */}
                                   <span
                                     className="text-muted small"

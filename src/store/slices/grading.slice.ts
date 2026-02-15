@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from "../index";
+import { clear } from "console";
 
 export interface PayloadScore {
   qrPayload: string;
@@ -25,6 +26,7 @@ interface GradingState {
 
   verifying: boolean;
   lastSlotId: number | null;
+  bagNo : number | null;
   records: GradingRecord[];
 }
 
@@ -34,6 +36,7 @@ const initialState: GradingState = {
   lastScore: null,
   verifying: false,
   lastSlotId: null,
+  bagNo: null,
   records: [],
 };
 export interface GradingRecord {
@@ -44,7 +47,7 @@ export interface GradingRecord {
 }
 
 export const verifyAndAllocateThunk = createAsyncThunk<
-  { slotId: number },
+  { slotId: number , bagNo: number}, 
   PayloadSlot,
   { rejectValue: string }
 >(
@@ -122,6 +125,7 @@ const gradingSlice = createSlice({
     clearGradingError: (state) => {
       state.error = null;
     },
+    clearGradingState: () => initialState,
   },
   extraReducers: (builder) => {
     builder
@@ -132,6 +136,7 @@ const gradingSlice = createSlice({
       .addCase(verifyAndAllocateThunk.fulfilled, (state, action) => {
         state.verifying = false;
         state.lastSlotId = action.payload.slotId;
+        state.bagNo = action.payload.bagNo;
       })
       .addCase(verifyAndAllocateThunk.rejected, (state, action) => {
         state.verifying = false;
@@ -165,15 +170,11 @@ const gradingSlice = createSlice({
   },
 });
 
-export const { clearGradingError } = gradingSlice.actions;
+export const { clearGradingError, clearGradingState } = gradingSlice.actions;
 
-// 5. Selectors (แก้ไขตามที่คุณขอ โดยใช้ createSelector)
 
-// (1) Base Selector: ดึง "LocalState" (GradingState) จาก "RootState"
 export const selectGradingState = (state: RootState) => state.grading;
 
-// (2) Derived Selectors: 
-//     (Selectors พวกนี้จะรับ LocalState (GradingState) จาก Base Selector)
 
 export const selectIsGradingLoading = createSelector(
   [selectGradingState], // (Input selector)
@@ -194,6 +195,11 @@ export const selectLastSlotId = createSelector(
   (gradingState) => gradingState.lastSlotId
 );
 
+export const selectBagNo = createSelector(
+  [selectGradingState],
+  (gradingState) => gradingState.bagNo
+);
+
 export const selectIsVerifyingSlot = createSelector(
   [selectGradingState],
   (gradingState) => gradingState.verifying
@@ -203,6 +209,7 @@ export const selectGradingRecords = createSelector(
   [selectGradingState],
   (gradingState) => gradingState.records
 );
+
 
 
 export { gradingSlice };

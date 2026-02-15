@@ -21,6 +21,7 @@ import { selectActiveCampaign } from "@/store/slices/examData.slice";
 import { selectDefaultBagCapacity, selectBagsForCampaign, fetchBagsForCampaignThunk } from "@/store/slices/bags.slice";
 import { selectCurrentUser } from "@/store/slices/auth.slice";
 import { useDispatch } from "react-redux";
+import { ShowIfCan } from "@/components/auth/ShowIfCan";
 
 /* -----------------------------------------
    ✅ Muted / Neutral theme (ไม่ฉูดฉาด)
@@ -48,6 +49,49 @@ const pieColors = [
 //   "sessions": {...},
 //   "avgScorePerQuestion": []
 // }
+const MOCK_SCORE_DISTRIBUTION: ScoreDistributionAPI = {
+  totalUsers: 1105,
+  noScore: 0,
+buckets: [
+  { label: "1-5", count: 12 },     // โดดซ้าย
+  { label: "6-10", count: 8 },
+  { label: "11-15", count: 22 },   // spike
+  { label: "16-20", count: 18 },
+  { label: "21-25", count: 45 },
+  { label: "26-30", count: 38 },   // ดรอปนิด
+  { label: "31-35", count: 72 },
+  { label: "36-40", count: 60 },   // ลดแบบไม่เนียน
+  { label: "41-45", count: 98 },
+  { label: "46-50", count: 110 },
+  { label: "51-55", count: 95 },   // ยุบลง
+  { label: "56-60", count: 130 },  // spike กลาง
+  { label: "61-65", count: 102 },
+  { label: "66-70", count: 115 },  // โดดอีกที
+  { label: "71-75", count: 88 },
+  { label: "76-80", count: 93 },   // เด้งขึ้นนิด
+  { label: "81-85", count: 65 },
+  { label: "86-90", count: 58 },
+  { label: "91-95", count: 52 },
+  { label: "96-100", count: 34 },
+  { label: "101-105", count: 40 }, // spike ขวากลาง
+  { label: "106-110", count: 18 },
+  { label: "111-115", count: 26 }, // เด้งอีกที
+  { label: "116-120", count: 9 },
+  { label: "121-125", count: 14 }, // ขวาโดด
+  { label: "126-130", count: 4 },
+  { label: "131-135", count: 7 },  // spike เล็ก
+  { label: "136-140", count: 2 },
+  { label: "141-145", count: 5 },  // ขวาปลายโดด
+  { label: "146-150", count: 1 },
+  { label: "151-155", count: 1 },
+  { label: "156-160", count: 1 },
+  { label: "161-165", count: 1 },
+  { label: "166-170", count: 1 },
+]
+
+};
+
+
 
 interface ScoreBucket {
   label: string; // "0-4", "5-9", ...
@@ -78,6 +122,7 @@ interface SummaryAPI {
 interface SessionAPI {
   sessionId: number;
   sessionCode: string;
+  subject_name: string;
   bags: {
     total: number;
     capacity: number;
@@ -93,11 +138,38 @@ interface SessionAPI {
     pending: number;
   };
 }
+interface SubjectQuestion {
+  id: number;
+  questionNo: number;
+  label: string;
+  maxScore: string; // หรือ number ถ้า backend ส่งมาเป็น number จริง ๆ
+}
+
+interface SubjectDetail {
+  subjectId: number;
+  code: string;
+  name: string;
+  questions: SubjectQuestion[];
+}
+interface SubjectQuestionApi {
+  id: number;
+  questionNo: number;
+  label: string;
+  maxScore: string; // หรือ number ถ้า backend แปลงมาแล้ว
+}
+
+interface SubjectQuestionsApi {
+  subjectId: number;
+  code: string;
+  name: string;
+  questions: SubjectQuestionApi[];
+}
 
 interface DashboardApiResponse {
   summary: SummaryAPI;
   sessions: Record<string, SessionAPI>;
   avgScorePerQuestion: any[];
+  subjectQuestions?: Record<string, SubjectQuestionsApi>;
 }
 
 /* ---------- Types ฝั่ง UI (สำหรับกราฟและการแสดงผล) ---------- */
@@ -112,6 +184,7 @@ interface BagCount {
 interface ImportStatusUI {
   sessionId: number;
   sessionCode: string;
+  subject_name: string
   inCampaign: number;
   inSession: number;
   importStatus: "NOT_IMPORTED" | "PARTIAL" | "IMPORTED";
@@ -120,6 +193,7 @@ interface ImportStatusUI {
 interface EncryptedStatusUI {
   sessionId: number;
   sessionCode: string;
+  subject_name: string;
   status: "NOT_ENCRYPTED" | "PARTIAL" | "ENCRYPTED_ALL";
   encrypted: number;
   pending: number;
@@ -201,21 +275,27 @@ export default function Dashboard() {
     fetchDashboard();
   }, [activeCampaign?.id]);
 
+  const USE_MOCK_SCORE = true; // <-- เปลี่ยนเป็น false ตอนอยากกลับไปใช้ของจริง
+
   useEffect(() => {
+    if (USE_MOCK_SCORE) {
+      const chartData = buildScoreChartData(MOCK_SCORE_DISTRIBUTION);
+      setScoreChartData(chartData);
+      return;
+    }
+
     if (!dashboardData?.summary?.scoreDistribution) return;
 
     const chartData = buildScoreChartData(
       dashboardData.summary.scoreDistribution
     );
-    console.log("Score Chart Data:", chartData);
-
     setScoreChartData(chartData);
   }, [dashboardData]);
 
 
   // 1) กำหนดช่วงทั้งหมดที่อยากให้แสดง 1–150 (ก้าวละ 5 คะแนน)
   const ALL_SCORE_BUCKETS: string[] = [];
-  for (let start = 1; start <= 150; start += 5) {
+  for (let start = 1; start <= 170; start += 5) {
     const end = start + 4;
     ALL_SCORE_BUCKETS.push(`${start}-${end}`); // "1-5", "6-10", ..., "146-150"
   }
@@ -261,6 +341,7 @@ export default function Dashboard() {
       inCampaign: s.users.inCampaign,
       inSession: s.users.inSession,
       importStatus: s.importStatus,
+      subject_name: s.subject_name
     }));
   }, [dashboardData]);
 
@@ -275,6 +356,7 @@ export default function Dashboard() {
       pending: s.encryption.pending,
       // ใช้จำนวนผู้เข้าสอบใน session เป็นตัวหาร
       totalUsersInSession: s.users.inSession,
+      subject_name: s.subject_name
     }));
   }, [dashboardData]);
 
@@ -321,9 +403,87 @@ export default function Dashboard() {
     if (!dashboardData?.sessions) return [];
     return Object.values(dashboardData.sessions).map((s) => ({
       sessionId: s.sessionId,
-      sessionLabel: s.sessionCode,
+      sessionLabel: `${s.sessionCode} (${s.subject_name ?? "-"})`,
       bagCount: s.bags.total,
+      //  subject_name: s.subject_name
     }));
+  }, [dashboardData]);
+
+  const subjectQuestionList = useMemo(() => {
+    if (!dashboardData?.subjectQuestions) return [];
+
+    // map: ชื่อวิชา -> list ของ sessionCode
+    const sessionsBySubjectName: Record<string, string[]> = {};
+
+    if (dashboardData.sessions) {
+      Object.values(dashboardData.sessions).forEach((s) => {
+        if (!s.subject_name) return;
+
+        // กรณีที่ subject_name อนาคตอาจเป็นหลายวิชา แล้วใช้ GROUP_CONCAT
+        const names = String(s.subject_name)
+          .split(",")
+          .map((n) => n.trim())
+          .filter(Boolean);
+
+        names.forEach((name) => {
+          if (!sessionsBySubjectName[name]) {
+            sessionsBySubjectName[name] = [];
+          }
+          sessionsBySubjectName[name].push(s.sessionCode);
+        });
+      });
+    }
+
+    // คืน array ของวิชา + sessionCodes
+    return Object.values(dashboardData.subjectQuestions).map((subj) => ({
+      subjectId: subj.subjectId,
+      code: subj.code,
+      name: subj.name,
+      questions: subj.questions,
+      // จำนวนหัวข้อ
+      questionCount: subj.questions.length,
+      // คะแนนเต็มรวมทั้งวิชา
+      totalMaxScore: subj.questions.reduce(
+        (sum, q) => sum + Number(q.maxScore ?? 0),
+        0
+      ),
+      // รอบสอบที่วิชานี้ไปอยู่
+      sessionCodes: sessionsBySubjectName[subj.name] ?? [],
+    }));
+  }, [dashboardData?.subjectQuestions, dashboardData?.sessions]);
+
+
+  // 2) ใช้ทั้ง subjectQuestions + sessions เพื่อทำข้อความสรุป
+  const subjectNamesSummary = useMemo(() => {
+    if (!dashboardData?.subjectQuestions || !dashboardData?.sessions) return "";
+
+    // สร้าง map: subject_name → [sessionCode...]
+    const sessionCodesBySubjectName: Record<string, string[]> = {};
+
+    Object.values(dashboardData.sessions).forEach((s) => {
+      if (!s.subject_name) return;
+      if (!sessionCodesBySubjectName[s.subject_name]) {
+        sessionCodesBySubjectName[s.subject_name] = [];
+      }
+      sessionCodesBySubjectName[s.subject_name].push(s.sessionCode);
+    });
+
+    // จาก subjectQuestions มาต่อ string
+    const subjects = Object.values(dashboardData.subjectQuestions).map((s) => {
+      const sessionsForSubject = sessionCodesBySubjectName[s.name] ?? [];
+      const sessionText =
+        sessionsForSubject.length > 0
+          ? ` (สอบใน ${sessionsForSubject.join(", ")})`
+          : "";
+
+      // ตัวอย่าง: "LAWENG - กฎหมายพิเศษและภาษาอังกฤษ (สอบใน วันที่ 1)"
+      return `${s.code} - ${s.name}${sessionText}`;
+    });
+
+    if (subjects.length === 0) return "";
+    if (subjects.length <= 2) return subjects.join(" • ");
+
+    return `${subjects.slice(0, 2).join(" • ")} + อีก ${subjects.length - 2} วิชา`;
   }, [dashboardData]);
 
 
@@ -368,10 +528,50 @@ export default function Dashboard() {
       </text>
     );
   };
+  // รายวิชาทั้งหมดจาก subjectQuestion
+
+  const sessionsBySubjectName = useMemo(() => {
+    if (!dashboardData?.sessions) return {} as Record<string, string[]>;
+
+    const map: Record<string, string[]> = {};
+
+    Object.values(dashboardData.sessions).forEach((sess) => {
+      if (!sess.subject_name) return;
+
+      if (!map[sess.subject_name]) {
+        map[sess.subject_name] = [];
+      }
+      map[sess.subject_name].push(sess.sessionCode);  // เช่น "วันที่ 1", "วันที่ 2"
+    });
+
+    return map;
+  }, [dashboardData?.sessions]);
+  const subjectList = useMemo(() => {
+    if (!dashboardData?.subjectQuestions) return [];
+
+    return Object.values(dashboardData.subjectQuestions).map((subj) => {
+      // หา session ของวิชานี้จากชื่อวิชา
+      const sessionCodes = sessionsBySubjectName[subj.name] ?? [];
+
+      return {
+        subjectId: subj.subjectId,
+        code: subj.code,
+        name: subj.name,
+        questionCount: subj.questions.length,
+        totalMaxScore: subj.questions.reduce(
+          (sum, q) => sum + Number(q.maxScore ?? 0),
+          0
+        ),
+        sessions: sessionCodes,          // <= เพิ่ม field นี้
+      };
+    });
+  }, [dashboardData?.subjectQuestions, sessionsBySubjectName]);
+
 
   /* ---------- Render ---------- */
 
   return (
+    <ShowIfCan permission="dashboard" fallback={<div className="p-4 alert alert-warning">คุณไม่มีสิทธิ์เข้าถึงแดชบอร์ดนี้</div>}>
     <div className="d-flex flex-column gap-4">
       {/* Header */}
       <div className="card border-0 shadow-sm" style={{ background: surface }}>
@@ -385,9 +585,9 @@ export default function Dashboard() {
                 {activeCampaign ? `${activeCampaign.name}` : "ยังไม่ได้เลือกแคมเปญ"}
               </h2>
               <div className="d-flex align-items-center gap-2 small" style={{ color: muted }}>
-                <span>
+                {/* <span>
                   Login โดย: {user?.name ?? "Guest"} ({user?.roles?.join(", ")})
-                </span>
+                </span> */}
               </div>
             </div>
           </div>
@@ -418,7 +618,7 @@ export default function Dashboard() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <div className="small text-uppercase fw-semibold" style={{ color: muted }}>
-                      รอบสอบทั้งหมด
+                      จำนวนรายวิชาที่สอบทั้งหมด
                     </div>
                     <CalendarDays size={18} className="opacity-75" style={{ color: muted }} />
                   </div>
@@ -426,7 +626,7 @@ export default function Dashboard() {
                     {sessionCount}
                   </div>
                   <div className="small" style={{ color: muted }}>
-                    รอบการจัดสอบในแคมเปญนี้
+                    วิชา
                   </div>
                 </div>
               </div>
@@ -440,21 +640,35 @@ export default function Dashboard() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <div className="small text-uppercase fw-semibold" style={{ color: muted }}>
-                      รายวิชา
+                      รายวิชาที่สอบทั้งหมด
                     </div>
                     <GraduationCap size={18} className="opacity-75" style={{ color: muted }} />
                   </div>
-                  <div className="h2 mb-1 fw-bold" style={{ color: "#0F172A" }}>
-                    {subjectCount}
-                  </div>
-                  <div className="small" style={{ color: muted }}>
-                    วิชาที่เปิดสอบทั้งหมด
-                  </div>
+
+
+                  {subjectList.length > 0 && (
+                    <ul className="list-unstyled mb-0 text-dark" style={{ color: muted }}>
+                      {subjectList.slice(0, 3).map((subj) => (
+                        <li key={subj.subjectId} className="fw-bold">
+                          {subj.name}
+                        </li>
+                      ))}
+
+                      {subjectList.length > 3 && (
+                        <li className="fst-italic">
+                          + อีก {subjectList.length - 3} วิชา
+                        </li>
+                      )}
+                    </ul>
+                  )}
                 </div>
+
+
               </div>
             </div>
 
             {/* Total Users */}
+
             <div className="col-lg-3 col-sm-6">
               <div
                 className="card shadow-sm h-100 border-start"
@@ -463,7 +677,7 @@ export default function Dashboard() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <div className="small text-uppercase fw-semibold" style={{ color: muted }}>
-                      ผู้เข้าสอบ
+                      ผู้เข้าสอบภายในรอบสอบนี้
                     </div>
                     <Users size={18} className="opacity-75" style={{ color: muted }} />
                   </div>
@@ -477,6 +691,8 @@ export default function Dashboard() {
               </div>
             </div>
 
+
+
             {/* Bags */}
             <div className="col-lg-3 col-sm-6">
               <div
@@ -486,7 +702,7 @@ export default function Dashboard() {
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <div className="small text-uppercase fw-semibold" style={{ color: muted }}>
-                      ถุงข้อสอบ
+                      จำนวนถุงข้อสอบในรอบสอบ
                     </div>
                     <Package size={18} className="opacity-75" style={{ color: muted }} />
                   </div>
@@ -509,7 +725,7 @@ export default function Dashboard() {
                 <div className="card-header bg-white py-3">
                   <h6 className="mb-0 fw-bold">ช่วงคะแนนรวม</h6>
                   <small style={{ color: muted }}>
-                    กราฟแสดงการกระจายตัวของคะแนน
+                    กราฟแสดงช่วงคะแนนรวมทั้งหมดทุกวิชา
                   </small>
                 </div>
                 <div className="card-body" style={{ height: 320 }}>
@@ -541,7 +757,7 @@ export default function Dashboard() {
                   {bagCounts.length > 0 && (
                     <div className="card shadow-sm" style={{ background: surface }}>
                       <div className="card-header bg-white py-3">
-                        <h6 className="mb-0 fw-bold">สัดส่วนถุงข้อสอบแบ่งตามวันที่สอบ</h6>
+                        <h6 className="mb-0 fw-bold">จำนวนถุงข้อสอบในแต่วิชา </h6>
                       </div>
                       <div className="card-body" style={{ height: 280 }}>
                         <ResponsiveContainer width="100%" height="100%">
@@ -582,7 +798,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Summary box - muted */}
-                <div className="card shadow-sm border-0" style={{ background: surfaceSoft }}>
+                <div className="card shadow-sm border-0" style={{ background: surface }}>
                   <div className="card-body d-flex align-items-center justify-content-between">
                     <div>
                       <div className="fw-bold mb-1" style={{ color: primary }}>
@@ -594,13 +810,87 @@ export default function Dashboard() {
                     </div>
                     <div className="text-end">
                       <div className="fw-bold mb-1" style={{ color: primary }}>
-                        Keys
+                        คีย์สำหรับการเข้ารหัส
                       </div>
                       <div className="h5 mb-0" style={{ color: "#0F172A" }}>
-                        {keysCount} ชุด
+                        {keysCount} คีย์
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-12">
+              <div className="card shadow-sm" style={{ background: surface }}>
+                <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                  <h6 className="mb-0 fw-bold">หัวข้อสอบในแต่ละวิชา</h6>
+                  <span
+                    className="badge rounded-pill fw-semibold"
+                    style={badgeStyle("neutral")}
+                  >
+                    โครงสร้างข้อสอบ
+                  </span>
+                </div>
+
+                <div
+                  className="card-body"
+                  style={{ maxHeight: 320, overflowY: "auto" }} // เลื่อนดูได้ ถ้าหัวข้อเยอะ
+                >
+                  {subjectQuestionList.length === 0 && (
+                    <div className="text-muted small">
+                      ยังไม่มีการกำหนดหัวข้อในรายวิชา
+                    </div>
+                  )}
+
+                  {subjectQuestionList.map((subj) => {
+                    return (
+                      <div
+                        key={subj.subjectId}
+                        className="mb-3 pb-2 border-bottom"
+                        style={{ borderColor: "#E2E8F0" }}
+                      >
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div>
+                            <div className="fw-semibold" style={{ color: "#0F172A" }}>
+                              {subj.code} - {subj.name}
+                            </div>
+
+                            {/* จำนวนหัวข้อ + คะแนนเต็มรวม */}
+                            <div className="small" style={{ color: muted }}>
+                              {subj.questionCount} หัวข้อ | คะแนนเต็มรวม{" "}
+                              {subj.totalMaxScore}
+                            </div>
+
+                            {/* ⬇⬇ แสดงรอบสอบที่วิชานี้เปิดสอบ ⬇⬇ */}
+                            {subj.sessionCodes && subj.sessionCodes.length > 0 && (
+                              <div className="small" style={{ color: muted }}>
+                                ลำดับวันสอบ:{" "}
+                                {subj.sessionCodes.join(" • ")}
+                                {/* เช่น "วันที่ 1 • วันที่ 2" */}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <ul className="small mt-2 mb-0" style={{ color: "#475569" }}>
+                          {subj.questions.map((q) => (
+                            <li
+                              key={q.id}
+                              className="d-flex justify-content-between align-items-center mb-1"
+                            >
+                              <span>
+                                ข้อ {q.questionNo}: {q.label}
+                              </span>
+                              <span className="text-muted">
+                                {Number(q.maxScore).toLocaleString()} คะแนน
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+
                 </div>
               </div>
             </div>
@@ -612,12 +902,12 @@ export default function Dashboard() {
             <div className="col-lg-6">
               <div className="card shadow-sm h-100" style={{ background: surface }}>
                 <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0 fw-bold">สถานะการนำเข้าข้อมูล (Import)</h6>
+                  <h6 className="mb-0 fw-bold">สถานะการนำเข้าข้อมูล</h6>
                   <span
                     className="badge rounded-pill fw-semibold"
                     style={badgeStyle("neutral")}
                   >
-                    ราย Session
+                    รายวิชา
                   </span>
                 </div>
                 <div className="card-body p-0">
@@ -640,7 +930,7 @@ export default function Dashboard() {
                           className="list-group-item d-flex align-items-center justify-content-between py-3"
                         >
                           <div>
-                            <div className="fw-medium text-dark">{s.sessionCode}</div>
+                            <div className="fw-medium text-dark">{s.sessionCode} {s.subject_name}</div>
                             <div className="small" style={{ color: muted }}>
                               ผู้เข้าสอบ: {s.inSession} / {s.inCampaign} คน
                             </div>
@@ -665,16 +955,17 @@ export default function Dashboard() {
               </div>
             </div>
 
+
             {/* Encryption */}
             <div className="col-lg-6">
               <div className="card shadow-sm h-100" style={{ background: surface }}>
                 <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0 fw-bold">สถานะการเข้ารหัส (Encryption)</h6>
+                  <h6 className="mb-0 fw-bold">สถานะการเข้ารหัสข้อมูลเพื่อสร้างคิวอาร์โค้ด</h6>
                   <span
                     className="badge rounded-pill fw-semibold"
                     style={badgeStyle("neutral")}
                   >
-                    ราย Session
+                    รายวิชา
                   </span>
                 </div>
                 <div className="card-body p-0">
@@ -685,7 +976,7 @@ export default function Dashboard() {
 
                       if (s.status === "ENCRYPTED_ALL") {
                         tone = "good";
-                        textStatus = "ครบถ้วน";
+                        textStatus = "เรียบร้อย";
                       } else if (s.status === "PARTIAL") {
                         tone = "warn";
                         textStatus = `ค้าง ${s.pending}`;
@@ -697,7 +988,7 @@ export default function Dashboard() {
                           className="list-group-item d-flex align-items-center justify-content-between py-3"
                         >
                           <div>
-                            <div className="fw-medium text-dark">{s.sessionCode} </div>
+                            <div className="fw-medium text-dark">{s.sessionCode} {s.subject_name} </div>
                             <div className="small" style={{ color: muted }}>
                               เข้ารหัสแล้ว: {s.encrypted} / {s.totalUsersInSession} คน
                             </div>
@@ -766,5 +1057,6 @@ export default function Dashboard() {
         </>
       )}
     </div>
+    </ShowIfCan>
   );
 }

@@ -23,6 +23,8 @@ interface ScannerPanelProps {
   facingMode: "environment" | "user";
   isLoading: boolean;
   questionNo: number;
+  bagNo: number | null;
+  slotId: number | null;
 
   onChangePauseAfterSuccess: (checked: boolean) => void;
   onChangeCooldown: (ms: number) => void;
@@ -62,7 +64,9 @@ export default function ScannerPanel({
   onScan,
   recent,
   setQuestionNo,
-  questionNo
+  questionNo,
+  bagNo,
+  slotId
 }: ScannerPanelProps) {
   return (
     <div className="card shadow-sm border-0">
@@ -168,20 +172,53 @@ export default function ScannerPanel({
       </div>
 
       {/* Ribbon แจ้งรหัสล่าสุด */}
+      {/* Ribbon แจ้งรหัสล่าสุด */}
       <div className="px-3 pt-2">
         {scanData ? (
-          <div className="alert alert-success py-2 d-flex align-items-center gap-2 mb-0">
-            <CheckCircle2 size={16} />
-            <span className="small">รหัสผู้เข้าสอบล่าสุด: {scanData}</span>
+          <div
+            className="alert alert-success py-2 mb-0 d-flex align-items-start justify-content-between gap-3"
+            role="alert"
+          >
+            {/* Left: main */}
+            <div className="d-flex gap-2">
+              <CheckCircle2 size={18} className="mt-1 flex-shrink-0" />
+              <div className="d-flex flex-column">
+                <div className="small fw-semibold">สแกนสำเร็จ</div>
+
+                <div className="small text-break">
+                  <span className="text-muted">รหัสข้อความ: </span>
+                  <span
+                    className="font-monospace"
+                    style={{ wordBreak: "break-all" }}
+                    title={scanData}
+                  >
+                    {scanData}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: meta */}
+            <div className="d-flex flex-wrap gap-2 justify-content-end">
+              <span className="badge text-bg-light border">
+                เลขประจำถุง: <span className="font-monospace">{bagNo ?? "-"}</span>
+              </span>
+              <span className="badge text-bg-light border">
+                เลข slot : <span className="font-monospace">{slotId ?? "-"}</span>
+              </span>
+            </div>
           </div>
         ) : (
-          <div className="alert alert-secondary py-2 d-flex align-items-center gap-2 mb-0">
-            <span className="small">
-              ยังไม่ได้สแกน — โปรดสแกนก่อนบันทึกคะแนน
-            </span>
+          <div
+            className="alert alert-secondary py-2 mb-0 d-flex align-items-center justify-content-between"
+            role="status"
+          >
+            <span className="small">ยังไม่ได้สแกน — โปรดสแกนก่อนบันทึกคะแนน</span>
+            <span className="badge text-bg-light border">Waiting</span>
           </div>
         )}
       </div>
+
 
 
       <div className="card-body">

@@ -1,5 +1,5 @@
 // hooks/useKeyManagement.ts
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { useToast } from "@/components/ui/use-toast";
 import Swal from "sweetalert2";
@@ -17,11 +17,13 @@ import {
   runBulkEncryptionForSession,
   selectEncryptionStatus,
   selectLastBulkEncryptionStats,
-  selectPrerequisites,
-  fetchKeysForCampaignByManager
+  selectPrerequisites
 } from "@/store/slices/key.slice";
 
-import { selectDashboardStatus, selectEncryptedStatus, selectImportStatus, fetchDashboardStatus } from "@/store/slices/dashboard.slice"
+import {
+  selectDashboardStatus, selectEncryptedStatus, selectImportStatus, fetchDashboardStatus
+  , selectKeyStatus, selectSubjects, selectSubjectQuestionsGrouped, selectSessionDates
+} from "@/store/slices/dashboard.slice"
 
 import { selectCurrentUser } from "@/store/slices/auth.slice";
 
@@ -54,6 +56,11 @@ export const useKeyManagement = () => {
   const dashboardStatus = useAppSelector(selectDashboardStatus)
   const EncryptedStatus = useAppSelector(selectEncryptedStatus)
   const ImportStatus = useAppSelector(selectImportStatus)
+
+  const keyStatusDashboard = useAppSelector(selectKeyStatus)
+  const subjects = useAppSelector(selectSubjects)
+  const subjectQuestionsGrouped = useAppSelector(selectSubjectQuestionsGrouped)
+  const sessionDates = useAppSelector(selectSessionDates)
 
   // --- Local state ---
   // const [keyInput, setKeyInput] = useState("");
@@ -94,9 +101,9 @@ export const useKeyManagement = () => {
         ? EncryptedStatus.filter((s) => s.encryption_status === "ENCRYPTED_ALL").length
         : 0;
 
-      return { totalSessions, importedSessions, encryptedSessions };
+      return { totalSessions, importedSessions, encryptedSessions , keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionDates};
     },
-    [ImportStatus, EncryptedStatus]
+    [ImportStatus, EncryptedStatus, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionDates]
   );
 
   function syncLocalFromKeys(keys: any[]) {
@@ -118,8 +125,13 @@ export const useKeyManagement = () => {
     console.log("EncryptedStatus =", EncryptedStatus);
     console.log("ImportStatus =", ImportStatus);
     console.log("headerSummary =", headerSummary);
-    console.log(sessions)
-  }, [dashboardStatus, EncryptedStatus, ImportStatus]);
+    console.log("sessions =", sessions);
+    console.log("keyStatusDashboard =", keyStatusDashboard);
+    console.log("subjects =", subjects);
+    console.log("subjectQuestionsGrouped =", subjectQuestionsGrouped);
+    console.log("sessionDates =", sessionDates);
+  }, [dashboardStatus, EncryptedStatus, ImportStatus, sessions, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionDates]);
+
 
 
 
@@ -421,5 +433,11 @@ export const useKeyManagement = () => {
     handleDeleteKey,
     handleSessionChange,
     handleRunBulkEncryption,
+
+
+    keyStatusDashboard,
+    subjects,
+    subjectQuestionsGrouped,
+    sessionDates,
   };
 };

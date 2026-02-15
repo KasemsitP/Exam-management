@@ -15,6 +15,8 @@ import {
   selectGradingRecords,
   fetchRecordThunk,
   gradingSlice,
+  selectBagNo,
+  clearGradingState,
 } from "@/store/slices/grading.slice";
 
 import { selectCurrentUser } from "@/store/slices/auth.slice";
@@ -61,8 +63,11 @@ export const useGradingStation = () => {
     selectAssignmentsForGrader(campaignNumericId, accountId)
   );
 
+  const bagNo = useAppSelector(selectBagNo);
+
   useEffect(() => {
     console.log("gradersAssignment =", gradersAssignment);
+    console.log("bagNo =", bagNo);
   }, [gradersAssignment]);
 
   const isLoading = useAppSelector(selectIsGradingLoading);
@@ -205,12 +210,13 @@ export const useGradingStation = () => {
         questionNo: questionNo,
       })
     );
+    console.log("verifyAndAllocate result:", result);
 
     if (verifyAndAllocateThunk.rejected.match(result)) {
       await Swal.fire({
         icon: "error",
         title: "สแกนไม่สำเร็จ",
-        text: gradingError || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
+        text: result.payload || result.error?.message || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
       });
       return;
     }
@@ -234,6 +240,7 @@ export const useGradingStation = () => {
   };
 
   const handleClear = () => {
+    dispatch(clearGradingState());
     setManualPayload("");
     setScanData(null);
     setPause(false);
@@ -278,6 +285,33 @@ export const useGradingStation = () => {
       setIsConfirmOpen(false);
       return;
     }
+    const confirmResult = await Swal.fire({
+      icon: "warning",
+      title: "ยืนยันการบันทึกคะแนน?",
+      html: `
+    <div style="margin-bottom:8px;">
+      บันทึกคะแนนข้อที่ ${questionNo}:
+      <strong>&nbsp ${score}</strong> คะแนน
+    </div>
+
+    <div style="margin-bottom:8px;">
+      เลขประจำถุง:<strong>&nbsp${bagNo}</strong>
+    </div>
+
+    <div>
+      รหัส Slot: <strong>&nbsp ${lastSlotId}</strong>
+    </div>
+`,
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+    });
+
+    if (!confirmResult.isConfirmed) {
+      return;
+    }
 
     const payload: PayloadScore = {
       slotId: lastSlotId,
@@ -315,7 +349,20 @@ export const useGradingStation = () => {
       await Swal.fire({
         icon: "success",
         title: "บันทึกคะแนนสำเร็จ!",
-        text: `Slot ID: ${result.slotId} | คะแนน: ${result.score}`,
+        html: `
+    <div style="margin-bottom:8px;">
+      บันทึกคะแนนข้อที่ ${questionNo}:
+      <strong>&nbsp ${score}</strong> คะแนน
+    </div>
+
+    <div style="margin-bottom:8px;">
+      เลขประจำถุง:<strong>&nbsp${bagNo}</strong>
+    </div>
+
+    <div>
+      รหัส Slot: <strong>&nbsp ${lastSlotId}</strong>
+    </div>
+`,
       });
 
       if (pauseAfterSuccess) {
@@ -337,6 +384,7 @@ export const useGradingStation = () => {
   };
 
   const toggleScanner = () => {
+    // dispatch(clearGradingState());
     setScannerEnabled((prev) => {
       const next = !prev;
       setPause(!next ? true : false);
@@ -393,5 +441,10 @@ export const useGradingStation = () => {
     handleSaveScore,
     handleScan,
     closeConfirmModal,
+
+
+
+    bagNo,
+    lastSlotId
   };
 };

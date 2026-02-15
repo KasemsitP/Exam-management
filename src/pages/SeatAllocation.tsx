@@ -784,7 +784,7 @@ export default function SeatAllocationPage() {
                     <th style={{ width: "20%" }}>ห้องสอบ</th>
                     <th style={{ width: "10%" }}>ความจุ (ที่นั่ง)</th>
                     <th style={{ width: "20%" }}>สถานะการจัดสรร</th>
-                    <th style={{ width: "20%" }}>จัดแล้ว / ความจุ</th>
+                    <th style={{ width: "20%" }}>ความจุ / จัดแล้ว  </th>
                     <th className="text-end " style={{ width: "15%" }}>
                       การจัดการ
                     </th>
@@ -805,6 +805,7 @@ export default function SeatAllocationPage() {
 
                     // ใช้ค่าจาก API เป็นหลัก
                     const assignedCountFromApi = assignedCounts[room.roomCode];
+                    console.log("assignedCountFromApi =", assignedCountFromApi, "for room", room.roomCode);
 
                     const allocatedCount = assignedCountFromApi ?? Number(
                       anyRoom.allocatedCount ?? cells.length ?? 0
@@ -839,7 +840,8 @@ export default function SeatAllocationPage() {
                         <td>{room.capacity}</td>
                         <td>{statusBadge}</td>
                         <td>
-                          {allocatedCount} / {room.capacity} คน
+                         
+                          {room.capacity} / {allocatedCount}  คน
                         </td>
                         <td>
                           <div className="d-flex justify-content-center gap-2 ">

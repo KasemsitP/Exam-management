@@ -46,6 +46,10 @@ export default function GradingStationPage() {
     handleScan,
     closeConfirmModal,
     // requestCameraPermission
+
+
+    lastSlotId,
+    bagNo
   } = useGradingStation();
 
   return (
@@ -92,6 +96,8 @@ export default function GradingStationPage() {
                 recent={gradersAssignment}
                 questionNo={questionNo}
                 setQuestionNo={setQuestionNo}
+                slotId={lastSlotId}
+                bagNo={bagNo}
               />
             </div>
 

@@ -69,7 +69,7 @@ export default function ComposeBagModal({
                                 <div className="card border-0 shadow-sm">
                                     <div className="card-header bg-white">
                                         <h6 className="mb-1">
-                                            รายการสแกนแล้ว (QR Payloads)
+                                            รายการที่้สแกนแล้ว ({scannedPayloads.length} ชุด)
                                         </h6>
                                     </div>
 
@@ -78,29 +78,32 @@ export default function ComposeBagModal({
                                             className="border rounded overflow-auto"
                                             style={{ maxHeight: 240 }}
                                         >
-                                            <ul className="list-group list-group-flush">
-                                                {scannedPayloads.length === 0 ? (
-                                                    <li className="list-group-item text-center text-muted">
-                                                        ยังไม่มีการสแกน QR Code
-                                                    </li>
-                                                ) : (
-                                                    scannedPayloads.map((code, index) => (
-                                                        <li
-                                                            key={`${code}-${index}`}
-                                                            className="list-group-item d-flex align-items-center gap-3"
-                                                        >
-                                                            <span
-                                                                className="text-muted small"
-                                                                style={{ minWidth: 50 }}
-                                                            >
-                                                                {scannedDate[index]?.toLocaleTimeString("th-TH")}
-                                                            </span>
+                                            <div className="table-responsive">
+                                                <table className="table table-sm table-striped align-middle">
+                                                    <thead className="table-light">
+                                                        <tr>
+                                                            <th style={{ width: 80 }}>ลำดับ</th>
+                                                            <th>Payload</th>
+                                                            <th style={{ width: 150 }}>วัน/เวลา</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {scannedPayloads.map((code, index) => (
+                                                            <tr key={`${code}-${index}`}>
+                                                                <td>{index + 1}</td>
+                                                                <td className="text-truncate" style={{ maxWidth: 300 }}>
+                                                                    {code}
+                                                                </td>
+                                                                <td className="text-muted">
+                                                                    {scannedDate[index]?.toLocaleTimeString("th-TH")}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
 
-                                                            <span>{code}</span>
-                                                        </li>
-                                                    ))
-                                                )}
-                                            </ul>
+
                                         </div>
 
                                         <div className="d-flex justify-content-end mt-2">

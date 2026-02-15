@@ -1,5 +1,5 @@
 // components/KeyCreateCard.tsx
-import { Lightbulb, Loader2, Minus, Plus, ShieldCheck } from "lucide-react";
+import { Lightbulb, Loader2, Minus, Plus, ShieldCheck , Key } from "lucide-react";
 
 interface KeyCreateCardProps {
   firstKey: string;
@@ -45,7 +45,7 @@ export default function KeyCreateCard({
   return (
     <div className="card shadow-sm mb-4 mt-4">
       <div className="card-header bg-white">
-        <h6 className="mb-0">1. ลงทะเบียนคีย์เข้ารหัส</h6>
+        <h6 className="mb-0">1. กำหนดคีย์สำหรับการเข้ารหัสคิวอาร์โค้ด</h6>
       </div>
 
       <div className="card-body">
@@ -69,6 +69,7 @@ export default function KeyCreateCard({
               value={firstKey}
               onChange={(e) => onFirstKeyChange(e.target.value)}
               disabled={!!firstKeyId}
+              placeholder="อัยการพิเศษฝ่าย (คก.2) คณะกรรมการ 2"
             />
           </div>
 
@@ -76,6 +77,7 @@ export default function KeyCreateCard({
             <button
               className="btn btn-primary w-100"
               onClick={onSaveFirstKey}
+             
               disabled={
                 !!firstKeyId ||
                 !firstKey.trim() ||
@@ -113,6 +115,7 @@ export default function KeyCreateCard({
               value={secondKey}
               onChange={(e) => onSecondKeyChange(e.target.value)}
               disabled={!!secondKeyId}
+               placeholder="รองอธิบดีอัยการ"
             />
           </div>
 

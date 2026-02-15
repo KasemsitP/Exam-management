@@ -39,7 +39,14 @@ export function AppSidebar({
   onCloseMobile,
   setOnClickMobileSidebar,
 }: AppSidebarProps) {
+  const roleLabel: Record<string, string> = {
+    admin: "ผู้ดูแลระบบ Admin",
+    staff: "เจ้าหน้าที่ Staff",
+    grader: "ผู้ตรวจข้อสอบ Grader",
+    manager: "ผู้จัดการคีย์ Manager"
+  };
   const SidebarInner = (
+
     <>
       <style>{styleScrollbar}</style>
 
@@ -108,9 +115,8 @@ export function AppSidebar({
                   style={({ isActive }) => ({
                     background: isActive ? SB.active : "transparent",
                     color: SB.text,
-                    border: `1px solid ${
-                      isActive ? SB.activeBorder : "transparent"
-                    }`,
+                    border: `1px solid ${isActive ? SB.activeBorder : "transparent"
+                      }`,
                     borderLeft: isActive
                       ? `4px solid ${theme.color}`
                       : "4px solid transparent",
@@ -181,9 +187,8 @@ export function AppSidebar({
                   style={({ isActive }) => ({
                     background: isActive ? SB.active : "transparent",
                     color: SB.text,
-                    border: `1px solid ${
-                      isActive ? SB.activeBorder : "transparent"
-                    }`,
+                    border: `1px solid ${isActive ? SB.activeBorder : "transparent"
+                      }`,
                     borderLeft: isActive
                       ? `4px solid ${theme.color}`
                       : "4px solid transparent",
@@ -249,13 +254,14 @@ export function AppSidebar({
                 className="mb-0 fw-bold text-truncate"
                 style={{ fontSize: "0.92rem", color: SB.text }}
               >
-                {user?.name ?? "Admin User"}
+
+                {roleLabel[user?.roles?.[0]]}
               </p>
               <p
                 className="mb-0 small text-truncate"
                 style={{ fontSize: "0.8rem", color: SB.muted }}
               >
-                {user?.username || "admin"}
+                {user?.name || "admin"}
               </p>
             </div>
           </div>

@@ -37,6 +37,7 @@ import CreateBagModal from "./components/CreateBagModal";
 import ComposeBagModal from "./components/ComposeBagModal";
 import BagScannerModal from "./components/BagScannerModal";
 import type { CreateBagForm } from "./bags.types";
+import axios from "axios";
 
 // ปรับ payload ให้เทียบเท่ากันเสมอ
 const normalizePayload = (s: string) => s.trim();
@@ -71,6 +72,8 @@ export default function BagsPage() {
   const [IsScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [qrPayloads, setQrPayloads] = useState<string[]>([]);
   const [DatePayloads, setDatePaylaods] = useState<Date[]>([]);
+
+
   const deviceId: string | undefined = undefined;
 
   const isLoading = bagStatus === "loading";
@@ -259,7 +262,7 @@ export default function BagsPage() {
     //   timeZone: "Asia/Bangkok",
     // });
 
-     console.log(dateTime);
+    console.log(dateTime);
 
     // กันสแกนถี่
     if (recentScanSetRef.current.has(data)) return;
@@ -278,9 +281,9 @@ export default function BagsPage() {
       //   variant: "destructive",
       // });
       Swal.fire({
-        icon : "error",
-        title : "QR code นี้ถูกสแกนแล้ว",
-        text  : "กรุณาสแกนอีกครั้ง"
+        icon: "error",
+        title: "QR code นี้ถูกสแกนแล้ว",
+        text: "กรุณาสแกนอีกครั้ง"
       })
       return;
     }
@@ -288,7 +291,7 @@ export default function BagsPage() {
 
 
     setQrPayloads((prev) => [...prev, data]);
-    setDatePaylaods((prev) => [...prev , dateTime])
+    setDatePaylaods((prev) => [...prev, dateTime])
 
     // console.log(qrPayloads)
 
@@ -315,11 +318,47 @@ export default function BagsPage() {
     try {
       console.log("BEFORE DISPATCH");
 
+      const result_subject = await axios.post("/api/bags/check-subjects", {
+        campaignId: Number(activeCampaign.id),
+        payload: qrPayloads,
+        datetime: DatePayloads
+      })
+      console.log("CHECK SUBJECT RESULT:", result_subject.data);
+      const data = result_subject.data;
+
+      if (result_subject.data.success) {
+        const result = await Swal.fire({
+          icon: "warning",
+          title: "ยืนยันการสร้างถุงข้อสอบ",
+          html: `
+    สร้างถุงข้อสอบวิชา <b>${data.subject_name.name}</b><br/>
+    ถุงเลขที่ <b>${data.bagNo}</b>
+    จำนวน <b>${qrPayloads.length}</b> เล่ม
+  `,
+          showCancelButton: true,
+          confirmButtonText: "ยืนยัน",
+          cancelButtonText: "ยกเลิก",
+        });
+        if (!result.isConfirmed) {
+          return;
+        }
+      }
+      else {
+        await Swal.fire({
+          icon: "error",
+          title: "มีบางเล่มที่มีวิชาไม่ตรงกับรอบสอบ",
+          text: "กรุณาตรวจสอบ QR code ที่สแกนอีกครั้ง",
+        });
+        return;
+      }
+
+
+
       const result = await dispatch(
         CreateBagAndAddQrPayload({
           campaignId: Number(activeCampaign.id),
           payload: qrPayloads,
-          datetime : DatePayloads
+          datetime: DatePayloads
         })
       ).unwrap();
 
@@ -328,7 +367,7 @@ export default function BagsPage() {
       await Swal.fire({
         icon: "success",
         title: "บันทึกข้อมูลสำเร็จ",
-        text: `สร้างถุงเลขที่ ${result.bagNo}`,
+        text: `สร้างถุงเลขที่ ${result.bagNo} จำนวน ${qrPayloads.length} เล่ม กรุณาปิดถุงเพื่อเตรียมนำส่ง `,
       });
 
       console.log("AFTER SWAL");
@@ -444,7 +483,7 @@ export default function BagsPage() {
       <ModalBackdrop open={IsScannerModalOpen} />
       <BagScannerModal
         open={IsScannerModalOpen}
-        onClose={() => { setIsScannerModalOpen(false); setQrPayloads([]); setDatePaylaods([]);  }}
+        onClose={() => { setIsScannerModalOpen(false); setQrPayloads([]); setDatePaylaods([]); }}
         canScan={canScan}
         isSealed={isSealed}
         scannerEnabled={scannerEnabled}
@@ -458,7 +497,7 @@ export default function BagsPage() {
         onClearCodes={handleClearCodes}
         onFinalize={handleFinalizeAndLink}
         scannedPayloads={qrPayloads}
-        scannedDate = {DatePayloads}
+        scannedDate={DatePayloads}
         bagStatus={bagStatus}
         bookletsInBag={bookletsInBag}
       />

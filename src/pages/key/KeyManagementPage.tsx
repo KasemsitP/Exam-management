@@ -38,6 +38,12 @@ export default function KeyManagementPage() {
     handleDeleteKey,
     handleSessionChange,
     handleRunBulkEncryption,
+
+    keyStatusDashboard,
+    subjects,
+    subjectQuestionsGrouped,
+    sessionDates,
+
   } = useKeyManagement();
 
   return (
@@ -66,13 +72,13 @@ export default function KeyManagementPage() {
           manager2={manager2}
           onRunBulkEncryption={handleRunBulkEncryption}
         />
-        {/* 
-        <ActiveKeysCard
+       
+        {/* <ActiveKeysCard
           activeKeys={activeKeys}
           keyStatus={keyStatus}
           isLoading={isLoading}
           onDeleteKey={handleDeleteKey}
-        /> */}
+        />  */}
 {/* 
         <EncryptionCard
           activeKeysCount={activeKeys.length}
