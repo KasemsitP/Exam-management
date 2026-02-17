@@ -7,13 +7,13 @@ export interface CampaignKey {
   id: number;
   campaign_id: number;
   account_id: number;
-  full_name:string;
+  full_name: string;
   key: string;
   algor?: string;
   iv: string;
-  active: number;   
-  order_num: number; 
-  created_at: string;  
+  active: number;
+  order_num: number;
+  created_at: string;
 }
 
 export interface PrerequisiteStatus {
@@ -95,35 +95,39 @@ export const fetchKeysForCampaignByManager = createAsyncThunk<
 );
 export const saveNewKey = createAsyncThunk<
   CampaignKey,
-  { campaignId: number; key: string; account_id : number  , order_num: number },
+  { campaignId: number; key: string; account_id: number, order_num: number },
   { rejectValue: string }
 >(
   "keyManagement/saveNewKey",
   async ({ campaignId, key, account_id, order_num }, { rejectWithValue }) => {
     try {
-      console.log("TEST KEY " , campaignId, key, account_id, order_num)
+      console.log("TEST KEY ", campaignId, key, account_id, order_num)
       const response = await axios.post<CampaignKey>(
         "/api/keys",
-        { campaignId, key , account_id, order_num }
+        { campaignId, key, account_id, order_num }
       );
       return response.data;
-    } catch (error: unknown) {
-      return rejectWithValue("Failed to save key");
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || "เกิดข้อผิดพลาด"
+      );
     }
   }
 );
 export const deleteKey = createAsyncThunk<
   number,
-  number,
+  { campaignId: number; account_id: number, keyId: number },
   { rejectValue: string }
 >(
   "keyManagement/deleteKey",
-  async (keyId, { rejectWithValue }) => {
+  async ({ campaignId, account_id, keyId }, { rejectWithValue }) => {
     try {
-      await axios.delete(`/api/keys/${keyId}`);
-      return keyId;
-    } catch (error: unknown) {
-      return rejectWithValue("Failed to delete key");
+      const response = await axios.delete(`/api/keys/${campaignId}/${account_id}/${keyId}`);
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || "เกิดข้อผิดพลาด"
+      );
     }
   }
 );

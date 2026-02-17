@@ -28,7 +28,6 @@ import Swal from "sweetalert2";
 interface FormValues {
   firstKey: string;
   secondKey: string;
-  otpCode?: string;
 }
 
 type ViewMode = "score" | "grader";
@@ -37,7 +36,7 @@ type DecryptStep = "keys" | "otp";
 export default function BagScoresPage() {
   const dispatch = useAppDispatch();
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  useAppSelector(selectActiveCampaignSessions); // แค่ให้ selector run
+  const sessionsNoSorted = useAppSelector(selectActiveCampaignSessions);
 
   const [bags, setBags] = useState<BagScoreBagSummary[]>([]);
   const [loadingBags, setLoadingBags] = useState(false);
@@ -57,7 +56,7 @@ export default function BagScoresPage() {
 
   // ---------- form 2-FA ----------
   const { handleSubmit, register, reset, getValues } = useForm<FormValues>({
-    defaultValues: { firstKey: "", secondKey: "", otpCode: "" },
+    defaultValues: { firstKey: "", secondKey: "" },
   });
 
   const [decryptStep, setDecryptStep] = useState<DecryptStep>("keys");
@@ -76,6 +75,18 @@ export default function BagScoresPage() {
 
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
+  const getDayNumber = (code: string): number => {
+    const match = code.match(/\d+/);
+    return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+  };
+
+  const sessions = [...sessionsNoSorted].sort((s1, s2) => {
+    const date1 = getDayNumber(s1.session_code);
+    const date2 = getDayNumber(s2.session_code);
+    return date1 - date2;
+  });
+
+  console.log("campaignsess", sessions)
   // countdown เวลา OTP
   useEffect(() => {
     if (decryptStep !== "otp") return;
@@ -304,99 +315,29 @@ export default function BagScoresPage() {
   // -----------------------------
   const openDecryptModal = () => {
     setopendecrypt(true);
-    setDecryptStep("keys");
-    setOtpToken(null);
-    setOtpEmail(null);
-    setOtpExpiresIn(null);
-    reset({ firstKey: "", secondKey: "", otpCode: "" });
+    reset({ firstKey: "", secondKey: "" });
   };
 
   const onSubmitDecrypt = async (values: FormValues) => {
-    // console.log(values)
-    if (decryptStep === "keys") {
-      const { firstKey: FirstKey, secondKey: SecondKey } = values;
-      if (FirstKey.length !== 16 || SecondKey.length !== 16) {
-        Swal.fire({
-          icon: "error",
-          title: "คีย์ไม่ถูกต้อง",
-          text: "กรุณากรอกคีย์ให้ครบ 16 ตัวอักษรเท่านั้น",
-        });
-        return;
-      }
+    if (!activeCampaign?.id) return;
 
-      setRequestingOtp(true);
-      try {
-        // NOTE: แก้ URL/field ให้ตรง backend ของคุณ
-        console.log(FirstKey, SecondKey)
-        const result = await axios.post(`/api/campaigns/${activeCampaign.id}/decrypt/request-otp`, {
-          FirstKey,
-          SecondKey,
-        });
+    const FirstKey = values.firstKey.trim();
+    const SecondKey = values.secondKey.trim();
 
-        if (result.data?.success) {
-          setDecryptStep("otp");
-          setOtpToken(result.data.otpToken || null);
-          setOtpEmail(result.data.email || null);
-          setOtpExpiresIn(result.data.expiresInSeconds ?? 300); // fallback 5 นาที
-          console.log(result.data)
-
-          Swal.fire({
-            icon: "success",
-            title: "ส่งรหัสยืนยันแล้ว",
-            text:
-              result.data.message ||
-              "กรุณาตรวจสอบรหัสจากอีเมลของคุณ แล้วกรอกด้านล่าง",
-          });
-        } else {
-          Swal.fire({
-            icon: "error",
-            title: "ขอรหัสยืนยันไม่สำเร็จ",
-            text: result.data?.message || "ไม่สามารถสร้างรหัสได้",
-          });
-        }
-      } catch (error: any) {
-        Swal.fire({
-          icon: "error",
-          title: "Request failed",
-          text:
-            error?.response?.data?.message ||
-            "Backend error. กรุณาลองใหม่อีกครั้ง",
-        });
-      } finally {
-        setRequestingOtp(false);
-      }
-
-      return;
-    }
-    console.log()
-    // step === "otp"
-    const otpCode = otpDigits.join("");
-
-    if (otpCode.length !== 6) {
-      Swal.fire({
-        icon: "warning",
-        title: "กรุณากรอกรหัสยืนยันให้ครบ 6 หลัก",
-      });
-      return;
-    }
-
-    if (!otpToken) {
+    if (FirstKey.length !== 16 || SecondKey.length !== 16) {
       Swal.fire({
         icon: "error",
-        title: "ไม่พบ token สำหรับยืนยัน",
-        text: "กรุณาขอรหัสใหม่อีกครั้ง",
+        title: "คีย์ไม่ถูกต้อง",
+        text: "กรุณากรอกคีย์ให้ครบ 16 ตัวอักษรเท่านั้น",
       });
       return;
     }
 
-
-    setVerifyingOtp(true);
     try {
-      // NOTE: แก้ URL/field ให้ตรง backend ของคุณ
-      const result = await axios.post(`/api/campaigns/${activeCampaign.id}/decrypt/verify-otp`, {
-        otpToken,
-        otpCode,
-      });
+      const result = await axios.post(
+        `/api/campaigns/${activeCampaign.id}/decrypt`,
+        { FirstKey, SecondKey }
+      );
 
       if (result.data?.success) {
         await Swal.fire({
@@ -404,55 +345,57 @@ export default function BagScoresPage() {
           title: "ถอดรหัสสำเร็จ",
           text: result.data.message || "ปลดล็อกข้อมูลเรียบร้อย",
         });
+
         setopendecrypt(false);
-        loadBagsForCampaign((activeCampaign.id));
-        // ถ้าถอดรหัสแล้วมีผลกับคะแนน/ข้อมูล ค่อย trigger reload เพิ่มตรงนี้
-        // เช่น: fetchScores(); หรือ dispatch อะไรบางอย่าง
+
+        await loadBagsForCampaign(activeCampaign.id);
+
+        const unlock = await axios.get(
+          `/api/campaigns/${activeCampaign.id}/is-unlock`
+        );
+        setIsdecrypted(!!unlock.data.isUnlock);
       } else {
         Swal.fire({
           icon: "error",
-          title: "ยืนยันรหัสไม่สำเร็จ",
-          text: result.data?.message || "รหัสไม่ถูกต้องหรือหมดอายุ",
+          title: "ถอดรหัสไม่สำเร็จ",
+          text: result.data?.message || "คีย์ไม่ถูกต้อง",
         });
       }
     } catch (error: any) {
+      console.log("decrypt error", error);
       Swal.fire({
         icon: "error",
         title: "Request failed",
-        text:
-          error?.response?.data?.message ||
-          "Backend error. กรุณาลองใหม่อีกครั้ง",
+        text: error?.response?.data?.message || "Backend error. กรุณาลองใหม่อีกครั้ง",
       });
-    } finally {
-      setVerifyingOtp(false);
     }
   };
 
-  const handleResendOtp = async () => {
-    // ใช้ key เดิมจาก form มา request ใหม่
-    const { firstKey, secondKey } = getValues();
-    await onSubmitDecrypt({ firstKey, secondKey });
-  };
+  // const handleResendOtp = async () => {
+  //   // ใช้ key เดิมจาก form มา request ใหม่
+  //   const { firstKey, secondKey } = getValues();
+  //   await onSubmitDecrypt({ firstKey, secondKey });
+  // };
 
 
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d?$/.test(value)) return;
+  // const handleOtpChange = (index: number, value: string) => {
+  //   if (!/^\d?$/.test(value)) return;
 
-    const newOtp = [...otpDigits];
-    newOtp[index] = value;
-    setOtpDigits(newOtp);
+  //   const newOtp = [...otpDigits];
+  //   newOtp[index] = value;
+  //   setOtpDigits(newOtp);
 
-    if (value && index < OTP_LENGTH - 1) {
-      inputsRef.current[index + 1]?.focus();
-    }
-  };
+  //   if (value && index < OTP_LENGTH - 1) {
+  //     inputsRef.current[index + 1]?.focus();
+  //   }
+  // };
 
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
-      inputsRef.current[index - 1]?.focus();
-    }
-  };
+  // const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+  //   if (e.key === "Backspace" && !otpDigits[index] && index > 0) {
+  //     inputsRef.current[index - 1]?.focus();
+  //   }
+  // };
 
   const handlePDFperBags = async () => {
     console.log(selectedBagId)
@@ -605,7 +548,7 @@ export default function BagScoresPage() {
 
             {/* ========== ซ้าย: Session filter ========== */}
             <div className="d-flex flex-wrap align-items-center gap-2">
-              <span className="text-muted small">Session</span>
+              <span className="text-muted small">วิชาที่สอบ</span>
 
               <select
                 className="form-select form-select-sm"
@@ -613,10 +556,11 @@ export default function BagScoresPage() {
                 value={selectedSessionId}
                 onChange={(e) => setSelectedSessionId(e.target.value)}
               >
-                <option value="all">ทุก session</option>
-                {sessionOptions.map((s) => (
+                <option value="all">รวมทุกวิชาสอบ</option>
+
+                {sessions.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.label || `Session ${s.id}`}
+                    {s.session_code} - {s.subjects?.[0]?.name ?? s.label}
                   </option>
                 ))}
               </select>
@@ -977,31 +921,34 @@ export default function BagScoresPage() {
                   <div className="modal-dialog modal-dialog-centered">
                     <div className="modal-content">
                       <div className="modal-header">
-                        <h6 className="modal-title">การถอดรหัส (2 ขั้นตอน)</h6>
+                        <h6 className="modal-title">การถอดรหัส</h6>
+
                         <button
                           type="button"
                           className="btn-close"
                           onClick={() => setopendecrypt(false)}
                         />
+
                       </div>
 
                       <form onSubmit={handleSubmit(onSubmitDecrypt)}>
                         <div className="modal-body">
                           {/* Step 1: กรอก Key 2 ดอก */}
-                          <div className="mb-3">
+                          <small className="text-muted">
+                            กรุณากรอกคีย์ให้ถูกต้องทั้ง 2 คีย์เพื่อปลดล็อคข้อมูลคะแนน
+                          </small>
+                          <div className="mt-3 mb-3">
                             <label className="form-label fw-semibold">
                               คีย์เข้ารหัสที่ 1
                             </label>
                             <input
                               type="password"
                               className="form-control"
-                              placeholder="คีย์ที่ 1 (16 ตัวอักษร)"
+                              placeholder="คีย์ที่ 1 อัยการพิเศษฝ่าย (คก.2) คณะกรรมการ 2 (16 ตัวอักษร)"
                               maxLength={16}
                               {...register("firstKey", { required: true })}
-                              disabled={
-                                decryptStep === "otp" || requestingOtp
-                              }
                             />
+
                           </div>
 
                           <div className="mb-3">
@@ -1011,18 +958,14 @@ export default function BagScoresPage() {
                             <input
                               type="password"
                               className="form-control"
-                              placeholder="คีย์ที่ 2 (16 ตัวอักษร)"
+                              placeholder="คีย์ที่ 2 รองอธิบดีอัยการ"
                               maxLength={16}
-
                               {...register("secondKey", { required: true })}
-                              disabled={
-                                decryptStep === "otp" || requestingOtp
-                              }
                             />
                           </div>
 
                           {/* Step 2: OTP จาก Gmail */}
-                          {decryptStep === "otp" && (
+                          {/* {decryptStep === "otp" && (
                             <>
                               <hr />
                               <div className="mb-2 small text-muted">
@@ -1073,7 +1016,7 @@ export default function BagScoresPage() {
 
                               </div>
                             </>
-                          )}
+                          )} */}
                         </div>
 
                         <div className="modal-footer">
@@ -1084,32 +1027,9 @@ export default function BagScoresPage() {
                           >
                             ปิด
                           </button>
-                          <button
-                            type="submit"
-                            className="btn btn-primary"
-                            disabled={requestingOtp || verifyingOtp}
-                          >
-                            {decryptStep === "keys" ? (
-                              <>
-                                {requestingOtp && (
-                                  <Loader2
-                                    size={16}
-                                    className="me-1 spin-animation"
-                                  />
-                                )}
-                                ขอรหัสยืนยันทางอีเมล
-                              </>
-                            ) : (
-                              <>
-                                {verifyingOtp && (
-                                  <Loader2
-                                    size={16}
-                                    className="me-1 spin-animation"
-                                  />
-                                )}
-                                ยืนยันการถอดรหัส
-                              </>
-                            )}
+
+                          <button type="submit" className="btn btn-danger">
+                            ถอดรหัส
                           </button>
                         </div>
                       </form>

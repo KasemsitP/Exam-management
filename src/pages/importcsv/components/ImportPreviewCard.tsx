@@ -28,14 +28,15 @@ export default function ImportPreviewCard({
       <div className="card-body">
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 text-muted small mb-2">
           <div className="d-flex flex-wrap align-items-center gap-3">
-            <span>{parsed.headers.length} columns detected</span>
-            <span>{parsed.rows.length} rows detected</span>
+            <span>{parsed.rows.length} แถว</span>
+            <span> {parsed.headers.length} คอลัมน์</span>
+            
             {statsText && (
               <span className="badge text-bg-light">{statsText}</span>
             )}
           </div>
           <div className="d-flex align-items-center gap-2">
-            {summaryText && <span className="small">{summaryText}</span>}
+            {/* {summaryText && <span className="small">{summaryText}</span>} */}
             <button
               className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
               onClick={onConfirm}
@@ -75,8 +76,7 @@ export default function ImportPreviewCard({
         </div>
 
         <div className="small text-muted mt-2">
-          Showing up to {previewRows} rows of{" "}
-          {parsed.rows.length.toLocaleString()} total rows.
+          แสดงสูงสุด {previewRows} แถว จากทั้งหมด {parsed.rows.length.toLocaleString()} แถว
         </div>
       </div>
     </div>

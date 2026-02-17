@@ -22,7 +22,7 @@ import {
 
 import {
   selectDashboardStatus, selectEncryptedStatus, selectImportStatus, fetchDashboardStatus
-  , selectKeyStatus, selectSubjects, selectSubjectQuestionsGrouped, selectSessionDates
+  , selectKeyStatus, selectSubjects, selectSubjectQuestionsGrouped, selectSession
 } from "@/store/slices/dashboard.slice"
 
 import { selectCurrentUser } from "@/store/slices/auth.slice";
@@ -60,7 +60,7 @@ export const useKeyManagement = () => {
   const keyStatusDashboard = useAppSelector(selectKeyStatus)
   const subjects = useAppSelector(selectSubjects)
   const subjectQuestionsGrouped = useAppSelector(selectSubjectQuestionsGrouped)
-  const sessionDates = useAppSelector(selectSessionDates)
+  const sessionInfo = useAppSelector(selectSession)
 
   // --- Local state ---
   // const [keyInput, setKeyInput] = useState("");
@@ -101,9 +101,9 @@ export const useKeyManagement = () => {
         ? EncryptedStatus.filter((s) => s.encryption_status === "ENCRYPTED_ALL").length
         : 0;
 
-      return { totalSessions, importedSessions, encryptedSessions , keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionDates};
+      return { totalSessions, importedSessions,EncryptedStatus, encryptedSessions , keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo , keyStatus};;
     },
-    [ImportStatus, EncryptedStatus, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionDates]
+    [ImportStatus, EncryptedStatus, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo ,keyStatus]
   );
 
   function syncLocalFromKeys(keys: any[]) {
@@ -129,8 +129,10 @@ export const useKeyManagement = () => {
     console.log("keyStatusDashboard =", keyStatusDashboard);
     console.log("subjects =", subjects);
     console.log("subjectQuestionsGrouped =", subjectQuestionsGrouped);
-    console.log("sessionDates =", sessionDates);
-  }, [dashboardStatus, EncryptedStatus, ImportStatus, sessions, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionDates]);
+    console.log("sessionInfo =", sessionInfo);
+    console.log("keyStatus =", keyStatus);
+
+  }, [dashboardStatus, EncryptedStatus, ImportStatus, sessions, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo]);
 
 
 
@@ -235,46 +237,47 @@ export const useKeyManagement = () => {
         syncLocalFromKeys(keys);
 
         dispatch(checkEncryptionPrerequisites(numericCampaignId));
+        dispatch(fetchDashboardStatus(numericCampaignId));
 
         const MIN_LOADING_TIME = 3000;
         const startTime = Date.now();
 
-        // ✅ 2. เปิด loading
-        Swal.fire({
-          title: "กำลังประมวลผล...",
-          allowOutsideClick: false,
-          didOpen: () => {
-            Swal.showLoading();
-          },
-        });
+        // // ✅ 2. เปิด loading
+        // Swal.fire({
+        //   title: "กำลังประมวลผล...",
+        //   allowOutsideClick: false,
+        //   didOpen: () => {
+        //     Swal.showLoading();
+        //   },
+        // });
 
-        // ✅ 3. ใส่ logic เวลา "ตรงนี้"
-        dispatch(runBulkEncryptionForSession({ campaignId: numericCampaignId }))
-          .unwrap()
-          .then(() => {
-            const elapsed = Date.now() - startTime;
-            const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
+        // // ✅ 3. ใส่ logic เวลา "ตรงนี้"
+        // dispatch(runBulkEncryptionForSession({ campaignId: numericCampaignId }))
+        //   .unwrap()
+        //   .then(() => {
+        //     const elapsed = Date.now() - startTime;
+        //     const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
 
-            setTimeout(() => {
-              Swal.fire({
-                icon: "success",
-                title: "เข้ารหัสสำเร็จ",
-                timer: 1500,
-                showConfirmButton: false,
-              });
-            }, remaining);
-          })
-          .catch(() => {
-            const elapsed = Date.now() - startTime;
-            const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
+        //     setTimeout(() => {
+        //       Swal.fire({
+        //         icon: "success",
+        //         title: "เข้ารหัสสำเร็จ",
+        //         timer: 1500,
+        //         showConfirmButton: false,
+        //       });
+        //     }, remaining);
+        //   })
+        //   .catch(() => {
+        //     const elapsed = Date.now() - startTime;
+        //     const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
 
-            setTimeout(() => {
-              Swal.fire({
-                icon: "error",
-                title: "เข้ารหัสล้มเหลว",
-              });
-            }, remaining);
-          });
+        //     setTimeout(() => {
+        //       Swal.fire({
+        //         icon: "error",
+        //         title: "เข้ารหัสล้มเหลว",
+        //       });
+        //     }, remaining);
+        //   });
       })
       .catch((error) => {
         Swal.fire({
@@ -296,7 +299,7 @@ export const useKeyManagement = () => {
       reverseButtons: true,
     }).then((result) => {
       if (!result.isConfirmed) return;
-      dispatch(deleteKey(keyId))
+      dispatch(deleteKey({ campaignId: numericCampaignId!, account_id: Number(userAccountId), keyId }))
         .unwrap()
         .then(async () => {
           Swal.fire({ icon: "success", title: "ลบคีย์สำเร็จ", timer: 1500, showConfirmButton: false });
@@ -305,6 +308,7 @@ export const useKeyManagement = () => {
           syncLocalFromKeys(keys);
 
           dispatch(checkEncryptionPrerequisites(numericCampaignId!));
+          dispatch(fetchDashboardStatus(numericCampaignId));
         })
         .catch((error) => {
           Swal.fire({
@@ -438,6 +442,5 @@ export const useKeyManagement = () => {
     keyStatusDashboard,
     subjects,
     subjectQuestionsGrouped,
-    sessionDates,
   };
 };

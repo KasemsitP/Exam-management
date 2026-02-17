@@ -1,5 +1,5 @@
 // components/KeyCreateCard.tsx
-import { Lightbulb, Loader2, Minus, Plus, ShieldCheck , Key } from "lucide-react";
+import { Lightbulb, Loader2, Minus, Plus, ShieldCheck, Key } from "lucide-react";
 
 interface KeyCreateCardProps {
   firstKey: string;
@@ -22,6 +22,10 @@ interface KeyCreateCardProps {
   hasActiveCampaign: boolean;
   activeKeyCount: number;
   onRunBulkEncryption: () => void;
+  headerSummary: {
+    keyStatus: any;
+    EncryptedStatus: any[];
+  };
 }
 
 
@@ -40,8 +44,16 @@ export default function KeyCreateCard({
   activeKeyCount,
   onRunBulkEncryption,
   manager1,
-  manager2
+  manager2,
+  headerSummary
 }: KeyCreateCardProps) {
+
+  const allEncrypted =
+    headerSummary.EncryptedStatus?.every(
+      (s: any) => s.encryption_status === "ENCRYPTED_ALL"
+    ) ?? false;
+
+
   return (
     <div className="card shadow-sm mb-4 mt-4">
       <div className="card-header bg-white">
@@ -57,7 +69,7 @@ export default function KeyCreateCard({
               <span>คีย์สำหรับการเข้ารหัสคนที่ 1</span>
 
               {manager1 && (
-                <span className="badge bg-light text-secondary fw-normal">
+                <span className="badge bg-light text-danger fw-normal">
                   เข้ารหัสโดย {manager1}
                 </span>
               )}
@@ -77,7 +89,7 @@ export default function KeyCreateCard({
             <button
               className="btn btn-primary w-100"
               onClick={onSaveFirstKey}
-             
+
               disabled={
                 !!firstKeyId ||
                 !firstKey.trim() ||
@@ -103,7 +115,7 @@ export default function KeyCreateCard({
               <span>คีย์สำหรับการเข้ารหัสคนที่ 2</span>
 
               {manager2 && (
-                <span className="badge bg-light text-secondary fw-normal">
+                <span className="badge bg-light text-danger fw-normal">
                   เข้ารหัสโดย {manager2}
                 </span>
               )}
@@ -115,7 +127,7 @@ export default function KeyCreateCard({
               value={secondKey}
               onChange={(e) => onSecondKeyChange(e.target.value)}
               disabled={!!secondKeyId}
-               placeholder="รองอธิบดีอัยการ"
+              placeholder="รองอธิบดีอัยการ"
             />
           </div>
 
@@ -148,18 +160,29 @@ export default function KeyCreateCard({
             className="d-flex align-items-center gap-2 mt-3 p-3 rounded border border-success bg-success bg-opacity-10"
           >
             <ShieldCheck size={18} className="text-success" />
-            <div>
-              <div className="fw-semibold text-success">
-                ระบบพร้อมสำหรับการเข้ารหัส
-              </div>
-              <div className="small text-muted">
-                รอบสอบนี้มีคีย์ความปลอดภัยครบทั้ง 2 อันแล้ว
-              </div>
-            </div>
+            {allEncrypted ? (
+              <>
+                <div className="fw-semibold text-success">
+                  เข้ารหัสและสร้างคิวอาร์โค้ดเแล้ว
+                </div>
+                <div className="small text-muted">
+                  ระบบได้สร้างคิวอาร์โค้ดครบถ้วนแล้ว
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="fw-semibold text-primary">
+                  ระบบพร้อมสำหรับการเข้ารหัสและสร้างคิวอาร์โค้ด
+                </div>
+                <div className="small text-muted">
+                  กรุณากดปุ่ม "เริ่มการเข้ารหัส" เพื่อดำเนินการ
+                </div>
+              </>
+            )}
           </div>
         )}
         <div className="mt-4">
-          <button className="btn btn-success" onClick={onRunBulkEncryption}>
+          <button className="btn btn-success" onClick={onRunBulkEncryption} disabled={allEncrypted}>
             เริ่มการเข้ารหัส
           </button>
         </div>

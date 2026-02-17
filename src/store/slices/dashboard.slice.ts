@@ -1,7 +1,7 @@
 // dashboard.slice.ts
 import { RootState } from "../index";
 import axios from "axios";
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 /* ---------------- API Types ---------------- */
 
@@ -20,8 +20,8 @@ export interface EncryptedStatus {
   session_id: number;
   session_code: string;
   total_users_in_session: number;
-  encrypted_users: number | string; // API ส่ง string มา
-  pending_users: number | string;   // API ส่ง string มา
+  encrypted_users: number | string; // API อาจส่ง string
+  pending_users: number | string; // API อาจส่ง string
   encryption_status: "NOT_ENCRYPTED" | "PARTIAL" | "ENCRYPTED_ALL";
 }
 
@@ -33,20 +33,30 @@ export interface SubjectLite {
 
 export interface SubjectQuestionRow {
   campaign_id: number;
+  // ✅ เพิ่มจาก backend: session + เวลา
+  session_id: number;
+  exam_date: string; // ISO
+  start_at: string; // ISO
+  end_at: string; // ISO
+
   subject_id: number;
   subject_code: string;
   subject_name: string;
+
   subject_question_id: number;
   question_no: number;
   question_label: string;
   max_score: number | string; // API ส่ง "5.00"
 }
 
-export interface SessionDateRow {
+// ✅ shape ของ “sessions” ที่ได้จาก backend
+export type SessionRow = {
+  session_id: number;
+  session_code: string;
   exam_date: string; // ISO
-  start_at: string;  // ISO
-  end_at: string;    // ISO
-}
+  start_at: string; // ISO
+  end_at: string; // ISO
+};
 
 export interface KeyStatus {
   key1_status: boolean;
@@ -59,6 +69,14 @@ export interface SubjectQuestionsGrouped {
   subject_id: number;
   subject_code: string;
   subject_name: string;
+
+  // ✅ optional: เอา session มาแปะไว้ด้วยได้ ถ้าคุณอยากใช้ใน UI ต่อ
+  // session_id?: number;
+  // session_code?: string;
+  // exam_date?: string;
+  // start_at?: string;
+  // end_at?: string;
+
   questions: Array<{
     id: number;
     questionNo: number;
@@ -74,16 +92,20 @@ export interface DashboardApiResponse {
   encryptedStatus: EncryptedStatus[];
   subjects: SubjectLite[];
   subjectsQuestions: SubjectQuestionRow[];
-  sessionDates: SessionDateRow[];
+  sessions: SessionRow[]; // ✅ เปลี่ยนจาก sessionDates เป็น sessions ให้ตรง backend
   keyStatus: KeyStatus;
 }
+
+/* ---------------- Helpers ---------------- */
 
 function toNumber(v: any, fallback = 0) {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
 
-function groupSubjectsQuestions(rows: SubjectQuestionRow[]): Record<number, SubjectQuestionsGrouped> {
+function groupSubjectsQuestions(
+  rows: SubjectQuestionRow[]
+): Record<number, SubjectQuestionsGrouped> {
   const map: Record<number, SubjectQuestionsGrouped> = {};
 
   for (const r of rows ?? []) {
@@ -111,33 +133,43 @@ function groupSubjectsQuestions(rows: SubjectQuestionRow[]): Record<number, Subj
 
   return map;
 }
+
+/* ---------------- Thunk ---------------- */
+
 export const fetchDashboardStatus = createAsyncThunk<
   {
     importStatus: ImportStatus[];
-    encryptedStatus: Array<Omit<EncryptedStatus, "encrypted_users" | "pending_users"> & {
-      encrypted_users: number;
-      pending_users: number;
-    }>;
+    encryptedStatus: Array<
+      Omit<EncryptedStatus, "encrypted_users" | "pending_users"> & {
+        encrypted_users: number;
+        pending_users: number;
+      }
+    >;
     subjects: SubjectLite[];
     subjectsQuestions: SubjectQuestionRow[];
     subjectQuestionsGrouped: Record<number, SubjectQuestionsGrouped>;
-    sessionDates: SessionDateRow[];
+    sessions: SessionRow[]; // ✅ ใช้ sessions ให้ตรงกัน
     keyStatus: KeyStatus | null;
   },
   number,
   { rejectValue: string }
 >("dashboard/fetchStatus", async (campaignId, { rejectWithValue }) => {
   try {
-    const res = await axios.get<DashboardApiResponse>(`/api/keys/dashboard/${campaignId}`);
+    const res = await axios.get<DashboardApiResponse>(
+      `/api/keys/dashboard/${campaignId}`
+    );
 
-    // normalize encryptedStatus number/string -> number
-    const encryptedStatusNormalized = (res.data.encryptedStatus ?? []).map((x) => ({
-      ...x,
-      encrypted_users: toNumber(x.encrypted_users, 0),
-      pending_users: toNumber(x.pending_users, 0),
-    }));
+    const encryptedStatusNormalized = (res.data.encryptedStatus ?? []).map(
+      (x) => ({
+        ...x,
+        encrypted_users: toNumber(x.encrypted_users, 0),
+        pending_users: toNumber(x.pending_users, 0),
+      })
+    );
 
-    const subjectQuestionsGrouped = groupSubjectsQuestions(res.data.subjectsQuestions ?? []);
+    const subjectQuestionsGrouped = groupSubjectsQuestions(
+      res.data.subjectsQuestions ?? []
+    );
 
     return {
       importStatus: res.data.importStatus ?? [],
@@ -145,7 +177,7 @@ export const fetchDashboardStatus = createAsyncThunk<
       subjects: res.data.subjects ?? [],
       subjectsQuestions: res.data.subjectsQuestions ?? [],
       subjectQuestionsGrouped,
-      sessionDates: res.data.sessionDates ?? [],
+      sessions: res.data.sessions ?? [], // ✅ จาก backend
       keyStatus: res.data.keyStatus ?? null,
     };
   } catch (e) {
@@ -153,17 +185,21 @@ export const fetchDashboardStatus = createAsyncThunk<
   }
 });
 
+/* ---------------- Slice ---------------- */
+
 export interface DashboardState {
   status: "idle" | "loading" | "succeeded" | "failed";
   importStatus: ImportStatus[];
-  encryptedStatus: Array<Omit<EncryptedStatus, "encrypted_users" | "pending_users"> & {
-    encrypted_users: number;
-    pending_users: number;
-  }>;
+  encryptedStatus: Array<
+    Omit<EncryptedStatus, "encrypted_users" | "pending_users"> & {
+      encrypted_users: number;
+      pending_users: number;
+    }
+  >;
   subjects: SubjectLite[];
   subjectsQuestions: SubjectQuestionRow[];
   subjectQuestionsGrouped: Record<number, SubjectQuestionsGrouped>;
-  sessionDates: SessionDateRow[];
+  sessions: SessionRow[]; // ✅ ใช้ sessions
   keyStatus: KeyStatus | null;
   error: string | null;
 }
@@ -175,7 +211,7 @@ const initialState: DashboardState = {
   subjects: [],
   subjectsQuestions: [],
   subjectQuestionsGrouped: {},
-  sessionDates: [],
+  sessions: [],
   keyStatus: null,
   error: null,
 };
@@ -191,7 +227,7 @@ const dashboardSlice = createSlice({
       state.subjects = [];
       state.subjectsQuestions = [];
       state.subjectQuestionsGrouped = {};
-      state.sessionDates = [];
+      state.sessions = [];
       state.keyStatus = null;
       state.error = null;
     },
@@ -209,8 +245,9 @@ const dashboardSlice = createSlice({
         state.subjects = action.payload.subjects;
         state.subjectsQuestions = action.payload.subjectsQuestions;
         state.subjectQuestionsGrouped = action.payload.subjectQuestionsGrouped;
-        state.sessionDates = action.payload.sessionDates;
+        state.sessions = action.payload.sessions;
         state.keyStatus = action.payload.keyStatus;
+       //console.log("Dashboard data loaded:", state.keyStatus)
       })
       .addCase(fetchDashboardStatus.rejected, (state, action) => {
         state.status = "failed";
@@ -220,7 +257,7 @@ const dashboardSlice = createSlice({
 });
 
 export const { clearDashboard } = dashboardSlice.actions;
-export {dashboardSlice}
+export { dashboardSlice };
 
 /* ---------------- Selectors ---------------- */
 
@@ -236,6 +273,10 @@ export const selectSubjects = (state: RootState) => state.dashboard.subjects;
 export const selectSubjectQuestionsGrouped = (state: RootState) =>
   state.dashboard.subjectQuestionsGrouped;
 
-export const selectSessionDates = (state: RootState) => state.dashboard.sessionDates;
-export const selectKeyStatus = (state: RootState) => state.dashboard.keyStatus;
+// ✅ ชื่อใหม่ที่ตรง backend
+export const selectSessions = (state: RootState) => state.dashboard.sessions;
 
+// ✅ alias กันโค้ดเก่าพัง (ถ้าคุณยังเรียก selectSessionDates อยู่)
+export const selectSession = (state: RootState) => state.dashboard.sessions;
+
+export const selectKeyStatus = (state: RootState) => state.dashboard.keyStatus;

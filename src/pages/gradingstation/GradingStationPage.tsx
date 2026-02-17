@@ -46,6 +46,8 @@ export default function GradingStationPage() {
     handleScan,
     closeConfirmModal,
     // requestCameraPermission
+    setQuestionMaxScore,
+    questionMaxScore,
 
 
     lastSlotId,
@@ -98,6 +100,8 @@ export default function GradingStationPage() {
                 setQuestionNo={setQuestionNo}
                 slotId={lastSlotId}
                 bagNo={bagNo}
+                setQuestionMaxScore={setQuestionMaxScore}
+                QuestionMaxScore={questionMaxScore}
               />
             </div>
 

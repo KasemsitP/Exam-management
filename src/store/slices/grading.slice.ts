@@ -15,7 +15,7 @@ export interface PayloadSlot {
   qrPayload: string;
   campaignId: number;
   graderId: number;
-  questionNo : number;
+  questionNo: number;
 }
 
 
@@ -26,7 +26,7 @@ interface GradingState {
 
   verifying: boolean;
   lastSlotId: number | null;
-  bagNo : number | null;
+  bagNo: number | null;
   records: GradingRecord[];
 }
 
@@ -43,11 +43,11 @@ export interface GradingRecord {
   slotId: number;
   score: number;
   enteredAt: string;
-  qr_payload:string
+  qr_payload: string
 }
 
 export const verifyAndAllocateThunk = createAsyncThunk<
-  { slotId: number , bagNo: number}, 
+  { slotId: number, bagNo: number },
   PayloadSlot,
   { rejectValue: string }
 >(
@@ -96,7 +96,7 @@ export const fetchRecordThunk = createAsyncThunk<
       const records: GradingRecord[] = res.data.map((r: any) => ({
         slotId: r.slot_id,
         score: r.score,
-        qr_payload : r.qr_payload,
+        qr_payload: r.qr_payload,
         enteredAt: new Date(r.enteredAT).toLocaleString("th-TH", {
           timeZone: "Asia/Bangkok",
           year: "numeric",
@@ -125,7 +125,14 @@ const gradingSlice = createSlice({
     clearGradingError: (state) => {
       state.error = null;
     },
-    clearGradingState: () => initialState,
+    clearGradingState: (state) => {
+      state.loading = false;
+      state.error = null;
+      state.lastScore = null;
+      state.verifying = false;
+      state.lastSlotId = null;
+      state.bagNo = null;
+    }
   },
   extraReducers: (builder) => {
     builder

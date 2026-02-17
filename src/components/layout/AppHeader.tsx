@@ -1,6 +1,8 @@
 import { CalendarDays, ChevronRight, LogOut, Menu } from "lucide-react";
 import { ExamCampaign } from "@/store/slices/examData.slice";
 import type { Theme } from "@/components/layout/theme"
+import { selectCurrentUser } from "@/store/slices/auth.slice";
+import { useAppSelector } from "@/store/hook";
 
 interface AppHeaderProps {
   activeCampaign: ExamCampaign | null;
@@ -19,6 +21,9 @@ export function AppHeader({
   onclickSidebar,
   theme,
 }: AppHeaderProps) {
+  const user = useAppSelector(selectCurrentUser);
+  const isAdmin = user?.roles?.includes("admin");
+
   const campaignLabel = activeCampaign
     ? `${activeCampaign.name ?? activeCampaign.campaign_size} `
     : null;
@@ -139,23 +144,29 @@ export function AppHeader({
             </span>
           )}
         </div>
-
-        <button
-          type="button"
-          className="btn btn-sm d-flex align-items-center gap-2"
-          style={{
-            background: headerSurface, // ✅ tinted
-            border: `1px solid ${headerBorder}`,
-            color: theme.text,
-            borderRadius: 10,
-            padding: "8px 14px",
-            boxShadow: "0 1px 6px rgba(15,23,42,0.05)",
-          }}
-          onClick={onOpenCampaignModal}
-        >
-          <CalendarDays size={16} style={{ color: theme.color }} />
-          <span className="d-none d-sm-inline fw-medium small">เปลี่ยนรอบสอบ</span>
-        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            disabled={!isAdmin}
+            className="btn btn-sm d-flex align-items-center gap-2"
+            style={{
+              background: headerSurface,
+              border: `1px solid ${headerBorder}`,
+              color: theme.text,
+              borderRadius: 10,
+              padding: "8px 14px",
+              boxShadow: "0 1px 6px rgba(15,23,42,0.05)",
+              opacity: isAdmin ? 1 : 0.5,
+              cursor: isAdmin ? "pointer" : "not-allowed",
+            }}
+            onClick={isAdmin ? onOpenCampaignModal : undefined}
+          >
+            <CalendarDays size={16} style={{ color: theme.color }} />
+            <span className="d-none d-sm-inline fw-medium small">
+              เปลี่ยนรอบสอบ
+            </span>
+          </button>
+        )}
 
         <div
           className="vr mx-2 d-none d-sm-block"

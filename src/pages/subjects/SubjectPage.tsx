@@ -136,6 +136,7 @@ const SubjectPage: React.FC = () => {
         showSuccess("เพิ่มข้อสำเร็จ", `ได้เพิ่มข้อที่ ${questionNo} : "${label}" (เต็ม ${maxScore} คะแนน) แล้ว`);
         setQuestionModalOpen(false);
         setQuestionModalSubjectId(null);
+        dispatch(fetchSubjectsThunk());
       })
       .catch(() => {
         Swal.fire("เพิ่มข้อไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
@@ -220,6 +221,7 @@ const SubjectPage: React.FC = () => {
         .unwrap()
         .then(() => {
           showSuccess("ลบวิชาสำเร็จ", "คุณได้ลบวิชาออกจากระบบแล้ว");
+          dispatch(fetchSubjectsThunk());
         })
         .catch(() => {
           Swal.fire("ลบวิชาไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
@@ -384,13 +386,16 @@ const SubjectPage: React.FC = () => {
           <div className="card-header d-flex justify-content-between align-items-center">
             <div>
               <div className="d-flex align-items-center gap-2">
-                <strong>{sub.name}</strong>
-                <span className="badge bg-secondary">
-                  {sub.questions.length} ข้อ
-                </span>
+                <strong>วิชา {sub.name}</strong>
               </div>
               <div className="text-muted small">
                 รหัสวิชา: <strong>{sub.code}</strong>
+              </div>
+              <div className="text-muted small">
+                จำนวน {sub.questions.length} ข้อ
+              </div>
+              <div className="text-muted small">
+                คะแนนเต็ม {sub.full_score} คะแนน
               </div>
 
             </div>
@@ -426,59 +431,59 @@ const SubjectPage: React.FC = () => {
             ) : (
               <div className="table-responsive">
                 <table className="table mb-0 align-middle">
-<thead className="table-light">
-  <tr className="align-middle">
-    <th style={{ width: 80 }} className="text-center">ข้อ</th>
-    <th className="text-start">ชื่อหัวข้อ</th>
-    <th style={{ width: 120 }} className="text-center">คะแนนเต็ม</th>
-    <th style={{ width: 80 }} className="text-center">การจัดการ</th>
-  </tr>
-</thead>
+                  <thead className="table-light">
+                    <tr className="align-middle">
+                      <th style={{ width: 80 }} className="text-center">ข้อ</th>
+                      <th className="text-start">ชื่อหัวข้อ</th>
+                      <th style={{ width: 120 }} className="text-center">คะแนนเต็ม</th>
+                      <th style={{ width: 80 }} className="text-center">การจัดการ</th>
+                    </tr>
+                  </thead>
 
-<tbody>
-  {sub.questions.map((q) => (
-    <tr key={q.id} className="align-middle">
-      <td
-        className="text-center"
-        style={{
-          fontVariantNumeric: "tabular-nums",
-          fontFeatureSettings: '"tnum" 1',
-          whiteSpace: "nowrap",
-        }}
-      >
-        {q.questionNo}
-      </td>
+                  <tbody>
+                    {sub.questions.map((q) => (
+                      <tr key={q.id} className="align-middle">
+                        <td
+                          className="text-center"
+                          style={{
+                            fontVariantNumeric: "tabular-nums",
+                            fontFeatureSettings: '"tnum" 1',
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {q.questionNo}
+                        </td>
 
-      <td>
-        <input
-          type="text"
-          className="form-control form-control-sm"
-          placeholder="เช่น กฎหมายรัฐธรรมนูญ"
-          value={q.label}
-          onChange={(e) =>
-            handleChangeQuestionLabel(sub.id, q.id, e.target.value)
-          }
-          disabled={loading}
-        />
-      </td>
+                        <td>
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            placeholder="เช่น กฎหมายรัฐธรรมนูญ"
+                            value={q.label}
+                            onChange={(e) =>
+                              handleChangeQuestionLabel(sub.id, q.id, e.target.value)
+                            }
+                            disabled={loading}
+                          />
+                        </td>
 
-      <td className="text-center" style={{ fontVariantNumeric: "tabular-nums" }}>
-        {q.maxScore}
-      </td>
+                        <td className="text-center" style={{ fontVariantNumeric: "tabular-nums" }}>
+                          {q.maxScore}
+                        </td>
 
-      <td className="text-center">
-        <button
-          type="button"
-          className="btn btn-outline-danger btn-sm"
-          onClick={() => handleRemoveQuestion(sub.id, q.id)}
-          disabled={loading}
-        >
-          ลบ
-        </button>
-      </td>
-    </tr>
-  ))}
-</tbody>
+                        <td className="text-center">
+                          <button
+                            type="button"
+                            className="btn btn-outline-danger btn-sm"
+                            onClick={() => handleRemoveQuestion(sub.id, q.id)}
+                            disabled={loading}
+                          >
+                            ลบ
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
               </div>
             )}

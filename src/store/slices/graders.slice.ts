@@ -22,6 +22,7 @@ export interface CrmGrader {
   subject_question_id: number;   
   question_no: number
   question_label?: string;       
+  max_score: number;
 }
 // export interface AssignedSubject {
 //   sessionId: number;
@@ -79,6 +80,7 @@ export const fetchGradersForCampaignThunk = createAsyncThunk<
         subject_name: g.subject_name,
         question_label : g.question_label,
         question_no: g.question_no,
+        max_score: g.max_score,
       }));
       console.log(mappedAssignments)
       return mappedAssignments;

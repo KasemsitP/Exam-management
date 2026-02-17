@@ -34,10 +34,11 @@ import GraderPage from "@/pages/grader/GradersPage";
 import AdminResetPage from "@/pages/admin-reset/AdminResetScorePage";
 //import UserSearchPage from "@/pages/UserSearch";
 import ScoreReviewPage from "./pages/scores/ScorePage"
+import SubjectRankingExportPage from "./pages/SubjectRaningExport";
 // import GradingRecheckPage from "./pages/gradingrecheck/GradingRecheckPage"
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BootstrapToastViewport } from "@/components/ui/bootstrap-toast";
-import{OverlayLoader} from "@/components/ui/Loading";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 function ProtectedApp() {
   return (
@@ -97,16 +98,17 @@ function AppContent() {
           <Route path="/import-csv" element={<ImportCsvPage />} />
           <Route path="/keys" element={<KeyManagementPage />} />
           <Route path="/sign-sheets" element={<SignSheetsPage />} />
-           {/* <Route path="/grading-recheck" element={<GradingRecheckPage />} /> */}
+          {/* <Route path="/grading-recheck" element={<GradingRecheckPage />} /> */}
           {/* <Route path="/graders" element={<GraderManagementPage />} /> */}
           <Route path="/grading-station" element={<GradingStationPage />} />
           <Route path="/score-review" element={<ScoreReviewPage />} />
           {/* <Route path="/user-search" element={<UserSearchPage />} /> */}
           <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/qrscanner" element={<QrPage />} />
-          <Route path="/subject" element={<SubjectPage/>}/>
-           <Route path="/graders" element={<GraderPage/>}/>
-            <Route path="/admin-reset" element={< AdminResetPage/>}/>
+          <Route path="/subject" element={<SubjectPage />} />
+          <Route path="/graders" element={<GraderPage />} />
+          <Route path="/admin-reset" element={< AdminResetPage />} />
+          <Route path="/subject-ranking-export" element={<SubjectRankingExportPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<NotFound />} />

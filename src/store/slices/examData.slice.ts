@@ -18,7 +18,8 @@ export interface CampaignSubject {
 
 export interface CampaignSession {
   id: string; // plain string id from backend (e.g. "1")
-  label: string;
+  label?: string;
+  session_code?: string;
   examDate: string;
   note?: string;
   site_id?: number;
@@ -140,6 +141,7 @@ const mapApiSubject = (subject: ApiSubject): CampaignSubject => ({
 const mapApiSessionToCampaignSession = (session: ApiSession): CampaignSession => ({
   id: buildSessionId(session.id),
   label: session.title ?? session.session_code,
+  session_code: session.session_code,
   examDate: session.exam_date,
   note: session.note,
   site_id: session.site_id,
@@ -518,13 +520,13 @@ const examDataSlice = createSlice({
         state.status = "loading";
         state.error = null;
       })
-.addCase(fetchInitialExamData.fulfilled, (state, action) => {
-  state.status = "succeeded";
-  state.list = action.payload;
+      .addCase(fetchInitialExamData.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        state.list = action.payload;
 
-  const firstActive = action.payload.find((c) => c.isActive);
-  state.activeCampaignId = firstActive?.id ?? action.payload[0]?.id ?? null;
-})
+        const firstActive = action.payload.find((c) => c.isActive);
+        state.activeCampaignId = firstActive?.id ?? action.payload[0]?.id ?? null;
+      })
       .addCase(fetchInitialExamData.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.payload ?? "Failed to fetch exam data";
@@ -677,3 +679,11 @@ export const selectSubjectsForSession =
 
 export const selectExamDataStatus = (state: RootState) => state.examData.status;
 export const selectExamDataError = (state: RootState) => state.examData.error ?? null;
+
+// campaign active จริงไหม
+export const selectIsCampaignActive = (state: RootState) =>
+  Boolean(selectActiveCampaign(state)?.isActive);
+
+// ถ้าอยาก "ล็อคทั้งระบบ" เมื่อ campaign ไม่ active (หรือกำลังโหลด)
+export const selectIsSystemLocked = (state: RootState) =>
+  !selectIsCampaignActive(state) || state.examData.status === "loading";

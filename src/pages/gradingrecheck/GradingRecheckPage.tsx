@@ -9,8 +9,11 @@ import ScannerPanel from "./components/ScannerPanel";
 import RecentScoresCard from "./components/RecentScoresCard";
 import ConfirmSaveModal from "./components/ConfirmSaveModal";
 import AssignmentCard from "./components/AssignmentCard";
+import { selectIsSystemLocked } from "@/store/slices/examData.slice";
+import { useAppSelector } from "@/store/hook";
 
 export default function GradingRecheckPage() {
+  const locked = useAppSelector(selectIsSystemLocked);
   const {
     user,
     graderProfile,
@@ -48,6 +51,7 @@ export default function GradingRecheckPage() {
   } = useGradingRecheck();
 
   return (
+    <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
     <ShowIfCan permission="grade_exams">
       <div className="container-fluid px-3 px-sm-4 py-4">
         {/* Header */}
@@ -117,5 +121,6 @@ export default function GradingRecheckPage() {
         /> */}
       </div>
     </ShowIfCan>
+    </fieldset>
   );
 }

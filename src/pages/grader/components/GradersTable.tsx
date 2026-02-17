@@ -2,6 +2,8 @@
 import { CheckCircle2, X, Trash2, Edit, Search, Loader2, Pencil } from "lucide-react";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import type { Account, Role } from "../types";
+import { selectIsSystemLocked } from "@/store/slices/examData.slice";
+import { useAppSelector } from "@/store/hook";
 
 interface AccountsTableProps {
   accounts: Account[];
@@ -29,6 +31,7 @@ export default function AccountsTable({
     roles.find((r) => r.id === id)?.name ?? `Role#${id}`;
   const roleCode = (id: number) =>
     roles.find((r) => r.id === id)?.code ?? "-";
+  const locked = useAppSelector(selectIsSystemLocked);
 
   const filteredAccounts = accounts;
 
@@ -84,6 +87,7 @@ export default function AccountsTable({
                         className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
                         onClick={() => onEdit(acc)}
                         title="แก้ไข"
+                        disabled={locked}
                       >
                         <Edit size={14} /> แก้ไข
                       </button>
@@ -94,6 +98,7 @@ export default function AccountsTable({
                           className="btn btn-outline-dark btn-sm d-inline-flex align-items-center gap-1"
                           onClick={() => onRevoke(acc)}
                           title="ถอนสิทธิ์"
+                          disabled={locked}
                         >
                           <X size={14} /> ถอนสิทธิ์
                         </button>
@@ -103,6 +108,7 @@ export default function AccountsTable({
                           className="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1"
                           onClick={() => onUnrevoke(acc)}
                           title="คืนสิทธิ์"
+                          disabled={locked}
                         >
                           <CheckCircle2 size={14} /> คืนสิทธิ์
                         </button>
@@ -114,6 +120,7 @@ export default function AccountsTable({
                           className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
                           onClick={() => onDelete(acc)}
                           title="ลบบัญชี"
+                          disabled={locked}
                         >
                           <Trash2 size={16} /> ลบ
                         </button>

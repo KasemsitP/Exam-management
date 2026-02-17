@@ -22,28 +22,47 @@ export type Permission =
   | "dashboard";
 
 const ALL_PERMISSIONS: Permission[] = [
-"manage_bags",
-"manage_rooms",
-"manage_sessions",
-"manage_subjects",
-"manage_users",
-"manage_keys",
-"import_subjects",
-"allocate_seats",
-"view_sessions",
-"view_reports",
-"view_qr",
-"manage_graders",
-"manage_accounts",
-"manage_bagshandover",
-"importcsv",
-"signshheets",
-"manage_grading",
-"dashboard"
+    "manage_bags",
+    "manage_rooms",
+    "manage_sessions",
+    "manage_subjects",
+    "manage_users",
+    "manage_keys",
+    "import_subjects",
+    "allocate_seats",
+    "view_sessions",
+    "view_reports",
+    "view_qr",
+    "manage_graders",
+    "manage_accounts",
+    "manage_bagshandover",
+    "importcsv",
+    "signshheets",
+    "manage_grading",
+    "dashboard"
 ];
 
 const rolePermissions: Record<Role, Permission[]> = {
-  admin: ALL_PERMISSIONS,
+  admin: [
+    "manage_bags",
+    "manage_rooms",
+    "manage_sessions",
+    "manage_subjects",
+    "manage_users",
+    "manage_keys",
+    "import_subjects",
+    "allocate_seats",
+    "view_sessions",
+    "view_reports",
+    "view_qr",
+    "manage_graders",
+    "manage_accounts",
+    "manage_bagshandover",
+    "importcsv",
+    "signshheets",
+    "manage_grading",
+    "dashboard"
+  ],
   manager: [
     "manage_keys",
   ],
@@ -64,8 +83,12 @@ export function can(roles: Role[] | undefined | null, permission: Permission): b
     return false;
   }
 
+  if (permission === "grade_exams") {
+    return roles.includes("grader"); 
+  }
+
   if (roles.includes(ADMIN_ROLE)) {
-    return true;
+    return true; // super admin
   }
 
   return roles.some((role) => rolePermissions[role]?.includes(permission));

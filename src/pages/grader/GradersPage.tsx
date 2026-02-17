@@ -27,7 +27,7 @@ import GradersTable from "./components/GradersTable";
 import GradersCreateModal from "./components/GradersCreateModal";
 import GradersEditModal from "./components/GradersEditModal";
 import GradersSubjectLists from "./components/GraderSubjectList"
-import { selectSessionsForCampaign } from "@/store/slices/examData.slice";
+import { selectIsSystemLocked, selectSessionsForCampaign } from "@/store/slices/examData.slice";
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
 import { createGraderAssignmentsThunk } from "@/store/slices/graders.slice";
 import { showSuccess } from "@/components/ui/successAlert"
@@ -46,6 +46,7 @@ import type {
 
 export default function AccountsPage() {
   const dispatch = useAppDispatch();
+  const locked = useAppSelector(selectIsSystemLocked);
 
   const { status: accountStatus } = useAppSelector(selectAccountsSlice);
 
@@ -378,6 +379,7 @@ export default function AccountsPage() {
 
 
   return (
+ 
     <div className="d-flex flex-column gap-4">
       <GradersHeader stats={stats} />
 
@@ -419,6 +421,7 @@ export default function AccountsPage() {
         onSessionChange={handleSessionChange}   // 👈 เพิ่ม
       />
 
+
       <GradersEditModal
         open={!!editingAccount}
         account={editingAccount}
@@ -428,5 +431,7 @@ export default function AccountsPage() {
         onSubmit={handleUpdate}
       />
     </div>
+
+   
   );
 }

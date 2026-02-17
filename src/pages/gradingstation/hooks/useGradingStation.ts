@@ -30,6 +30,7 @@ import {
 } from "@/store/slices/graders.slice";
 
 import { DeleteCamp } from "@/utils/camp";
+import { set } from "react-hook-form";
 
 export interface RecordedScore {
   slotId: number;
@@ -134,8 +135,9 @@ export const useGradingStation = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [recent, setRecent] = useState<RecordedScore[]>([]);
   const [questionNo, setQuestionNo] = useState<number>(null);
+  const [questionMaxScore, setQuestionMaxScore] = useState<number>(null);
 
-  console.log(questionNo)
+  console.log(questionNo, questionMaxScore)
 
   // --- 6. Error -> toast ---
   useEffect(() => {
@@ -245,6 +247,9 @@ export const useGradingStation = () => {
     setScanData(null);
     setPause(false);
     setScannerEnabled(true);
+    setScore("");
+    setQuestionNo(null);
+    setQuestionMaxScore(null);
   };
 
   const verifyManualPayload = async () => {
@@ -285,23 +290,70 @@ export const useGradingStation = () => {
       setIsConfirmOpen(false);
       return;
     }
+    if (questionMaxScore !== null && Number(score) > questionMaxScore) {
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถบันทึกคะแนนได้",
+        html: `
+  <div style="text-align:left; line-height:1.8;">
+    <div>
+    เนื่องจากคะแนนที่กรอกสูงกว่าคะแนนเต็มของข้อที่เลือกไว้
+    </div>
+
+    <hr style="margin:10px 0;" />
+
+    <div>ข้อ: <strong>${questionNo}</strong></div>
+    <div>รายวิชา: <strong>${activeAssignment.subject_name}</strong></div>
+    <div>หัวข้อ: <strong>${activeAssignment.question_label}</strong></div>
+
+  </div>
+`
+        ,
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
+
+    if (questionMaxScore !== null && Number(score) < 0) {
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถบันทึกคะแนนได้",
+        html: `
+  <div style="text-align:left; line-height:1.8;">
+    <div>
+    เนื่องจากคะแนนที่กรอกติดลบ กรุณากรอกคะแนนใหม่
+    </div>
+
+    <hr style="margin:10px 0;" />
+
+    <div>ข้อ: <strong>${questionNo}</strong></div>
+    <div>รายวิชา: <strong>${activeAssignment.subject_name}</strong></div>
+    <div>หัวข้อ: <strong>${activeAssignment.question_label}</strong></div>
+
+  </div>
+`
+        ,
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
+
+
     const confirmResult = await Swal.fire({
       icon: "warning",
       title: "ยืนยันการบันทึกคะแนน?",
-      html: `
-    <div style="margin-bottom:8px;">
-      บันทึกคะแนนข้อที่ ${questionNo}:
-      <strong>&nbsp ${score}</strong> คะแนน
-    </div>
+html: `
+  <div style="text-align:left; line-height:1.8;">
+    <div>ข้อที่: <strong>${questionNo}</strong></div>
+    <div>คะแนนที่บันทึก: <strong>${score}</strong> คะแนน</div>
+    <div>รายวิชา: <strong>${activeAssignment.subject_name}</strong></div>
+    <div>หัวข้อ: <strong>${activeAssignment.question_label}</strong></div>
+    <div>เลขประจำถุง: <strong>${bagNo}</strong></div>
+    <div>รหัส Slot: <strong>${lastSlotId}</strong></div>
 
-    <div style="margin-bottom:8px;">
-      เลขประจำถุง:<strong>&nbsp${bagNo}</strong>
-    </div>
-
-    <div>
-      รหัส Slot: <strong>&nbsp ${lastSlotId}</strong>
-    </div>
-`,
+  </div>
+`
+,
       showCancelButton: true,
       confirmButtonText: "ยืนยัน",
       cancelButtonText: "ยกเลิก",
@@ -350,18 +402,15 @@ export const useGradingStation = () => {
         icon: "success",
         title: "บันทึกคะแนนสำเร็จ!",
         html: `
-    <div style="margin-bottom:8px;">
-      บันทึกคะแนนข้อที่ ${questionNo}:
-      <strong>&nbsp ${score}</strong> คะแนน
-    </div>
+  <div style="text-align:left; line-height:1.8;">
+    <div>ข้อที่: <strong>${questionNo}</strong></div>
+    <div>คะแนนที่บันทึก: <strong>${score}</strong> คะแนน</div>
+    <div>รายวิชา: <strong>${activeAssignment.subject_name}</strong></div>
+    <div>หัวข้อ: <strong>${activeAssignment.question_label}</strong></div>
+    <div>เลขประจำถุง: <strong>${bagNo}</strong></div>
+    <div>รหัส Slot: <strong>${lastSlotId}</strong></div>
 
-    <div style="margin-bottom:8px;">
-      เลขประจำถุง:<strong>&nbsp${bagNo}</strong>
-    </div>
-
-    <div>
-      รหัส Slot: <strong>&nbsp ${lastSlotId}</strong>
-    </div>
+  </div>
 `,
       });
 
@@ -441,7 +490,8 @@ export const useGradingStation = () => {
     handleSaveScore,
     handleScan,
     closeConfirmModal,
-
+    setQuestionMaxScore,
+    questionMaxScore,
 
 
     bagNo,

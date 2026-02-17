@@ -6,7 +6,7 @@ import React, {
   type CSSProperties,
 } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { selectActiveCampaign } from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectIsSystemLocked } from "@/store/slices/examData.slice";
 import {
   selectExamRoomsSlice,
   fetchRoomsByCampaignThunk,
@@ -62,6 +62,7 @@ function clamp(n: number, min: number, max: number) {
 
 export default function SeatAllocationPage() {
   const dispatch = useAppDispatch();
+  const locked = useAppSelector(selectIsSystemLocked);
   const campaign = useAppSelector(selectActiveCampaign);
   const { rooms = [], status: roomStatus } = useAppSelector(selectExamRoomsSlice);
 
@@ -699,6 +700,7 @@ export default function SeatAllocationPage() {
               <button
                 className="btn btn-primary d-inline-flex align-items-center gap-2"
                 onClick={openCreate}
+                disabled={locked}
               >
                 <Plus size={16} /> เพิ่มห้องสอบ
               </button>
@@ -778,7 +780,7 @@ export default function SeatAllocationPage() {
 
           <div className="card-body">
             <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
+              <table className="table table-hover align-middle mb-0 table-striped">
                 <thead className="table-light">
                   <tr>
                     <th style={{ width: "20%" }}>ห้องสอบ</th>
@@ -840,7 +842,7 @@ export default function SeatAllocationPage() {
                         <td>{room.capacity}</td>
                         <td>{statusBadge}</td>
                         <td>
-                         
+
                           {room.capacity} / {allocatedCount}  คน
                         </td>
                         <td>
@@ -848,6 +850,7 @@ export default function SeatAllocationPage() {
                             <button
                               className="btn btn-sm btn-outline-success"
                               onClick={() => setCreateRoom(room)}
+                              disabled={locked}
                             >
                               สร้างผังที่นั่ง
                             </button>
@@ -868,6 +871,7 @@ export default function SeatAllocationPage() {
                                   capacity: Number(room.capacity ?? 0),
                                 })
                               }
+                              disabled={locked}
                             >
                               แก้ไข
                             </button>
@@ -880,6 +884,7 @@ export default function SeatAllocationPage() {
                                   room.roomCode
                                 )
                               }
+                              disabled={locked}
                             >
                               ลบ
                             </button>
@@ -897,7 +902,7 @@ export default function SeatAllocationPage() {
             {/* Pagination */}
             <nav className="mt-3 d-flex justify-content-between align-items-center">
               <div>
-                <button className="btn btn-outline-secondary" onClick={handleResetSeat}>
+                <button className="btn btn-outline-secondary" onClick={handleResetSeat} disabled={locked}>
                   รีเซ็ตการจัดสรรทั้งหมด
                 </button>
               </div>
@@ -1098,7 +1103,7 @@ export default function SeatAllocationPage() {
                       ผังที่นั่ง ห้อง {selectedRoom.roomCode}
                     </h5>
                     <div className="small text-muted">
-                      แสดงค่า seatsPerRow = {modalSeatsPerRow}
+                      จำนวนที่นั่งภายใน 1 แถว : {modalSeatsPerRow} ที่นั่งต่อแถว
                     </div>
                   </div>
 
@@ -1114,11 +1119,11 @@ export default function SeatAllocationPage() {
                   <div className="row g-3 align-items-end mb-3">
                     <div className="col-md-6">
                       <label className="form-label">
-                        ค้นหา (userId / ชื่อ)
+                        ค้นหารหัสประจำตัวผู้สอบหรือ ชื่อ-สกุล
                       </label>
                       <input
                         className="form-control"
-                        placeholder="เช่น 0001 / นายทดสอบ"
+                        placeholder="เช่น 0001"
                         value={modalSearch}
                         onChange={(e) => setModalSearch(e.target.value)}
                       />
@@ -1126,11 +1131,11 @@ export default function SeatAllocationPage() {
 
                     <div className="col-md-6 d-flex gap-2 justify-content-md-end">
                       <span className="badge text-bg-light border align-self-center">
-                        capacity: {selectedRoom.capacity}
+                        ความจุห้อง: {selectedRoom.capacity}
                       </span>
-                      <span className="badge text-bg-light border align-self-center">
-                        show: {modalCells.length}
-                      </span>
+                      {/* <span className="badge text-bg-light border align-self-center">
+                          แสดง: {modalCells.length}
+                        </span> */}
                       <button
                         className="btn btn-outline-secondary"
                         onClick={() => setModalSearch("")}
@@ -1186,64 +1191,78 @@ export default function SeatAllocationPage() {
                   </div>
 
                   <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mt-3">
-                    <div className="d-flex gap-2 align-items-center">
-                      <span className="text-muted small">Cols/หน้า</span>
-                      <select
-                        className="form-select form-select-sm"
-                        style={{ width: 120 }}
-                        value={modalColsPerPage}
-                        onChange={(e) => {
-                          setModalColsPerPage(Number(e.target.value));
-                          setModalPage(1);
-                        }}
-                      >
-                        {[3, 4, 6, 8, 10, 12].map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                      </select>
+                    {/* <div className="d-flex gap-2 align-items-center">
+                        <span className="text-muted small">Cols/หน้า</span>
+                        <select
+                          className="form-select form-select-sm"
+                          style={{ width: 120 }}
+                          value={modalColsPerPage}
+                          onChange={(e) => {
+                            setModalColsPerPage(Number(e.target.value));
+                            setModalPage(1);
+                          }}
+                        >
+                          {[3, 4, 6, 8, 10, 12].map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
 
-                      <span className="text-muted small">
-                        หน้า {modalPage}/{totalModalPages} (ทั้งหมด{" "}
-                        {modalColumns.length} คอลัมน์)
-                      </span>
-                    </div>
+                        <span className="text-muted small">
+                          หน้า {modalPage}/{totalModalPages} (ทั้งหมด{" "}
+                          {modalColumns.length} คอลัมน์)
+                        </span>
+                      </div> */}
 
-                    <div className="btn-group ">
-                      <button
-                        className="btn btn-outline-secondary btn-sm"
-                        disabled={modalPage <= 1}
-                        onClick={() =>
-                          setModalPage((p) => Math.max(1, p - 1))
-                        }
-                      >
-                        ก่อนหน้า
-                      </button>
-                      <button
-                        className="btn btn-outline-secondary btn-sm"
-                        disabled={modalPage >= totalModalPages}
-                        onClick={() =>
-                          setModalPage((p) =>
-                            Math.min(totalModalPages, p + 1)
-                          )
-                        }
-                      >
-                        ต่อไป
-                      </button>
-                    </div>
+                    {/* <div className="btn-group ">
+                        <button
+                          className="btn btn-outline-secondary btn-sm"
+                          disabled={modalPage <= 1}
+                          onClick={() =>
+                            setModalPage((p) => Math.max(1, p - 1))
+                          }
+                        >
+                          ก่อนหน้า
+                        </button>
+                        <button
+                          className="btn btn-outline-secondary btn-sm"
+                          disabled={modalPage >= totalModalPages}
+                          onClick={() =>
+                            setModalPage((p) =>
+                              Math.min(totalModalPages, p + 1)
+                            )
+                          }
+                        >
+                          ต่อไป
+                        </button>
+                      </div> */}
                   </div>
                 </div>
 
                 <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={handleCloseModal}
-                  >
-                    ปิด
-                  </button>
-                  {/* ไม่มีปุ่มยืนยัน/จัดใหม่แล้ว เพราะเป็น preview-only */}
+                  <div className="btn-group ">
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      disabled={modalPage <= 1}
+                      onClick={() =>
+                        setModalPage((p) => Math.max(1, p - 1))
+                      }
+                    >
+                      ก่อนหน้า
+                    </button>
+                    <button
+                      className="btn btn-outline-secondary btn-sm"
+                      disabled={modalPage >= totalModalPages}
+                      onClick={() =>
+                        setModalPage((p) =>
+                          Math.min(totalModalPages, p + 1)
+                        )
+                      }
+                    >
+                      ต่อไป
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

@@ -2,14 +2,16 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
 import type { DisputedQuestionDto } from "./types";
-import { selectActiveCampaign } from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectIsSystemLocked } from "@/store/slices/examData.slice";
 import { useAppSelector } from "@/store/hook";
 import { DeleteCamp } from "@/utils/camp";
 import Swal from "sweetalert2";
 
 
 export default function AdminResetScoresPage() {
+
   const activeCampaign = useAppSelector(selectActiveCampaign);
+  const locked = useAppSelector(selectIsSystemLocked);
 
   const [rows, setRows] = useState<DisputedQuestionDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -111,13 +113,14 @@ export default function AdminResetScoresPage() {
   };
 
   return (
+     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
     <div className="d-flex flex-column gap-4">
       <div className="container-fluid px-3 px-sm-4 py-4">
         <div className="card shadow-sm mb-3 ">
           <div className="card-header bg-white">
             <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
               <div>
-                <h5 className="mb-1">จัดการบัญชีผู้ใช้</h5>
+                <h5 className="mb-1">จัดการคะแนนที่ต่างกันเกิน 4 คะแนน</h5>
                 <small className="text-muted">
                   เพิ่ม ลบ แก้ไข และกำหนดข้อสำหรับผู้ตรวจ
                 </small>
@@ -190,5 +193,6 @@ export default function AdminResetScoresPage() {
         )}
       </div>
     </div>
+    </fieldset>
   );
 }

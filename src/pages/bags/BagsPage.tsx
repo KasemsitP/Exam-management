@@ -8,6 +8,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hook";
 import {
   selectActiveCampaign,
   selectActiveCampaignSessions,
+  selectIsSystemLocked,
 } from "@/store/slices/examData.slice";
 import Swal from "sweetalert2";
 
@@ -49,6 +50,7 @@ const normalizePayload = (s: string) => s.trim();
 
 export default function BagsPage() {
   const dispatch = useAppDispatch();
+  const locked = useAppSelector(selectIsSystemLocked);
   const { toast } = useToast();
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
@@ -168,10 +170,15 @@ export default function BagsPage() {
     if (!term) return sessionFiltered;
 
     return sessionFiltered.filter((bag) => {
-      const subjectText = `${bag.subjectCode ?? ""} ${bag.subjectName ?? ""
-        }`.toLowerCase();
+
+      const subjectText =
+        `${bag.subjectCode ?? ""} ${bag.subjectName ?? ""}`.toLowerCase();
+
+      const formattedBagNo =
+        bag.bag_no.toString().padStart(3, "0").toLowerCase();
+
       return (
-        bag.id.toString().toLowerCase().includes(term) ||
+        formattedBagNo.includes(term) ||
         bag.sessionLabel.toLowerCase().includes(term) ||
         subjectText.includes(term)
       );
@@ -418,10 +425,13 @@ export default function BagsPage() {
   const handleDeleteBag = async (bagId: string) => {
     if (!activeCampaign) return;
 
+    const bagData = bags.find((b) => b.id === bagId);
+    console.log("Bag to delete: ", bagData);
+
     const result = await Swal.fire({
       icon: "warning",
       title: "ยืนยันการลบ",
-      text: `ลบถุง ${bagId} หรือไม่?`,
+      text: `ลบถุงหมายเลข ${bagData?.bag_no} วิชา ${bagData?.sessionLabel} หรือไม่?`,
       showCancelButton: true,
       confirmButtonText: "ลบ",
       cancelButtonText: "ยกเลิก",

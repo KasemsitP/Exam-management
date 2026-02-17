@@ -1,6 +1,8 @@
 // src/pages/bags/components/BagsHeader.tsx
 import { Search, QrCode, CheckCircle2, AlertTriangle, Plus } from "lucide-react";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
+import { selectIsSystemLocked } from "@/store/slices/examData.slice";
+import { useAppSelector } from "@/store/hook";
 
 interface BagsHeaderProps {
   bagStats: { total: number; completed: number; inProgress: number };
@@ -23,6 +25,7 @@ export default function BagsHeader({
   onOpenCreateDialog,
   activeCampaignPresent,
 }: BagsHeaderProps) {
+    const locked = useAppSelector(selectIsSystemLocked);
   return (
     <div className="card shadow-sm">
       <div className="card-header bg-white">
@@ -106,7 +109,7 @@ export default function BagsHeader({
             <button
               className="btn btn-primary d-inline-flex align-items-center gap-2 w-100"
               onClick={onOpenCreateDialog}
-              disabled={!activeCampaignPresent}
+              disabled={!activeCampaignPresent || locked}
             >
               <Plus size={16} /> สร้างถุงข้อสอบ
             </button>

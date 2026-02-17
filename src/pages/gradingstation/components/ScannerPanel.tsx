@@ -25,6 +25,7 @@ interface ScannerPanelProps {
   questionNo: number;
   bagNo: number | null;
   slotId: number | null;
+  QuestionMaxScore: number | null;
 
   onChangePauseAfterSuccess: (checked: boolean) => void;
   onChangeCooldown: (ms: number) => void;
@@ -32,6 +33,7 @@ interface ScannerPanelProps {
   onToggleFacingMode: () => void;
   onClear: () => void;
   setQuestionNo: (value: number) => void
+  setQuestionMaxScore: (value: number) => void
   onChangeManualPayload: (value: string) => void;
   onVerifyManualPayload: () => void;
   onChangeScore: (value: string) => void;
@@ -66,7 +68,9 @@ export default function ScannerPanel({
   setQuestionNo,
   questionNo,
   bagNo,
-  slotId
+  slotId,
+  setQuestionMaxScore,
+  QuestionMaxScore
 }: ScannerPanelProps) {
   return (
     <div className="card shadow-sm border-0">
@@ -76,24 +80,29 @@ export default function ScannerPanel({
           <span className="fw-semibold">สแกนคิวอาร์โค้ดและบันทึกคะแนน</span>
         </div>
 
-        <div className="small text-muted">
-          สถานะกล้อง:{" "}
-          <span
-            className={`badge ${!scannerEnabled
-              ? "bg-secondary"
-              : pause
-                ? "bg-warning"
-                : "bg-success"
-              }`}
-          >
-            {!scannerEnabled ? "หยุดอยู่" : pause ? "พักอยู่" : "พร้อม"}
-          </span>
+        <div className="d-flex align-items-center gap-3">
+          <div className="small text-muted">
+            สถานะกล้อง:{" "}
+            <span
+              className={`badge ${!scannerEnabled
+                ? "bg-secondary"
+                : pause
+                  ? "bg-warning"
+                  : "bg-success"
+                }`}
+            >
+              {!scannerEnabled ? "หยุดอยู่" : pause ? "พักอยู่" : "พร้อม"}
+            </span>
+          </div>
+          <div className="small text-muted">
+            คะแนนเต็ม: {QuestionMaxScore !== null ? QuestionMaxScore : "-"}
+          </div>
         </div>
       </div>
 
       {/* Controls */}
       <div className="px-3 pt-2 d-flex flex-wrap align-items-center gap-2">
-        <div className="form-check me-2">
+        {/* <div className="form-check me-2">
           <input
             className="form-check-input"
             type="checkbox"
@@ -104,9 +113,9 @@ export default function ScannerPanel({
           <label className="form-check-label small" htmlFor="pauseAfterSuccess">
             พักกล้องเมื่อสแกนสำเร็จ
           </label>
-        </div>
+        </div> */}
 
-        <select
+        {/* <select
           className="form-select form-select-sm"
           style={{ width: 130 }}
           value={cooldownMs}
@@ -117,7 +126,7 @@ export default function ScannerPanel({
           <option value={1200}>Cooldown: 1.2s</option>
           <option value={1600}>Cooldown: 1.6s</option>
           <option value={2000}>Cooldown: 2.0s</option>
-        </select>
+        </select> */}
 
         {/* <button
           className={`btn btn-${
@@ -157,13 +166,28 @@ export default function ScannerPanel({
 
         <select
           className="form-select"
-          value={questionNo}
-          onChange={(e) => setQuestionNo(Number(e.target.value))}
-        >
+          value={questionNo ?? ""}
+          onChange={(e) => {
+            const val = e.target.value;
 
+            if (val === "") {
+              setQuestionNo(null);
+              setQuestionMaxScore(null);
+              return;
+            }
+
+            const num = Number(val);
+            setQuestionNo(num);
+
+            setQuestionMaxScore(
+              recent.find(q => q.question_no === num)?.max_score ?? null
+            );
+          }}
+        >
           <option value="">-- เลือก --</option>
-          {recent.map((row, idx) => (
-            <option key={idx} value={row.question_no}>
+
+          {recent.map((row) => (
+            <option key={row.question_no} value={row.question_no}>
               ข้อ {row.question_no} วิชา {row.question_label}
             </option>
           ))}
@@ -201,10 +225,17 @@ export default function ScannerPanel({
             {/* Right: meta */}
             <div className="d-flex flex-wrap gap-2 justify-content-end">
               <span className="badge text-bg-light border">
-                เลขประจำถุง: <span className="font-monospace">{bagNo ?? "-"}</span>
+                หมายเลขถุง:{" "}
+                <span className="font-monospace fw-bold fs-6">
+                  {bagNo ?? "-"}
+                </span>
               </span>
+
               <span className="badge text-bg-light border">
-                เลข slot : <span className="font-monospace">{slotId ?? "-"}</span>
+                เลข slot :{" "}
+                <span className="font-monospace fw-bold fs-6">
+                  {slotId ?? "-"}
+                </span>
               </span>
             </div>
           </div>
@@ -265,7 +296,7 @@ export default function ScannerPanel({
             <input
               type="number"
               className="form-control"
-              placeholder="เช่น 4.5"
+              placeholder="กรุณากรอกคะแนนเป็นจำนวนเต็ม เช่น 0 , 2 , 5"
               value={score}
               onChange={(e) => onChangeScore(e.target.value)}
               min={0}

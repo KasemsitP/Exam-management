@@ -8,8 +8,11 @@ import ImportHeader from "./components/ImportHeader";
 import ImportControls from "./components/ImportControls";
 import ImportAlerts from "./components/ImportAlerts";
 import ImportPreviewCard from "./components/ImportPreviewCard";
+import { selectIsSystemLocked } from "@/store/slices/examData.slice";
+import { useAppSelector } from "@/store/hook";
 
 export default function ImportCsvPage() {
+  const locked = useAppSelector(selectIsSystemLocked);
   const {
     activeCampaign,
     importStatus,
@@ -34,6 +37,7 @@ export default function ImportCsvPage() {
   } = useUserImport();
 
   return (
+    <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
     <ShowIfCan permission="importcsv">
       <div className="flex-grow-1 overflow-auto p-2 p-sm-3 p-lg-4">
         <ImportHeader />
@@ -78,5 +82,6 @@ export default function ImportCsvPage() {
         )}
       </div>
     </ShowIfCan>
+    </fieldset>
   );
 }

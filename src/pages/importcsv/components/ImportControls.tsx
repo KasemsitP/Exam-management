@@ -40,7 +40,7 @@ export default function ImportControls({
             onChange={onFileChange}
           />
           {fileName && (
-            <div className="mt-2 small text-muted">Selected: {fileName}</div>
+            <div className="mt-2 small text-muted">กำลังเลือกไฟล์: {fileName}</div>
           )}
         </div>
 
@@ -50,6 +50,7 @@ export default function ImportControls({
             className="form-select"
             value={encoding}
             onChange={(event) => onEncodingChange(event.target.value)}
+            disabled = { true}
           >
             {ENCODINGS.map((option) => (
               <option key={option.value} value={option.value}>

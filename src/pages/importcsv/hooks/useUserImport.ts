@@ -189,53 +189,68 @@ export const useUserImport = () => {
     }
   }, [excelBuffer, excelSelectedSheet]);
 
-const handleConfirm = async () => {
-  if (!parsed || !activeCampaign) return;
+  const handleConfirm = async () => {
+    if (!parsed || !activeCampaign) return;
 
-  // 🔄 เปิด loading
-  Swal.fire({
-    title: "กำลังนำเข้าข้อมูล",
-    text: "กรุณารอสักครู่ ระบบกำลังประมวลผล",
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    didOpen: () => {
-      Swal.showLoading();
-    },
-  });
 
-  try {
-    const result = await dispatch(
-      importUsersThunk({
-        campaignId: activeCampaign.id,
-        rows: parsed.rows,
-      })
-    ).unwrap();
-
-    const parts = [
-      `สร้างผู้ใช้งานใหม่ ${result.totalUsersCreated} รายการ`,
-      `พบผู้ใช้งานเดิม ${result.totalUsersFound} รายการ`,
-      `ผูกแคมเปญ ${result.totalCampaignLinks} รายการ`,
-    ];
-
-    //  ปิด loading แล้วเปิด success
-    Swal.fire({
-      icon: "success",
-      title: "นำเข้าข้อมูลสำเร็จ",
-      text: parts.join(" · "),
-      confirmButtonText: "ตกลง",
+    const result = await Swal.fire({
+      title: "ยืนยันการนำเข้าข้อมูล",
+      html: `คุณกำลังจะนำเข้าข้อมูลผู้ใช้งานจำนวน 
+    <strong>${parsed.rows.length.toLocaleString()}</strong> 
+    รายการเข้าสู่แคมเปญ 
+    <strong>${activeCampaign.name}</strong><br><br>
+    โปรดตรวจสอบให้แน่ใจว่าข้อมูลถูกต้องก่อนดำเนินการต่อ`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
     });
 
-    resetState();
-  } catch (err) {
-    // ปิด loading แล้วเปิด error
+    if (!result.isConfirmed) return;
+
     Swal.fire({
-      icon: "error",
-      title: "นำเข้าผู้ใช้งานไม่สำเร็จ",
-      text: getErrorMessage(err),
-      confirmButtonText: "ตกลง",
+      title: "กำลังนำเข้าข้อมูล",
+      text: "กรุณารอสักครู่ ระบบกำลังประมวลผล",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
     });
-  }
-};
+
+    try {
+      const result = await dispatch(
+        importUsersThunk({
+          campaignId: activeCampaign.id,
+          rows: parsed.rows,
+        })
+      ).unwrap();
+
+      const parts = [
+        `สร้างผู้ใช้งานใหม่ ${result.totalUsersCreated} รายการ`,
+        `พบผู้ใช้งานเดิม ${result.totalUsersFound} รายการ`,
+        `ผูกแคมเปญ ${result.totalCampaignLinks} รายการ`,
+      ];
+
+      //  ปิด loading แล้วเปิด success
+      Swal.fire({
+        icon: "success",
+        title: "นำเข้าข้อมูลสำเร็จ",
+        text: parts.join(" · "),
+        confirmButtonText: "ตกลง",
+      });
+
+      resetState();
+    } catch (err) {
+      // ปิด loading แล้วเปิด error
+      Swal.fire({
+        icon: "error",
+        title: "นำเข้าผู้ใช้งานไม่สำเร็จ",
+        text: getErrorMessage(err),
+        confirmButtonText: "ตกลง",
+      });
+    }
+  };
 
   const preview = useMemo(() => {
     if (!parsed) return [];

@@ -128,7 +128,7 @@ const QrPreview: React.FC<QrPreviewProps> = ({ value, size = 56, onClick }) => {
 
 export default function SignSheetsPage() {
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  const sessions = useAppSelector(selectActiveCampaignSessions) as any[];
+  const sessionsUnSorted = useAppSelector(selectActiveCampaignSessions) as any[];
 
   // ฟอร์มด้านบน
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
@@ -152,6 +152,20 @@ export default function SignSheetsPage() {
   // สำหรับขยาย QR
   const [enlargedQr, setEnlargedQr] = useState<string | null>(null);
 
+  const emptyRows = page > 0 ? Math.max(0, ITEMS_PER_PAGE - rows.length) : 0;
+
+  const getDayNumber = (code: string): number => {
+    const match = code.match(/\d+/);
+    return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
+  };
+
+  const sessions = [...sessionsUnSorted].sort((s1, s2) => {
+    const date1 = getDayNumber(s1.session_code);
+    const date2 = getDayNumber(s2.session_code);
+    return date1 - date2;
+  });
+  console.log("sessionSorted", sessions)
+
   /* ------------------------------- Init session ---------------------------- */
 
   useEffect(() => {
@@ -170,13 +184,14 @@ export default function SignSheetsPage() {
 
     setCourse((prev) => s.subjects?.[0]?.name ?? prev);
     setSessionText(
-      `${new Date(s.examDate).toLocaleDateString("th-TH")} ${s.label}`
+      `${new Date(s.examDate).toLocaleDateString("th-TH")} ${s.subjects?.[0]?.startTime ?? ""}–${s.subjects?.[0]?.endTime ?? ""}`
     );
   }, [sessions, selectedSessionId]);
 
   // sync org จาก campaign
   useEffect(() => {
     if (activeCampaign?.name) {
+      console.log("session", sessions)
       setOrg(activeCampaign.name);
     }
   }, [activeCampaign]);
@@ -242,7 +257,18 @@ export default function SignSheetsPage() {
     if (Number.isNaN(numericSessionId)) return;
 
     setIsExportingPdf(true);
+
     try {
+      Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
       const res = await axios.get(
         `/api/signsheet/campaign/${activeCampaign.id}/session/${numericSessionId}/pdf`,
         {
@@ -251,23 +277,18 @@ export default function SignSheetsPage() {
         }
       );
 
+      Swal.close();
+
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
-      // const a = document.createElement("a");
-      // a.href = url;
-      // a.download = `ใบเซ็นชื่อ_${org.replaceAll(" ", "")}.pdf`;
-      // document.body.appendChild(a);
-      // a.click();
-      // a.remove();
-      // window.URL.revokeObjectURL(url);
 
-      // Swal.fire({
-      //   icon: "success",
-      //   title: "ดาวน์โหลด PDF สำเร็จ",
-      // });
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+
     } catch (error) {
+      Swal.close();
       console.error(error);
+
       Swal.fire({
         icon: "error",
         title: "Export PDF ล้มเหลว",
@@ -287,22 +308,40 @@ export default function SignSheetsPage() {
     if (Number.isNaN(numericSessionId)) return;
 
     try {
+      // ✅ เปิด loading modal
+      Swal.fire({
+        title: "กำลังสร้างผังที่นั่งสอบ...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
       const res = await axios.get(
         `/api/seatplan/campaign/${activeCampaign.id}/session/${numericSessionId}/pdf`,
         { responseType: "blob" }
       );
 
+      // ✅ ปิด loading
+      Swal.close();
+
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
-      // const a = document.createElement("a");
-      // a.href = url;
-      // a.download = `ผังที่นั่งสอบ_${activeCampaign.name}.pdf`;
-      // document.body.appendChild(a);
-      // a.click();
-      // a.remove();
-      // window.URL.revokeObjectURL(url);
+
+      // (optional) แจ้งสำเร็จสั้น ๆ
+      // Swal.fire({
+      //   icon: "success",
+      //   title: "ดาวน์โหลดสำเร็จ",
+      //   timer: 1200,
+      //   showConfirmButton: false,
+      // });
+
     } catch (err) {
+      Swal.close(); // ปิด loading ก่อน
+
       console.error(err);
       Swal.fire({
         icon: "error",
@@ -311,32 +350,37 @@ export default function SignSheetsPage() {
     }
   };
 
+
   const handleDownloadSeatPlanNameList = async () => {
     if (!activeCampaign?.id) return;
 
-    // const numericSessionId = parseInt(
-    //   String(selectedSessionId).replace("sess-", ""),
-    //   10
-    // );
-    // if (Number.isNaN(numericSessionId)) return;
-
     try {
+      //  เปิด loading ก่อน
+      Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
       const res = await axios.get(
         `/api/seatplan/campaign/${activeCampaign.id}/name-list-pdf`,
         { responseType: "blob" }
       );
 
+      // ✅ ปิด loading
+      Swal.close();
+
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
-      // const a = document.createElement("a");
-      // a.href = url;
-      // a.download = `ผังที่นั่งสอบ_${activeCampaign.name}.pdf`;
-      // document.body.appendChild(a);
-      // a.click();
-      // a.remove();
-      // window.URL.revokeObjectURL(url);
+
     } catch (err) {
+      Swal.close(); // ปิด loading ก่อน
+
       console.error(err);
       Swal.fire({
         icon: "error",
@@ -344,6 +388,7 @@ export default function SignSheetsPage() {
       });
     }
   };
+
 
 
   const handlePrint = () => {
@@ -516,18 +561,24 @@ export default function SignSheetsPage() {
 
                     <div className="row g-3">
                       <div className="col-12 col-md-6 col-lg-3">
-                        <label className="form-label">รอบการสอบ</label>
+                        <label className="form-label">วิชาที่สอบ</label>
                         <select
                           className="form-select"
                           value={selectedSessionId}
                           onChange={(e) => setSelectedSessionId(e.target.value)}
                         >
-                          {sessions.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.label} –{" "}
-                              {new Date(s.examDate).toLocaleDateString("th-TH")}
-                            </option>
-                          ))}
+                          {sessions.map((s) => {
+                            const subjectNames =
+                              s.subjects?.map((sub) => sub.name).join(", ") ?? "-";
+
+                            return (
+                              <option key={s.id} value={s.id}>
+                                {s.session_code} {subjectNames}
+                                {/* {new Date(s.examDate).toLocaleDateString("th-TH")} */}
+                              </option>
+                            );
+                          })}
+
                           {!sessions.length && (
                             <option value="">ไม่มีข้อมูลรอบการสอบ</option>
                           )}
@@ -557,7 +608,7 @@ export default function SignSheetsPage() {
                       </div>
 
                       <div className="col-12 col-md-6 col-lg-3">
-                        <label className="form-label">หน่วยงาน / สถานที่</label>
+                        <label className="form-label">รอบสอบ</label>
                         <input
                           className="form-control"
                           value={org}
@@ -600,96 +651,99 @@ export default function SignSheetsPage() {
             </div>
           </div>
 
-          <div className="card-body p-0">
-            <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0">
+          <div className="card-body p-0 position-relative"> {/* เพิ่ม position-relative เพื่อให้ Overlay ทำงานได้ */}
+
+            {/* =========================================================
+      Loading Overlay: แสดงตอนกำลังโหลดหน้าถัดไป (ข้อมูลเก่ามัวลง)
+      ========================================================= */}
+            {isLoading && rows.length > 0 && (
+              <div
+                className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                style={{
+                  backgroundColor: "rgba(255, 255, 255, 0.6)", // พื้นหลังสีขาวจางๆ
+                  zIndex: 10,
+                  backdropFilter: "blur(1px)" // (Optional) เบลอข้อมูลเก่าเล็กน้อย
+                }}
+              >
+                <div className="bg-white p-2 rounded shadow-sm border d-flex align-items-center gap-2">
+                  <Loader2 size={20} className="spin-animation text-primary" />
+                  <span className="small fw-medium text-muted">กำลังโหลด...</span>
+                </div>
+              </div>
+            )}
+
+            <div className="table-responsive" style={{ minHeight: "300px" }}> {/* กำหนด minHeight กันตารางยุบ */}
+              <table className="table table-hover align-middle mb-0 table-striped">
                 <thead className="table-light sticky-top">
                   <tr>
-                    <th style={{ width: 60 }} className="text-center text-nowrap">
-                      ลำดับ
-                    </th>
-                    <th style={{ width: 140 }} className="text-nowrap">
-                      รหัสผู้เข้าสอบ
-                    </th>
+                    {/* ... หัวตารางเหมือนเดิม ... */}
+                    <th style={{ width: 60 }} className="text-center text-nowrap">ลำดับ</th>
+                    <th style={{ width: 140 }} className="text-nowrap">รหัสผู้เข้าสอบ</th>
                     <th>ชื่อ - นามสกุล</th>
-                    <th style={{ width: 50 }} className="text-center">
-                      แถว
-                    </th>
-                    <th style={{ width: 180 }}>
-                      ห้อง / ที่นั่ง
-                    </th>
-                    <th style={{ width: 140 }} className="text-center">
-                      QR
-                    </th>
+                    <th style={{ width: 50 }} className="text-center">แถว</th>
+                    <th style={{ width: 180 }}>ห้อง / ที่นั่ง</th>
+                    <th style={{ width: 140 }} className="text-center">QR</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {/* Loading */}
+                  {/* Case 1: Loading ครั้งแรก (ยังไม่มีข้อมูลเลย) */}
                   {rows.length === 0 && isLoading && (
                     <tr>
-                      <td colSpan={6} className="text-center py-5 text-muted">
-                        <Loader2
-                          size={20}
-                          className="me-2 spin-animation align-text-bottom"
-                        />
-                        กำลังโหลดข้อมูล...
+                      <td colSpan={6} className="text-center py-5 text-muted" style={{ height: "300px" }}>
+                        <Loader2 size={30} className="mb-2 spin-animation text-primary" />
+                        <div>กำลังโหลดข้อมูล...</div>
                       </td>
                     </tr>
                   )}
 
-                  {/* Empty */}
+                  {/* Case 2: ไม่มีข้อมูล (Empty State) */}
                   {rows.length === 0 && !isLoading && (
                     <tr>
-                      <td colSpan={6} className="text-center py-5 text-muted">
+                      <td colSpan={6} className="text-center py-5 text-muted" style={{ height: "300px" }}>
+                        <div className="mb-2">🚫</div>
                         ไม่พบข้อมูลผู้เข้าสอบในหน้านี้
                       </td>
                     </tr>
                   )}
 
-                  {/* Data */}
+                  {/* Case 3: มีข้อมูล (Render Rows) */}
                   {rows.map((r, idx) => (
-                    <tr key={r.user_session_id}>
+                    <tr
+                      key={r.user_session_id}
+                      style={{
+                        height: "65px",
+                        opacity: isLoading ? 0.4 : 1,   // <--- จุดสำคัญที่ช่วยลดการกระพริบ
+                        transition: "opacity 0.2s ease" // <--- ช่วยให้นุ่มนวลขึ้น
+                      }}
+                    >
                       <td className="text-center text-muted small">
                         {(page - 1) * ITEMS_PER_PAGE + idx + 1}
                       </td>
-
-                      <td className="fw-semibold text-nowrap">
-                        {r.userCode}
-                      </td>
-
+                      <td className="fw-semibold text-nowrap">{r.userCode}</td>
                       <td>
                         <div className="fw-medium">
                           {r.firstName} {r.lastName}
                         </div>
                       </td>
-
                       <td className="text-center">
-                        <span className="badge bg-light text-dark">
-                          {r.row_no ?? "-"}
-                        </span>
+                        <span className="badge bg-light text-dark">{r.row_no ?? "-"}</span>
                       </td>
-
                       <td>
                         <div className="d-flex flex-column gap-1">
                           <span className="badge bg-secondary-subtle text-secondary-emphasis align-self-start">
                             ห้อง {r.roomName ?? "-"}
                           </span>
-
                           {r.seat_code && (
-                            <small className="text-muted">
-                              ที่นั่ง: {r.seat_code}
-                            </small>
+                            <small className="text-muted">ที่นั่ง: {r.seat_code}</small>
                           )}
                         </div>
                       </td>
-
                       <td className="text-center">
                         {r.qr_payload ? (
                           <QrPreview
                             value={r.qr_payload}
                             size={52}
-
                             onClick={() => setEnlargedQr(r.qr_payload)}
                           />
                         ) : (
@@ -700,6 +754,17 @@ export default function SignSheetsPage() {
                       </td>
                     </tr>
                   ))}
+
+                  {/* =========================================================
+            Spacer Rows: เติมแถวว่างให้เต็มหน้า เพื่อดัน Pagination ให้ไม่ขยับ
+            ========================================================= */}
+                  {emptyRows > 0 && rows.length > 0 && (
+                    Array.from({ length: emptyRows }).map((_, index) => (
+                      <tr key={`empty-${index}`} style={{ height: "65px" }}> {/* ความสูงต้องเท่ากับ Row ปกติ */}
+                        <td colSpan={6} />
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

@@ -16,6 +16,7 @@ export interface Subject {
   id: number;
   code: string;
   name: string;
+  full_score : number
   questions: SubjectQuestion[];
 }
 
@@ -173,6 +174,7 @@ const subjectsSlice = createSlice({
         code,
         name,
         questions: [],
+        full_score : 0
       };
 
       state.items.push(newSubject);

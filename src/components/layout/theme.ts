@@ -115,7 +115,8 @@ export function buildThemeByRole(role: Role | "DEFAULT"): Theme {
     accent: roleAccent,
 
     headerGradient: makeRoleHeaderGradient(roleHex),
-    mainBg: makeRoleMainBg(roleHex),
+    // mainBg: makeRoleMainBg(roleHex),
+    mainBg: "#F4F7FB",
 
     // ✅ ลด “ขาวโพลน”: card เป็น tint อ่อน ๆ
     cardBg: tint(roleHex, 7),

@@ -1,6 +1,9 @@
 // src/pages/bags/components/BagsTable.tsx
 import { Trash2, QrCode } from "lucide-react";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
+import { useMemo } from "react";
+import { selectIsSystemLocked } from "@/store/slices/examData.slice";
+import { useAppSelector } from "@/store/hook";
 
 type BagStatusKey = "draft" | "ready" | "incomplete";
 
@@ -33,14 +36,20 @@ export default function BagsTable({
   onOpenCompose,
   onDeleteBag,
 }: BagsTableProps) {
+  const sortedBags = useMemo(() => {
+    return [...filteredBags].sort(
+      (a, b) => Number(a.bag_no) - Number(b.bag_no)
+    );
+  }, [filteredBags]);
+  const locked = useAppSelector(selectIsSystemLocked);
   return (
     <div className="card shadow-sm">
       <div className="card-body p-0">
         <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
+          <table className="table table-hover align-middle mb-0 table-striped">
             <thead className="table-light text-uppercase small">
               <tr>
-                <th>Bag</th>
+                <th>หมายเลขถุง</th>
                 <th>รอบสอบ</th>
                 <th className="text-center">จำนวนเล่ม</th>
                 <th className="text-center">สแกนแล้ว</th>
@@ -49,7 +58,7 @@ export default function BagsTable({
               </tr>
             </thead>
             <tbody>
-              {filteredBags.map((bag) => (
+              {sortedBags.map((bag) => (
                 <tr key={bag.id} className="text-sm">
                   <td className="fw-semibold">
                     {String(bag.bag_no).padStart(3, "0")}
@@ -84,11 +93,13 @@ export default function BagsTable({
                       </button>
                       <ShowIfCan permission="manage_bags">
                         <button
-                          className="btn btn-link text-danger p-2"
+                          className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 "
                           onClick={() => onDeleteBag(bag.id)}
                           title="ลบถุง"
+                          disabled={locked}
                         >
                           <Trash2 size={16} />
+                          ลบถุง
                         </button>
                       </ShowIfCan>
                     </div>

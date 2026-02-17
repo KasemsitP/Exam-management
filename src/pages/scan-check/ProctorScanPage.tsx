@@ -15,6 +15,8 @@ import {
 
 import { useProctorScan } from "./hooks/useProctorScan";
 import { userQR } from "@/store/slices/qrscanner.slice"
+import { selectIsSystemLocked } from "@/store/slices/examData.slice";
+import { useAppSelector } from "@/store/hook";
 
 /* --------------------------- Scan Result Card --------------------------- */
 const ScanResult = ({
@@ -70,7 +72,7 @@ const ScanResult = ({
             </li>
             <li className="list-group-item d-flex justify-content-between">
               <span className="text-muted">รอบสอบและวิชา </span>
-              <span className="fw-semibold">{user.session_code} { user.subjectName?? "N/A"}</span>
+              <span className="fw-semibold">{user.session_code} {user.subjectName ?? "N/A"}</span>
             </li>
             <li className="list-group-item d-flex justify-content-between">
               <span className="text-muted">ชื่อ-สกุล:</span>
@@ -115,6 +117,9 @@ const ScanResult = ({
 
 /* --------------------------- Page Component ---------------------------- */
 export default function ProctorScanPage() {
+  const locked = useAppSelector(selectIsSystemLocked);
+  
+  
   const {
     campaignLabel,
     status,
@@ -137,196 +142,197 @@ export default function ProctorScanPage() {
   } = useProctorScan();
 
   return (
-    <div className="container py-4">
-      {/* Header */}
-      <div className="card shadow-sm mb-4">
+    <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
+      <div className="container py-4">
         {/* Header */}
-        <div className="card-header bg-white">
-          <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-            {/* Title */}
-            <div>
-              <h5 className="mb-1">สแกนยืนยันตัวตนผู้สอบ</h5>
-              <div className="small text-muted">
-                <span className="fw-semibold">{campaignLabel}</span>
+        <div className="card shadow-sm mb-4">
+          {/* Header */}
+          <div className="card-header bg-white">
+            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              {/* Title */}
+              <div>
+                <h5 className="mb-1">สแกนยืนยันตัวตนผู้สอบ</h5>
+                <div className="small text-muted">
+                  <span className="fw-semibold">{campaignLabel}</span>
+                </div>
               </div>
-            </div>
 
-            {/* Controls */}
-            <div className="d-flex flex-wrap align-items-center gap-2">
-              <div className="form-check form-switch me-2">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id="pauseAfterSuccess"
-                  checked={pauseAfterSuccess}
-                  onChange={(e) => setPauseAfterSuccess(e.target.checked)}
-                />
-                <label
-                  className="form-check-label small"
-                  htmlFor="pauseAfterSuccess"
+              {/* Controls */}
+              <div className="d-flex flex-wrap align-items-center gap-2">
+                <div className="form-check form-switch me-2">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="pauseAfterSuccess"
+                    checked={pauseAfterSuccess}
+                    onChange={(e) => setPauseAfterSuccess(e.target.checked)}
+                  />
+                  <label
+                    className="form-check-label small"
+                    htmlFor="pauseAfterSuccess"
+                  >
+                    พักกล้องเมื่อสำเร็จ
+                  </label>
+                </div>
+
+                <select
+                  className="form-select form-select-sm"
+                  style={{ width: 140 }}
+                  value={cooldownMs}
+                  onChange={(e) => setCooldownMs(Number(e.target.value))}
                 >
-                  พักกล้องเมื่อสำเร็จ
-                </label>
+                  <option value={800}>Cooldown 0.8s</option>
+                  <option value={1200}>Cooldown 1.2s</option>
+                  <option value={1600}>Cooldown 1.6s</option>
+                  <option value={2000}>Cooldown 2.0s</option>
+                </select>
+
+                <button
+                  className={`btn btn-sm ${scannerEnabled ? "btn-outline-secondary" : "btn-success"
+                    } d-inline-flex align-items-center gap-1`}
+                  onClick={toggleScanner}
+                >
+                  {scannerEnabled ? <Pause size={16} /> : <Play size={16} />}
+                  {scannerEnabled ? "หยุด" : "เริ่ม"}
+                </button>
+
+                <button
+                  className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+                  onClick={toggleFacingMode}
+                >
+                  <Camera size={16} /> สลับ
+                </button>
+
+                <button
+                  className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+                  onClick={handleClear}
+                >
+                  <RotateCcw size={16} /> ล้าง
+                </button>
               </div>
-
-              <select
-                className="form-select form-select-sm"
-                style={{ width: 140 }}
-                value={cooldownMs}
-                onChange={(e) => setCooldownMs(Number(e.target.value))}
-              >
-                <option value={800}>Cooldown 0.8s</option>
-                <option value={1200}>Cooldown 1.2s</option>
-                <option value={1600}>Cooldown 1.6s</option>
-                <option value={2000}>Cooldown 2.0s</option>
-              </select>
-
-              <button
-                className={`btn btn-sm ${scannerEnabled ? "btn-outline-secondary" : "btn-success"
-                  } d-inline-flex align-items-center gap-1`}
-                onClick={toggleScanner}
-              >
-                {scannerEnabled ? <Pause size={16} /> : <Play size={16} />}
-                {scannerEnabled ? "หยุด" : "เริ่ม"}
-              </button>
-
-              <button
-                className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
-                onClick={toggleFacingMode}
-              >
-                <Camera size={16} /> สลับ
-              </button>
-
-              <button
-                className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
-                onClick={handleClear}
-              >
-                <RotateCcw size={16} /> ล้าง
-              </button>
             </div>
           </div>
-        </div>
 
-        {/* Body */}
-        <div className="">
-          {status === "loading" && (
-            <div className="alert alert-primary py-2 d-flex align-items-center gap-2 mb-0">
-              <Loader2 className="spin-animation" size={16} />
-              <span className="small">กำลังตรวจสอบข้อมูล…</span>
-            </div>
-          )}
-
-          {status === "failed" && (
-            <div className="alert alert-danger py-2 d-flex align-items-center gap-2 mb-0">
-              <AlertTriangle size={16} />
-              <span className="small">{error ?? "ตรวจสอบไม่สำเร็จ"}</span>
-            </div>
-          )}
-
-          {status === "succeeded" && scannedUser && (
-            <div className="alert alert-success py-2 d-flex align-items-center gap-2 mb-0">
-              <CheckCircle2 size={16} />
-              <span className="small">
-                ยืนยัน: {scannedUser.firstName} {scannedUser.lastName} (
-                {scannedUser.userCode})
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-
-      {/* Content */}
-      <div className="row g-4">
-        {/* Left: Scanner */}
-        <div className="col-12 col-lg-7">
-          <div className="card shadow-sm border-0">
-            <div className="card-header bg-white d-flex align-items-center justify-content-between">
-              <div className="d-flex align-items-center gap-2">
-                {/* <ScanLine className="text-primary" size={18} /> */}
-                <span className="fw-semibold">กล้องสแกน QR</span>
+          {/* Body */}
+          <div className="">
+            {status === "loading" && (
+              <div className="alert alert-primary py-2 d-flex align-items-center gap-2 mb-0">
+                <Loader2 className="spin-animation" size={16} />
+                <span className="small">กำลังตรวจสอบข้อมูล…</span>
               </div>
-              <div className="small text-muted">
-                สถานะกล้อง:{" "}
-                <span
-                  className={`badge ${scannerEnabled ? "bg-success" : "bg-secondary"
-                    }`}
-                >
-                  {scannerEnabled ? "พร้อม" : "หยุดอยู่"}
+            )}
+
+            {status === "failed" && (
+              <div className="alert alert-danger py-2 d-flex align-items-center gap-2 mb-0">
+                <AlertTriangle size={16} />
+                <span className="small">{error ?? "ตรวจสอบไม่สำเร็จ"}</span>
+              </div>
+            )}
+
+            {status === "succeeded" && scannedUser && (
+              <div className="alert alert-success py-2 d-flex align-items-center gap-2 mb-0">
+                <CheckCircle2 size={16} />
+                <span className="small">
+                  ยืนยัน: {scannedUser.firstName} {scannedUser.lastName} (
+                  {scannedUser.userCode})
                 </span>
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
-            <div className="card-body">
-              {scannerEnabled ? (
-                <div className="rounded overflow-hidden border bg-black">
-                  <Scanner
-                    formats={["qr_code", "micro_qr_code", "rm_qr_code"]}
-                    onScan={(codes) => {
-                      if (!codes?.length) return;
-                      const val = codes[0].rawValue;
-                      handleScan(val);
-                    }}
-                    onError={(e) => console.warn("scanner error:", e)}
-                    constraints={{ facingMode }}
-                    styles={{
-                      container: { width: "100%" },
-                      video: { width: "100%" },
-                    }}
-                    components={{
-                      onOff: true,
-                      torch: true,
-                      zoom: true,
-                      finder: true,
-                      tracker: boundingBox,
-                    }}
-                    allowMultiple={false}
-                    scanDelay={cooldownMs}
-                    paused={pause}
-                  />
-                </div>
-              ) : (
-                <div className="text-center text-muted py-5 border rounded">
-                  <Pause className="mb-2" />
-                  <div>กล้องถูกหยุดอยู่ — กด “เริ่ม” เพื่อใช้งาน</div>
-                </div>
-              )}
 
-              {/* Manual input */}
-              <div className="mt-3">
-                <label className="form-label small d-flex align-items-center gap-2">
-                  <Keyboard size={16} /> กรอก/วาง QR Payload (สำรอง)
-                </label>
-                <div className="input-group">
-                  <input
-                    className="form-control"
-                    placeholder="วางสตริงจาก QR ที่นี่…"
-                    value={manualPayload}
-                    onChange={(e) => setManualPayload(e.target.value)}
-                  />
-                  <button
-                    className="btn btn-outline-primary"
-                    onClick={handleManualSubmit}
-                    disabled={status === "loading"}
+        {/* Content */}
+        <div className="row g-4">
+          {/* Left: Scanner */}
+          <div className="col-12 col-lg-7">
+            <div className="card shadow-sm border-0">
+              <div className="card-header bg-white d-flex align-items-center justify-content-between">
+                <div className="d-flex align-items-center gap-2">
+                  {/* <ScanLine className="text-primary" size={18} /> */}
+                  <span className="fw-semibold">กล้องสแกน QR</span>
+                </div>
+                <div className="small text-muted">
+                  สถานะกล้อง:{" "}
+                  <span
+                    className={`badge ${scannerEnabled ? "bg-success" : "bg-secondary"
+                      }`}
                   >
-                    ตรวจสอบ
-                  </button>
+                    {scannerEnabled ? "พร้อม" : "หยุดอยู่"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="card-body">
+                {scannerEnabled ? (
+                  <div className="rounded overflow-hidden border bg-black">
+                    <Scanner
+                      formats={["qr_code", "micro_qr_code", "rm_qr_code"]}
+                      onScan={(codes) => {
+                        if (!codes?.length) return;
+                        const val = codes[0].rawValue;
+                        handleScan(val);
+                      }}
+                      onError={(e) => console.warn("scanner error:", e)}
+                      constraints={{ facingMode }}
+                      styles={{
+                        container: { width: "100%" },
+                        video: { width: "100%" },
+                      }}
+                      components={{
+                        onOff: true,
+                        torch: true,
+                        zoom: true,
+                        finder: true,
+                        tracker: boundingBox,
+                      }}
+                      allowMultiple={false}
+                      scanDelay={cooldownMs}
+                      paused={pause}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-center text-muted py-5 border rounded">
+                    <Pause className="mb-2" />
+                    <div>กล้องถูกหยุดอยู่ — กด “เริ่ม” เพื่อใช้งาน</div>
+                  </div>
+                )}
+
+                {/* Manual input */}
+                <div className="mt-3">
+                  <label className="form-label small d-flex align-items-center gap-2">
+                    <Keyboard size={16} /> กรอก/วาง QR Payload (สำรอง)
+                  </label>
+                  <div className="input-group">
+                    <input
+                      className="form-control"
+                      placeholder="วางสตริงจาก QR ที่นี่…"
+                      value={manualPayload}
+                      onChange={(e) => setManualPayload(e.target.value)}
+                    />
+                    <button
+                      className="btn btn-outline-primary"
+                      onClick={handleManualSubmit}
+                      disabled={status === "loading"}
+                    >
+                      ตรวจสอบ
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Right: Result + Tips */}
-        <div className="col-12 col-lg-5">
-          <ScanResult
-            status={status}
-            error={error}
-            user={scannedUser}
-            onClear={handleClear}
-          />
+          {/* Right: Result + Tips */}
+          <div className="col-12 col-lg-5">
+            <ScanResult
+              status={status}
+              error={error}
+              user={scannedUser}
+              onClear={handleClear}
+            />
 
-          {/* <div className="card border-0 shadow-sm mt-3">
+            {/* <div className="card border-0 shadow-sm mt-3">
             <div className="card-body small text-muted">
               <div className="fw-semibold mb-2">คำแนะนำ</div>
               <ul className="mb-0 ps-3">
@@ -336,8 +342,9 @@ export default function ProctorScanPage() {
               </ul>
             </div>
           </div> */}
+          </div>
         </div>
       </div>
-    </div>
+    </fieldset>
   );
 }
