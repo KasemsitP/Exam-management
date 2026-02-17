@@ -1,39 +1,84 @@
 // src/pages/reports/SubjectRankingExportPage.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { FileText, Download, Loader2, ArrowDownUp } from "lucide-react";
+import {
+    FileText,
+    Download,
+    Loader2,
+    Settings,
+    Layers,
+    X,
+    Plus,
+    Trash2,
+    ArrowUp,
+    ArrowDown,
+    CheckSquare,
+    ArrowDownUp,
+    CheckCircle2, // เพิ่มไอคอนติ๊กถูกแสดงสถานะ
+} from "lucide-react";
 import Swal from "sweetalert2";
 import axios from "axios";
 import { useAppSelector } from "@/store/hook";
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
-// ลบ import selectActiveCampaignSessions ออก
 
+/** =========================
+ * Types
+ * ========================= */
 type SortBy =
     | "TOTAL_DESC"
     | "TOTAL_ASC"
     | "EXAMCODE_ASC"
     | "EXAMCODE_DESC"
     | "NAME_ASC"
-    | "NAME_DESC"
-    | "ROOM_ASC"
-    | "ROOM_DESC"
-    | "SEAT_ASC"
-    | "SEAT_DESC";
+    | "NAME_DESC";
 
 type ExportFormat = "PDF";
 
-type SubjectOption = {
-    id: number;
-    code: string;
-    name: string;
-    full_score?: number;
+export type RawRow = {
+    session_id: number;
+    subject_id: number;
+    subject_name: string;
+    question_no: number;
+    label: string;
 };
 
-// ถ้าอนาคตจะรับ props ก็สามารถ destructure ใน function ได้
-type Props = {
-    campaignId: number; 
-    sessionId?: number; 
-    userRole?: "ADMIN" | "MANAGER" | "STAFF" | "GRADER" | string;
+type GroupedSubject = {
+    subjectId: number;
+    subjectName: string;
+    sessionIds: number[];
+    questions: { questionNo: number; label: string }[];
 };
+
+type SessionBlock = {
+    sessionId: number;
+    subjects: GroupedSubject[];
+};
+
+type QKey = string;
+type GroupItem = { sessionId: number; subjectId: number; questionNo: number };
+
+type GroupRule = {
+    id: string;
+    title: string;
+    items: GroupItem[];
+};
+
+/** =========================
+ * Helpers
+ * ========================= */
+function makeId() {
+    const g: any = globalThis as any;
+    if (g?.crypto?.randomUUID) return g.crypto.randomUUID();
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function qKey(sessionId: number, subjectId: number, questionNo: number): QKey {
+    return `${sessionId}:${subjectId}:${questionNo}`;
+}
+
+function parseQKey(key: QKey): GroupItem {
+    const [sess, sid, qno] = key.split(":");
+    return { sessionId: Number(sess), subjectId: Number(sid), questionNo: Number(qno) };
+}
 
 function openBlobInNewTab(blob: Blob) {
     const url = URL.createObjectURL(blob);
@@ -41,161 +86,297 @@ function openBlobInNewTab(blob: Blob) {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+function sortLabel(v: SortBy) {
+    switch (v) {
+        case "TOTAL_DESC": return "คะแนนรวม: มาก → น้อย";
+        case "TOTAL_ASC": return "คะแนนรวม: น้อย → มาก";
+        case "EXAMCODE_ASC": return "รหัสสอบ: A → Z";
+        case "EXAMCODE_DESC": return "รหัสสอบ: Z → A";
+        case "NAME_ASC": return "ชื่อ-สกุล: ก → ฮ";
+        case "NAME_DESC": return "ชื่อ-สกุล: ฮ → ก";
+        default: return v;
+    }
+}
+
+/** =========================
+ * Component
+ * ========================= */
 export default function SubjectRankingExportPage() {
-
     const activeCampaign = useAppSelector(selectActiveCampaign);
-    // ลบ const sessions = ... ออก
-
     const campaignId = activeCampaign?.id;
-    
-    // ปรับ sessionId เป็น undefined (หรือไม่กำหนดค่า) เพราะเราไม่ใช้ sessions แล้ว
-    // แต่ถ้าต้องการรับจากข้างนอก สามารถเปลี่ยนเป็นรับ props ได้
-    const sessionId: number | undefined = undefined; 
 
-    const userRole = "ADMIN"; 
+    // data
+    const [rows, setRows] = useState<RawRow[]>([]);
+    const [loadingRows, setLoadingRows] = useState(false);
 
-    // ===== UI state =====
-    const [subjects, setSubjects] = useState<SubjectOption[]>([]);
-    const [loadingSubjects, setLoadingSubjects] = useState(false);
+    // selection (ตอนนี้จะเก็บทุกวิชาเสมอ)
+    const [selectedSubjectIds, setSelectedSubjectIds] = useState<number[]>([]);
 
-    const [subjectId, setSubjectId] = useState<number | "">("");
     const [sortBy, setSortBy] = useState<SortBy>("TOTAL_DESC");
     const [format] = useState<ExportFormat>("PDF");
 
-    // ตัวเลือกเพิ่มเติม
+    // export options
     const [includeRankNo, setIncludeRankNo] = useState(true);
     const [includeRoomSeat, setIncludeRoomSeat] = useState(true);
-    const [includeAvgExplain, setIncludeAvgExplain] = useState(true); 
-    const [onlyCompleted, setOnlyCompleted] = useState(false); 
+    const [includeAvgExplain, setIncludeAvgExplain] = useState(true);
+    const [onlyCompleted, setOnlyCompleted] = useState(false);
 
+    // limit
+    const [passCount, setPassCount] = useState<number>(50);
+
+    // grouping UI
+    const [showGroupModal, setShowGroupModal] = useState(false);
+    const [pickedKeys, setPickedKeys] = useState<QKey[]>([]);
+    const [groups, setGroups] = useState<GroupRule[]>([]);
     const [exporting, setExporting] = useState(false);
 
-    const isAdminOnlyBlocked = useMemo(() => {
-        if (!userRole) return false;
-        return String(userRole).toUpperCase() !== "ADMIN";
-    }, [userRole]);
-
-    // ===== load subjects =====
+    /** =========================
+     * Load rows & Auto Select All
+     * ========================= */
     useEffect(() => {
         if (!campaignId) return;
 
         const load = async () => {
-            setLoadingSubjects(true);
-
+            setLoadingRows(true);
             try {
-                const res = await axios.get<SubjectOption[]>("/api/subjects");
-                console.log("Loaded subjects:", res.data);
-                const data = res.data;
+                const res = await axios.get<RawRow[]>(
+                    `/api/subjects/questioncamp/${campaignId}`
+                );
+                const data = Array.isArray(res.data) ? res.data : [];
+                setRows(data);
 
-                setSubjects(Array.isArray(data) ? data : []);
-
-                // auto select วิชาแรก
-                if (Array.isArray(data) && data.length > 0) {
-                    setSubjectId(data[0].id);
+                // ✅ Change: Auto Select All Subjects
+                if (data.length > 0) {
+                    // หา unique subject_id ทั้งหมด
+                    const allSubjectIds = Array.from(new Set(data.map(r => Number(r.subject_id))));
+                    setSelectedSubjectIds(allSubjectIds);
+                } else {
+                    setSelectedSubjectIds([]);
                 }
-            } catch (error: any) {
-                setSubjects([]);
 
-                const message =
-                    axios.isAxiosError(error)
-                        ? error.response?.data?.message || "โหลดรายวิชาไม่สำเร็จ"
-                        : "เกิดข้อผิดพลาด";
-
+            } catch (err: any) {
+                setRows([]);
+                setSelectedSubjectIds([]);
                 Swal.fire({
                     icon: "error",
                     title: "โหลดรายวิชาไม่สำเร็จ",
-                    text: message,
+                    text: err?.response?.data?.message || "Backend error",
                 });
             } finally {
-                setLoadingSubjects(false);
+                setLoadingRows(false);
             }
         };
 
         load();
-    }, [campaignId, sessionId]);
-    
-    const selectedSubject = useMemo(() => {
-        if (!subjectId) return null;
-        return subjects.find((s) => s.id === subjectId) ?? null;
-    }, [subjects, subjectId]);
+    }, [campaignId]);
 
-    const sortLabel = (v: SortBy) => {
-        switch (v) {
-            case "TOTAL_DESC":
-                return "คะแนนรวม: มาก → น้อย";
-            case "TOTAL_ASC":
-                return "คะแนนรวม: น้อย → มาก";
-            case "EXAMCODE_ASC":
-                return "รหัสสอบ: A → Z";
-            case "EXAMCODE_DESC":
-                return "รหัสสอบ: Z → A";
-            case "NAME_ASC":
-                return "ชื่อ-สกุล: ก → ฮ";
-            case "NAME_DESC":
-                return "ชื่อ-สกุล: ฮ → ก";
-            case "ROOM_ASC":
-                return "ห้องสอบ: น้อย → มาก (หรือ A→Z)";
-            case "ROOM_DESC":
-                return "ห้องสอบ: มาก → น้อย (หรือ Z→A)";
-            case "SEAT_ASC":
-                return "ที่นั่ง: น้อย → มาก";
-            case "SEAT_DESC":
-                return "ที่นั่ง: มาก → น้อย";
-            default:
-                return v;
+    /** =========================
+     * Build groupedSubjects (List of Subjects)
+     * ========================= */
+    const groupedSubjects = useMemo<GroupedSubject[]>(() => {
+        const map = new Map<number, GroupedSubject>();
+
+        for (const r of rows) {
+            const subjectId = Number(r.subject_id);
+            const questionNo = Number(r.question_no);
+            const sessionId = Number(r.session_id);
+
+            if (!map.has(subjectId)) {
+                map.set(subjectId, {
+                    subjectId,
+                    subjectName: r.subject_name,
+                    sessionIds: [sessionId],
+                    questions: [],
+                });
+            } else {
+                const g = map.get(subjectId)!;
+                if (!g.sessionIds.includes(sessionId)) g.sessionIds.push(sessionId);
+            }
+
+            const g = map.get(subjectId)!;
+            if (!g.questions.some((q) => q.questionNo === questionNo)) {
+                g.questions.push({ questionNo, label: r.label });
+            }
         }
+
+        const arr = Array.from(map.values()).map((g) => ({
+            ...g,
+            sessionIds: [...g.sessionIds].sort((a, b) => a - b),
+            questions: [...g.questions].sort((a, b) => a.questionNo - b.questionNo),
+        }));
+
+        arr.sort((a, b) => a.subjectName.localeCompare(b.subjectName, "th"));
+        return arr;
+    }, [rows]);
+
+    /** =========================
+     * แยกเป็น block ตาม session (สำหรับ Modal)
+     * ========================= */
+    const sessionBlocks = useMemo<SessionBlock[]>(() => {
+        // ใช้ rows ทั้งหมดเลย เพราะเราถือว่า select all
+        const sessMap = new Map<number, Map<number, GroupedSubject>>();
+
+        for (const r of rows) {
+            const sessionId = Number(r.session_id);
+            const subjectId = Number(r.subject_id);
+            const questionNo = Number(r.question_no);
+
+            if (!sessMap.has(sessionId)) sessMap.set(sessionId, new Map());
+            const subjMap = sessMap.get(sessionId)!;
+
+            if (!subjMap.has(subjectId)) {
+                subjMap.set(subjectId, {
+                    subjectId,
+                    subjectName: r.subject_name,
+                    sessionIds: [sessionId],
+                    questions: [],
+                });
+            }
+
+            const g = subjMap.get(subjectId)!;
+            if (!g.questions.some((q) => q.questionNo === questionNo)) {
+                g.questions.push({ questionNo, label: r.label });
+            }
+        }
+
+        const blocks: SessionBlock[] = Array.from(sessMap.entries())
+            .map(([sessionId, subjMap]) => ({
+                sessionId,
+                subjects: Array.from(subjMap.values()).map((s) => ({
+                    ...s,
+                    questions: [...s.questions].sort((a, b) => a.questionNo - b.questionNo),
+                })),
+            }))
+            .sort((a, b) => a.sessionId - b.sessionId);
+
+        return blocks;
+    }, [rows]);
+
+    // Keys used in groups
+    const usedKeys = useMemo<QKey[]>(() => {
+        const list: QKey[] = [];
+        for (const g of groups) {
+            for (const it of g.items) list.push(qKey(it.sessionId, it.subjectId, it.questionNo));
+        }
+        return list;
+    }, [groups]);
+
+    const usedSet = useMemo(() => new Set(usedKeys), [usedKeys]);
+
+    /** =========================
+     * UI actions (Modal)
+     * ========================= */
+    const togglePick = (key: QKey) => {
+        setPickedKeys((prev) =>
+            prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+        );
     };
 
+    const createGroupFromPicked = () => {
+        if (pickedKeys.length === 0) return;
+        const items = pickedKeys.map(parseQKey);
+
+        // ห้ามข้าม session
+        const sessionSet = new Set(items.map((x) => x.sessionId));
+        if (sessionSet.size > 1) {
+            Swal.fire({
+                icon: "warning",
+                title: "จัดกลุ่มข้าม session ไม่ได้",
+                text: "กรุณาเลือกข้อภายใน session เดียวกันต่อ 1 กลุ่ม",
+            });
+            return;
+        }
+
+        items.sort((a, b) => {
+            if (a.sessionId !== b.sessionId) return a.sessionId - b.sessionId;
+            if (a.subjectId !== b.subjectId) return a.subjectId - b.subjectId;
+            return a.questionNo - b.questionNo;
+        });
+
+        const title = `กลุ่ม ${groups.length + 1}`;
+        setGroups((prev) => [...prev, { id: makeId(), title, items }]);
+        setPickedKeys([]);
+    };
+
+    const removeGroup = (id: string) => setGroups((prev) => prev.filter((g) => g.id !== id));
+
+    const updateGroupTitle = (id: string, title: string) => {
+        setGroups((prev) => prev.map((g) => (g.id === id ? { ...g, title } : g)));
+    };
+
+    const moveGroup = (id: string, dir: "up" | "down") => {
+        setGroups((prev) => {
+            const idx = prev.findIndex((g) => g.id === id);
+            if (idx < 0) return prev;
+            const nextIdx = dir === "up" ? idx - 1 : idx + 1;
+            if (nextIdx < 0 || nextIdx >= prev.length) return prev;
+            const copy = [...prev];
+            const [it] = copy.splice(idx, 1);
+            copy.splice(nextIdx, 0, it);
+            return copy;
+        });
+    };
+
+    const removeItemFromGroup = (groupId: string, itemKey: QKey) => {
+        const it = parseQKey(itemKey);
+        setGroups((prev) =>
+            prev.map((g) => {
+                if (g.id !== groupId) return g;
+                return {
+                    ...g,
+                    items: g.items.filter(
+                        (x) =>
+                            !(x.sessionId === it.sessionId && x.subjectId === it.subjectId && x.questionNo === it.questionNo)
+                    ),
+                };
+            })
+        );
+    };
+
+    /** =========================
+     * Export
+     * ========================= */
     const handleExport = async () => {
         if (!campaignId) {
             Swal.fire({ icon: "error", title: "ไม่พบ campaignId" });
             return;
         }
-        if (!subjectId) {
-            Swal.fire({ icon: "warning", title: "กรุณาเลือกวิชา" });
+        if (selectedSubjectIds.length === 0) {
+            Swal.fire({ icon: "warning", title: "ไม่พบข้อมูลรายวิชาในระบบ" });
             return;
         }
-        if (isAdminOnlyBlocked) {
-            Swal.fire({
-                icon: "warning",
-                title: "สิทธิ์ไม่เพียงพอ",
-                text: "เฉพาะ ADMIN เท่านั้นที่สามารถออกเอกสารนี้ได้",
-            });
+        if (!Number.isFinite(passCount) || passCount <= 0) {
+            Swal.fire({ icon: "warning", title: "กรุณากรอกจำนวนคนที่ผ่านให้ถูกต้อง" });
             return;
         }
 
         setExporting(true);
         try {
-            const qs = new URLSearchParams();
-            if (sessionId != null) qs.set("sessionId", String(sessionId));
-            qs.set("sortBy", sortBy);
-            qs.set("format", format);
+            const url = `/api/campaigns/${campaignId}/ranking/pdf`;
+            const body = {
+                sortBy,
+                format,
+                includeRankNo,
+                includeRoomSeat,
+                includeAvgExplain,
+                onlyCompleted,
+                subjectIds: selectedSubjectIds, // ส่งทั้งหมด
+                limit: passCount,
+                groups: groups.map((g) => ({ title: g.title, items: g.items })),
+            };
 
-            qs.set("includeRankNo", includeRankNo ? "1" : "0");
-            qs.set("includeRoomSeat", includeRoomSeat ? "1" : "0");
-            qs.set("includeAvgExplain", includeAvgExplain ? "1" : "0");
-            qs.set("onlyCompleted", onlyCompleted ? "1" : "0");
-
-            const url = `/api/reports/campaigns/${campaignId}/subjects/${subjectId}/ranking/pdf?${qs.toString()}`;
-
-            const res = await fetch(url, {
-                method: "GET",
+            const res = await axios.post(url, body, {
+                responseType: "blob",
                 headers: { Accept: "application/pdf" },
             });
 
-            if (!res.ok) {
-                const text = await res.text().catch(() => "");
-                throw new Error(text || "Export PDF ไม่สำเร็จ");
-            }
-
-            const blob = await res.blob();
+            const blob = new Blob([res.data], { type: "application/pdf" });
             openBlobInNewTab(blob);
-        } catch (e: any) {
-            Swal.fire({
-                icon: "error",
-                title: "ไม่สามารถออกเอกสารได้",
-                text: e?.message || "Backend error. กรุณาลองใหม่อีกครั้ง",
-            });
+        } catch (err: any) {
+            const message = axios.isAxiosError(err)
+                ? err.response?.data?.message || err.message || "Export PDF ไม่สำเร็จ"
+                : "Export PDF ไม่สำเร็จ";
+            Swal.fire({ icon: "error", title: "ไม่สามารถออกเอกสารได้", text: message });
         } finally {
             setExporting(false);
         }
@@ -203,101 +384,105 @@ export default function SubjectRankingExportPage() {
 
     return (
         <div className="container-fluid px-3 px-sm-4 py-3">
-            <div className="card shadow-sm border-0">
+            <div className="card shadow-sm border-0 mb-3">
                 <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
                     <div>
                         <h5 className="mb-1 d-flex align-items-center gap-2">
                             <FileText size={18} />
-                            ออกเอกสาร “ใบรายชื่อเรียงลำดับคะแนน” รายวิชา
+                            สร้างบัญชีรายชื่อผู้สอบผ่าน (Ranking & Tie-break)
                         </h5>
                         <small className="text-muted">
-                            เลือกวิชา + เลือกการจัดลำดับ แล้วดาวน์โหลดเป็น PDF
+                            คำนวณคะแนนรวมจากทุกรายวิชาที่มีในแคมเปญนี้
                         </small>
                     </div>
 
-                    <button
-                        type="button"
-                        className="btn btn-primary btn-lg d-flex align-items-center gap-2"
-                        onClick={handleExport}
-                        disabled={
-                            exporting ||
-                            loadingSubjects ||
-                            !campaignId ||
-                            !subjectId ||
-                            isAdminOnlyBlocked
-                        }
-                        title={
-                            isAdminOnlyBlocked
-                                ? "เฉพาะ ADMIN เท่านั้น"
-                                : "ออกเอกสาร PDF"
-                        }
-                    >
-                        {exporting ? (
-                            <>
-                                <Loader2 size={18} className="spin-animation" />
-                                กำลังออกเอกสาร...
-                            </>
-                        ) : (
-                            <>
-                                <Download size={18} />
-                                ดาวน์โหลด PDF
-                            </>
-                        )}
-                    </button>
+                    <div className="d-flex gap-2">
+                        <button
+                            type="button"
+                            className="btn btn-outline-primary d-flex align-items-center gap-2"
+                            onClick={() => setShowGroupModal(true)}
+                            disabled={selectedSubjectIds.length === 0}
+                        >
+                            <Layers size={16} />
+                            จัดกลุ่มวิชาสอบ
+                        </button>
+
+                        <button
+                            type="button"
+                            className="btn btn-primary btn-lg d-flex align-items-center gap-2"
+                            onClick={handleExport}
+                            disabled={exporting || loadingRows || !campaignId || selectedSubjectIds.length === 0}
+                        >
+                            {exporting ? (
+                                <>
+                                    <Loader2 size={18} className="spin-animation" />
+                                    กำลังออกเอกสาร...
+                                </>
+                            ) : (
+                                <>
+                                    <Download size={18} />
+                                    ดาวน์โหลด PDF
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
 
                 <div className="card-body">
-                    {/* ===== controls ===== */}
                     <div className="row g-3">
+                        {/* Left: Subjects List (Read Only) */}
                         <div className="col-12 col-lg-6">
-                            <div className="border rounded-3 p-3">
-                                <div className="small text-muted mb-1">รายวิชา</div>
-
-                                <select
-                                    className="form-select"
-                                    value={subjectId}
-                                    onChange={(e) =>
-                                        setSubjectId(e.target.value ? Number(e.target.value) : "")
-                                    }
-                                    disabled={loadingSubjects}
-                                >
-                                    {loadingSubjects && <option value="">กำลังโหลด...</option>}
-                                    {!loadingSubjects && subjects.length === 0 && (
-                                        <option value="">ไม่พบรายวิชา</option>
-                                    )}
-                                    {subjects.map((s) => (
-                                        <option key={s.id} value={s.id}>
-                                            {s.code} - {s.name}
-                                        </option>
-                                    ))}
-                                </select>
-
-                                <div className="small text-muted mt-2">
-                                    วิชาที่เลือก:{" "}
-                                    <span className="fw-semibold">
-                                        {selectedSubject ? selectedSubject.name : "-"}
+                            <div className="border rounded-3 p-3 h-100 bg-light-subtle">
+                                <div className="d-flex align-items-center justify-content-between">
+                                    <div className="small text-muted d-flex align-items-center gap-2">
+                                        <Settings size={14} />
+                                        <span>รายวิชาที่นำมาคำนวณ (ทั้งหมด)</span>
+                                    </div>
+                                    <span className="badge bg-success border border-success-subtle">
+                                        {selectedSubjectIds.length} วิชา
                                     </span>
-                                    {selectedSubject?.full_score != null && (
-                                        <>
-                                            {" "}
-                                            | คะแนนเต็ม{" "}
-                                            <span className="fw-semibold">
-                                                {selectedSubject.full_score}
-                                            </span>
-                                        </>
+                                </div>
+
+                                <div
+                                    className="mt-2 border rounded-3 p-2 bg-white"
+                                    style={{ maxHeight: 260, overflowY: "auto" }}
+                                >
+                                    {loadingRows ? (
+                                        <div className="text-center text-muted small py-3">กำลังโหลด...</div>
+                                    ) : groupedSubjects.length === 0 ? (
+                                        <div className="text-center text-muted small py-3">ไม่พบข้อมูลรายวิชา</div>
+                                    ) : (
+                                        <div className="d-flex flex-column gap-2">
+                                            {groupedSubjects.map((s) => (
+                                                <div
+                                                    key={s.subjectId}
+                                                    className="d-flex align-items-center gap-2 px-2 py-2 rounded border border-light-subtle"
+                                                >
+                                                    {/* เปลี่ยนจาก checkbox เป็น icon ติ๊กถูกสีเขียว */}
+                                                    <CheckCircle2 size={18} className="text-success flex-shrink-0" />
+
+                                                    <div className="flex-grow-1 overflow-hidden">
+                                                        <div className="fw-semibold text-truncate">{s.subjectName}</div>
+                                                        <div className="small text-muted d-flex gap-2">
+                                                            <span>{s.questions.length} ข้อ</span>
+                                                            <span>•</span>
+                                                            <span>Session: {s.sessionIds.join(", ")}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
                             </div>
                         </div>
 
+                        {/* Right: Options & Tie-break */}
                         <div className="col-12 col-lg-6">
-                            <div className="border rounded-3 p-3">
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <div className="small text-muted">จัดลำดับ (Sort)</div>
-                                    <div className="text-muted small d-flex align-items-center gap-1">
-                                        <ArrowDownUp size={14} />
-                                        <span>เลือกได้ตามต้องการ</span>
-                                    </div>
+                            <div className="border rounded-3 p-3 h-100">
+                                <div className="small text-muted d-flex align-items-center gap-2">
+                                    <ArrowDownUp size={14} />
+                                    <span>การเรียงลำดับ (Sort)</span>
                                 </div>
 
                                 <select
@@ -311,111 +496,315 @@ export default function SubjectRankingExportPage() {
                                     <option value="EXAMCODE_DESC">{sortLabel("EXAMCODE_DESC")}</option>
                                     <option value="NAME_ASC">{sortLabel("NAME_ASC")}</option>
                                     <option value="NAME_DESC">{sortLabel("NAME_DESC")}</option>
-                                    <option value="ROOM_ASC">{sortLabel("ROOM_ASC")}</option>
-                                    <option value="ROOM_DESC">{sortLabel("ROOM_DESC")}</option>
-                                    <option value="SEAT_ASC">{sortLabel("SEAT_ASC")}</option>
-                                    <option value="SEAT_DESC">{sortLabel("SEAT_DESC")}</option>
                                 </select>
 
-                                <div className="small text-muted mt-2">
-                                    หมายเหตุ: คะแนนรวม “รายวิชา” ควรเป็นค่าเฉลี่ยผู้ตรวจ 1 และ 2
-                                    (เช่น (s1+s2)/2) ตามที่คุณกำหนดในฝั่ง backend
+                                <hr className="my-3" />
+
+                                <div className="small text-muted mb-2">จำนวน "ผู้สอบผ่าน" (Top N)</div>
+                                <input
+                                    type="number"
+                                    className="form-control"
+                                    value={passCount}
+                                    min={1}
+                                    onChange={(e) => setPassCount(Number(e.target.value))}
+                                    placeholder="เช่น 50"
+                                />
+                                <div className="small text-muted mt-1">
+                                    ระบบจะตัดยอด {passCount} คนแรก หลังจากเรียงลำดับคะแนนแล้ว
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* ===== options ===== */}
-                        <div className="col-12">
-                            <div className="border rounded-3 p-3">
-                                <div className="small text-muted mb-2">ตัวเลือกในเอกสาร</div>
+                                <hr className="my-3" />
 
+                                <div className="small text-muted mb-2">ตัวเลือกการแสดงผล</div>
                                 <div className="row g-2">
-                                    <div className="col-12 col-md-6 col-lg-3">
-                                        <label className="form-check d-flex gap-2 align-items-start">
+                                    <div className="col-6">
+                                        <label className="form-check d-flex gap-2 align-items-center">
                                             <input
-                                                className="form-check-input mt-1"
+                                                className="form-check-input"
                                                 type="checkbox"
                                                 checked={includeRankNo}
                                                 onChange={(e) => setIncludeRankNo(e.target.checked)}
                                             />
-                                            <span>
-                                                <div className="fw-semibold">แสดงลำดับที่</div>
-                                                <div className="small text-muted">
-                                                    เช่น 1, 2, 3 ...
-                                                </div>
-                                            </span>
+                                            <span className="small">แสดงลำดับที่</span>
                                         </label>
                                     </div>
-
-                                    <div className="col-12 col-md-6 col-lg-3">
-                                        <label className="form-check d-flex gap-2 align-items-start">
+                                    <div className="col-6">
+                                        <label className="form-check d-flex gap-2 align-items-center">
                                             <input
-                                                className="form-check-input mt-1"
+                                                className="form-check-input"
                                                 type="checkbox"
                                                 checked={includeRoomSeat}
                                                 onChange={(e) => setIncludeRoomSeat(e.target.checked)}
                                             />
-                                            <span>
-                                                <div className="fw-semibold">แสดงห้อง/ที่นั่ง</div>
-                                                <div className="small text-muted">
-                                                    room_code, row_no, col_no
-                                                </div>
-                                            </span>
+                                            <span className="small">แสดงห้อง/ที่นั่ง</span>
                                         </label>
                                     </div>
-
-                                    <div className="col-12 col-md-6 col-lg-3">
-                                        <label className="form-check d-flex gap-2 align-items-start">
+                                    <div className="col-6">
+                                        <label className="form-check d-flex gap-2 align-items-center">
                                             <input
-                                                className="form-check-input mt-1"
+                                                className="form-check-input"
                                                 type="checkbox"
                                                 checked={includeAvgExplain}
                                                 onChange={(e) => setIncludeAvgExplain(e.target.checked)}
                                             />
-                                            <span>
-                                                <div className="fw-semibold">แสดงสูตรเฉลี่ย</div>
-                                                <div className="small text-muted">
-                                                    (ผู้ตรวจ1 + ผู้ตรวจ2) / 2
-                                                </div>
-                                            </span>
+                                            <span className="small">แสดงสูตรคำนวณ</span>
                                         </label>
                                     </div>
-
-                                    <div className="col-12 col-md-6 col-lg-3">
-                                        <label className="form-check d-flex gap-2 align-items-start">
+                                    <div className="col-6">
+                                        <label className="form-check d-flex gap-2 align-items-center">
                                             <input
-                                                className="form-check-input mt-1"
+                                                className="form-check-input"
                                                 type="checkbox"
                                                 checked={onlyCompleted}
                                                 onChange={(e) => setOnlyCompleted(e.target.checked)}
                                             />
-                                            <span>
-                                                <div className="fw-semibold">เฉพาะคนที่ครบคะแนน</div>
-                                                <div className="small text-muted">
-                                                    แล้วแต่คุณนิยามใน backend
-                                                </div>
-                                            </span>
+                                            <span className="small">เฉพาะคนตรวจครบ</span>
                                         </label>
                                     </div>
                                 </div>
 
-                                {isAdminOnlyBlocked && (
-                                    <div className="alert alert-warning mt-3 mb-0">
-                                        หน้านี้ตั้งให้ <b>ADMIN เท่านั้น</b> ที่กดออกเอกสารได้
-                                        (ถ้าคุณไม่อยากล็อค เอา prop <code>userRole</code> ออกได้)
+                                <div className="mt-4 d-flex flex-wrap align-items-center gap-2">
+
+                                    {groups.length > 0 && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline-danger ms-auto d-flex align-items-center gap-2"
+                                            onClick={() => {
+                                                setGroups([]);
+                                                setPickedKeys([]);
+                                            }}
+                                        >
+                                            <Trash2 size={16} />
+                                            ล้างกลุ่ม
+                                        </button>
+                                    )}
+                                </div>
+
+                                {groups.length > 0 ? (
+                                    <div className="alert alert-info py-2 px-3 small mt-3 mb-0">
+                                        <div className="fw-bold mb-1">ลำดับการตัดสิน (Tie-breaker):</div>
+                                        <ol className="mb-0 ps-3">
+                                            <li>คะแนนรวม (Total Score)</li>
+                                            {groups.map((g) => (
+                                                <li key={g.id}>
+                                                    คะแนน {g.title} ({g.items.length} ข้อ)
+                                                </li>
+                                            ))}
+                                            <li>รหัสประจำตัวสอบ</li>
+                                        </ol>
+                                    </div>
+                                ) : (
+                                    <div className="small text-muted mt-2 fst-italic">
+                                        * หากไม่มีกลุ่ม Tie-break ระบบจะใช้ "รหัสประจำตัว" ตัดสินกรณีคะแนนรวมเท่ากัน
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
-
-                    {/* ===== preview hint ===== */}
-                    <div className="mt-3 small text-muted">
-                        ทริค: ถ้าคุณอยากทำ “หน้าตั้งค่า sort แบบในรูป” เพิ่มเติม
-                        คุณสามารถเพิ่ม radio/checkbox ได้ และส่งค่าไปใน query string ตัวเดิมได้เลย
-                    </div>
                 </div>
             </div>
+
+            {/* =========================
+       * Group Modal (คงเดิม Logic เดิม)
+       * ========================= */}
+            {showGroupModal && (
+                <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+                    <div className="modal-dialog modal-xl modal-dialog-scrollable">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <div>
+                                    <h5 className="modal-title mb-0">จัดกลุ่มข้อสอบ (Tie-break)</h5>
+                                    <div className="small text-muted">
+                                        เลือกข้อสอบเพื่อใช้ตัดสินกรณีคะแนนรวมเท่ากัน (ห้ามข้าม Session ภายใน 1 กลุ่ม)
+                                    </div>
+                                </div>
+                                <button type="button" className="btn-close" onClick={() => setShowGroupModal(false)} />
+                            </div>
+
+                            <div className="modal-body p-0">
+                                <div className="row g-0">
+                                    {/* Left: Pick Questions */}
+                                    <div className="col-lg-7 border-end bg-light">
+                                        <div className="p-3 bg-white border-bottom d-flex justify-content-between align-items-center sticky-top">
+                                            <div className="fw-semibold d-flex align-items-center gap-2">
+                                                <CheckSquare size={16} />
+                                                เลือกข้อ ({pickedKeys.length})
+                                            </div>
+                                            <button
+                                                className="btn btn-primary btn-sm d-flex align-items-center gap-2"
+                                                disabled={pickedKeys.length === 0}
+                                                onClick={createGroupFromPicked}
+                                            >
+                                                <Plus size={16} />
+                                                สร้างกลุ่ม
+                                            </button>
+                                        </div>
+
+                                        <div className="p-3">
+                                            {sessionBlocks.map((block) => (
+                                                <div key={block.sessionId} className="mb-4">
+                                                    <div className="fw-semibold mb-2 text-dark border-bottom pb-1">
+                                                        Session {block.sessionId}
+                                                    </div>
+                                                    {block.subjects.map((subj) => {
+                                                        const available = subj.questions
+                                                            .map((q) => ({
+                                                                sessionId: block.sessionId,
+                                                                subjectId: subj.subjectId,
+                                                                subjectName: subj.subjectName,
+                                                                questionNo: q.questionNo,
+                                                                label: q.label,
+                                                                key: qKey(block.sessionId, subj.subjectId, q.questionNo),
+                                                            }))
+                                                            .filter((x) => !usedSet.has(x.key));
+
+                                                        if (available.length === 0) return null;
+
+                                                        return (
+                                                            <div key={`${block.sessionId}-${subj.subjectId}`} className="mb-3 ps-2">
+                                                                <div className="fw-semibold text-primary mb-2 small">
+                                                                    {subj.subjectName}
+                                                                </div>
+                                                                <div className="row g-2">
+                                                                    {available.map((q) => {
+                                                                        const checked = pickedKeys.includes(q.key);
+                                                                        return (
+                                                                            <div key={q.key} className="col-12 col-md-6 col-xl-4">
+                                                                                <label
+                                                                                    className={`border rounded bg-white p-2 d-flex gap-2 align-items-start cursor-pointer h-100 ${checked ? "border-primary shadow-sm" : ""
+                                                                                        }`}
+                                                                                >
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        className="form-check-input mt-1"
+                                                                                        checked={checked}
+                                                                                        onChange={() => togglePick(q.key)}
+                                                                                    />
+                                                                                    <div>
+                                                                                        <div className="fw-semibold small">ข้อ {q.questionNo}</div>
+                                                                                        <div className="text-muted" style={{ fontSize: "0.75rem" }}>
+                                                                                            {q.label || "-"}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </label>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Groups List */}
+                                    <div className="col-lg-5 bg-white">
+                                        <div className="p-3 bg-light border-bottom d-flex justify-content-between align-items-center sticky-top">
+                                            <div className="fw-semibold d-flex align-items-center gap-2">
+                                                <Layers size={16} />
+                                                กลุ่มที่สร้างแล้ว ({groups.length})
+                                            </div>
+                                            <button
+                                                className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2"
+                                                onClick={() => setGroups([])}
+                                                disabled={groups.length === 0}
+                                            >
+                                                <Trash2 size={14} />
+                                                ล้างทั้งหมด
+                                            </button>
+                                        </div>
+
+                                        <div className="p-3">
+                                            {groups.length === 0 ? (
+                                                <div className="text-center text-muted py-5">
+                                                    ยังไม่มีกลุ่ม Tie-break
+                                                    <div className="small">เลือกข้อฝั่งซ้าย แล้วกด “สร้างกลุ่ม”</div>
+                                                </div>
+                                            ) : (
+                                                <div className="d-flex flex-column gap-3">
+                                                    {groups.map((g, idx) => (
+                                                        <div key={g.id} className="card shadow-sm border-0">
+                                                            <div className="card-body p-2">
+                                                                <div className="d-flex align-items-start gap-2">
+                                                                    <span className="badge bg-dark rounded-pill mt-1">{idx + 1}</span>
+                                                                    <div className="flex-grow-1">
+                                                                        <input
+                                                                            className="form-control form-control-sm fw-semibold"
+                                                                            value={g.title}
+                                                                            onChange={(e) => updateGroupTitle(g.id, e.target.value)}
+                                                                        />
+                                                                        <div className="mt-2 d-flex flex-wrap gap-1">
+                                                                            {g.items.map((it) => (
+                                                                                <span
+                                                                                    key={qKey(it.sessionId, it.subjectId, it.questionNo)}
+                                                                                    className="badge bg-white text-dark border d-inline-flex align-items-center gap-1"
+                                                                                >
+                                                                                    <span className="text-muted">
+                                                                                        {it.sessionId}:{it.subjectId}:{it.questionNo}
+                                                                                    </span>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="btn btn-sm p-0 ms-1"
+                                                                                        onClick={() =>
+                                                                                            removeItemFromGroup(g.id, qKey(it.sessionId, it.subjectId, it.questionNo))
+                                                                                        }
+                                                                                    >
+                                                                                        <X size={12} />
+                                                                                    </button>
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="d-flex flex-column gap-1">
+                                                                        <button
+                                                                            className="btn btn-light border btn-sm"
+                                                                            onClick={() => moveGroup(g.id, "up")}
+                                                                            disabled={idx === 0}
+                                                                        >
+                                                                            <ArrowUp size={12} />
+                                                                        </button>
+                                                                        <button
+                                                                            className="btn btn-light border btn-sm"
+                                                                            onClick={() => moveGroup(g.id, "down")}
+                                                                            disabled={idx === groups.length - 1}
+                                                                        >
+                                                                            <ArrowDown size={12} />
+                                                                        </button>
+                                                                        <button
+                                                                            className="btn btn-light border text-danger btn-sm"
+                                                                            onClick={() => removeGroup(g.id)}
+                                                                        >
+                                                                            <Trash2 size={12} />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="modal-footer bg-light">
+                                <button className="btn btn-secondary" onClick={() => setShowGroupModal(false)}>
+                                    ปิดหน้าต่าง
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <style>{`.cursor-pointer { cursor: pointer; }`}</style>
+                </div>
+            )}
+
+            <style>{`
+        .spin-animation { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+      `}</style>
         </div>
     );
 }

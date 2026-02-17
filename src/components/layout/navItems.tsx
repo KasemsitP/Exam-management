@@ -139,4 +139,10 @@ export const NAV_ITEMS: NavItem[] = [
     icon: QrCode,
     permissions: ["manage_grading"],
   },
+  {
+    to: "/subject-ranking-export",
+    label: "ออกใบสรุป",
+    icon: QrCode,
+    permissions: ["manage_grading"],
+  },
 ];

@@ -252,6 +252,7 @@ export default function BagScoresPage() {
           `http://localhost:8000/api/reports/bags/${selectedBagId}/scores`,
           { params: { campaignId: activeCampaign.id } }
         );
+        console.log(res.data)
         if (cancelled) return;
         setBagScores(res.data);
       } catch (err: any) {
@@ -275,6 +276,7 @@ export default function BagScoresPage() {
   // -----------------------------
   // 4) header ข้อสอบ + helper
   // -----------------------------
+  
   const headerQuestions: { questionNo: number; label: string }[] = useMemo(() => {
     if (!bagScores || !bagScores.booklets.length) return [];
     const first = bagScores.booklets[0];
@@ -294,6 +296,15 @@ export default function BagScoresPage() {
       });
     }
     return arr;
+  }, [bagScores]);
+  const sortedBooklets = useMemo(() => {
+    if (!bagScores || !bagScores.booklets) return [];
+    
+    // spread array [...] เพื่อสร้าง array ใหม่ป้องกันการแก้ state โดยตรง
+    return [...bagScores.booklets].sort((a, b) => {
+      // ใช้ localeCompare + numeric: true เพื่อรองรับเลขที่มี 0 นำหน้า หรือเลขจำนวนหลักไม่เท่ากัน
+      return (a.examCode ?? "").localeCompare(b.examCode ?? "", undefined, { numeric: true });
+    });
   }, [bagScores]);
 
   const formatScore = (v: number | string | null | undefined) => {
@@ -790,7 +801,7 @@ export default function BagScoresPage() {
                     </thead>
 
                     <tbody>
-                      {bagScores.booklets.map((bk) => (
+                      {sortedBooklets.map((bk) => (
                         <tr key={bk.bookletId}>
                           {/* รหัสสอบ */}
                           <td

@@ -458,12 +458,11 @@ const SubjectPage: React.FC = () => {
                           <input
                             type="text"
                             className="form-control form-control-sm"
-                            placeholder="เช่น กฎหมายรัฐธรรมนูญ"
                             value={q.label}
                             onChange={(e) =>
                               handleChangeQuestionLabel(sub.id, q.id, e.target.value)
                             }
-                            disabled={loading}
+                            disabled={true}
                           />
                         </td>
 
