@@ -34,6 +34,7 @@ export interface ExamCampaign {
   name: string;
   isActive: boolean;
   sessions: CampaignSession[];
+  qrActive?: boolean; // 
 }
 
 /* =========================================================
@@ -49,6 +50,7 @@ interface ApiCampaign {
   name: string;
   is_active: ApiBoolean;
   note?: string;
+  qr_active: ApiBoolean;
 }
 
 interface ApiSession {
@@ -184,6 +186,7 @@ const mapApiPayloadToCampaigns = (payload: ExamDataApiPayload): ExamCampaign[] =
       year_be: campaign.year_be,
       site: campaign.site,
       campaign_size: campaign.campaign_size,
+      qrActive: toBool(campaign.qr_active),
     };
   });
 };
@@ -210,6 +213,8 @@ interface CreateCampaignInput {
   campaign_size: string
   name: string;
   isActive: boolean;
+  qrActive?: boolean;
+
   description?: string;
 }
 
@@ -654,6 +659,10 @@ export const selectCampaigns = (state: RootState) => state.examData.list;
 
 export const selectActiveCampaign = (state: RootState) =>
   state.examData.list.find((c) => c.id === state.examData.activeCampaignId) ?? null;
+
+export const selectQrActiveCampaign = (state: RootState) =>
+  state.examData.list.find((c) => c.id === state.examData.activeCampaignId)?.qrActive ?? false;
+
 
 
 export const selectSessionsForCampaign =

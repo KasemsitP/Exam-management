@@ -20,7 +20,7 @@ import {
 } from "@/store/slices/grading.slice";
 
 import { selectCurrentUser } from "@/store/slices/auth.slice";
-import { selectActiveCampaign } from "@/store/slices/examData.slice";
+import { selectActiveCampaign  , selectQrActiveCampaign} from "@/store/slices/examData.slice";
 import {
   selectGradersForCampaign,
   selectGradersStatus,
@@ -49,6 +49,8 @@ export const useGradingStation = () => {
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const lastSlotId = useAppSelector(selectLastSlotId);
   const records = useAppSelector(selectGradingRecords);
+
+  const QRActive = useAppSelector(selectQrActiveCampaign);
 
   const campaignNumericId = activeCampaign?.id
     ? Number(DeleteCamp(String(activeCampaign.id)))
@@ -495,6 +497,7 @@ html: `
 
 
     bagNo,
-    lastSlotId
+    lastSlotId,
+    QRActive
   };
 };

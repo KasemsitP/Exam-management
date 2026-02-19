@@ -39,7 +39,7 @@ export default function AccountsTable({
     <div className="card shadow-sm">
       <div className="card-body p-0">
         <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
+          <table className="table table-hover align-middle mb-0 table-striped text-nowrap">
             <thead className="table-light text-uppercase small">
               <tr>
                 <th>ชื่อผู้ใช้</th>

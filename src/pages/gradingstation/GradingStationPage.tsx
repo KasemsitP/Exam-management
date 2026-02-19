@@ -51,7 +51,8 @@ export default function GradingStationPage() {
 
 
     lastSlotId,
-    bagNo
+    bagNo,
+    QRActive
   } = useGradingStation();
 
   return (
@@ -101,6 +102,7 @@ export default function GradingStationPage() {
                 slotId={lastSlotId}
                 bagNo={bagNo}
                 setQuestionMaxScore={setQuestionMaxScore}
+                QrActive={QRActive}
                 QuestionMaxScore={questionMaxScore}
               />
             </div>

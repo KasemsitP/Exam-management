@@ -86,8 +86,8 @@ export function CampaignFiltersCard({
               onChange={(e) => onDateFilterChange(e.target.value)}
             />
           </div>
-          <div className="col-lg-3 d-flex align-items-end justify-content-lg-end">
-            <button className="btn btn-outline-secondary btn-sm w-100 w-sm-auto" onClick={onResetFilters}>
+          <div className="col-lg-3 d-flex align-items-end justify-content-start justify-content-lg-end">
+            <button className="btn btn-outline-secondary btn-sm w-100 w-sm-auto text-nowrap" onClick={onResetFilters}>
               ล้างตัวกรอง
             </button>
           </div>

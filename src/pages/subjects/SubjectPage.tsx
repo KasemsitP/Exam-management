@@ -230,7 +230,7 @@ const SubjectPage: React.FC = () => {
   };
 
   return (
-    <>
+    <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
       <Header
         showCreateForm={showCreateForm}
         setShowCreateForm={setShowCreateForm}
@@ -346,10 +346,10 @@ const SubjectPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="modal-footer">
+                  <div className="modal-footer flex-column flex-sm-row gap-2">
                     <button
                       type="button"
-                      className="btn btn-outline-secondary"
+                      className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
                       onClick={() => setShowCreateForm(false)}
                       disabled={loading}
                     >
@@ -358,7 +358,7 @@ const SubjectPage: React.FC = () => {
 
                     <button
                       type="submit"
-                      className="btn btn-success"
+                      className="btn btn-success w-100 w-sm-auto order-1 order-sm-2"
                       disabled={loading || !newCode.trim() || !newName.trim()}
                     >
                       บันทึกวิชา
@@ -371,9 +371,7 @@ const SubjectPage: React.FC = () => {
         </>
       )}
 
-      {/* <div className="card mb-4">
-  <div className="card-body bg-white"> */}
-      {/* ถ้ายังไม่มีวิชาเลย */}
+
       {subjects.length === 0 && !showCreateForm && !loading && (
         <div className="alert alert-info">
           ยังไม่มีวิชาในระบบ กดปุ่ม <strong>“เพิ่มวิชา”</strong> ด้านขวาบนเพื่อเริ่มต้น
@@ -383,40 +381,38 @@ const SubjectPage: React.FC = () => {
       {/* การ์ดวิชาแต่ละตัว */}
       {subjects.map((sub) => (
         <div className="card mb-4" key={sub.id}>
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <div>
-              <div className="d-flex align-items-center gap-2">
-                <strong>วิชา {sub.name}</strong>
-              </div>
-              <div className="text-muted small">
-                รหัสวิชา: <strong>{sub.code}</strong>
-              </div>
-              <div className="text-muted small">
-                จำนวน {sub.questions.length} ข้อ
-              </div>
-              <div className="text-muted small">
-                คะแนนเต็ม {sub.full_score} คะแนน
+          <div className="card-header">
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-3">
+              <div className="flex-grow-1">
+                <div className="d-flex align-items-center gap-2">
+                  <strong className="fs-6">วิชา {sub.name}</strong>
+                </div>
+                <div className="text-muted small">
+                  รหัสวิชา: <strong>{sub.code}</strong>
+                </div>
+                <div className="text-muted small">
+                  จำนวน {sub.questions.length} ข้อ | คะแนนเต็ม {sub.full_score} คะแนน
+                </div>
               </div>
 
-            </div>
-
-            <div className="d-flex gap-2">
-              <button
-                type="button"
-                className="btn btn-outline-danger btn-sm"
-                onClick={() => handleDeleteSubject(sub.id)}
-                disabled={loading}
-              >
-                ลบ
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary btn-sm"
-                onClick={() => openAddQuestionModal(sub.id)}
-                disabled={loading}
-              >
-                + เพิ่มข้อ
-              </button>
+              <div className="d-flex gap-2 flex-nowrap align-self-sm-start">
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm text-nowrap"
+                  onClick={() => handleDeleteSubject(sub.id)}
+                  disabled={loading}
+                >
+                  ลบ
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm text-nowrap"
+                  onClick={() => openAddQuestionModal(sub.id)}
+                  disabled={loading}
+                >
+                  + เพิ่มข้อ
+                </button>
+              </div>
             </div>
           </div>
 
@@ -433,10 +429,10 @@ const SubjectPage: React.FC = () => {
                 <table className="table mb-0 align-middle">
                   <thead className="table-light">
                     <tr className="align-middle">
-                      <th style={{ width: 80 }} className="text-center">ข้อ</th>
+                      <th style={{ width: 60, minWidth: 60 }} className="text-center text-nowrap">ข้อ</th>
                       <th className="text-start">ชื่อหัวข้อ</th>
-                      <th style={{ width: 120 }} className="text-center">คะแนนเต็ม</th>
-                      <th style={{ width: 80 }} className="text-center">การจัดการ</th>
+                      <th style={{ width: 100, minWidth: 100 }} className="text-center text-nowrap">คะแนนเต็ม</th>
+                      <th style={{ width: 90, minWidth: 90 }} className="text-center text-nowrap">การจัดการ</th>
                     </tr>
                   </thead>
 
@@ -444,11 +440,10 @@ const SubjectPage: React.FC = () => {
                     {sub.questions.map((q) => (
                       <tr key={q.id} className="align-middle">
                         <td
-                          className="text-center"
+                          className="text-center text-nowrap"
                           style={{
                             fontVariantNumeric: "tabular-nums",
                             fontFeatureSettings: '"tnum" 1',
-                            whiteSpace: "nowrap",
                           }}
                         >
                           {q.questionNo}
@@ -466,11 +461,11 @@ const SubjectPage: React.FC = () => {
                           />
                         </td>
 
-                        <td className="text-center" style={{ fontVariantNumeric: "tabular-nums" }}>
+                        <td className="text-center text-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
                           {q.maxScore}
                         </td>
 
-                        <td className="text-center">
+                        <td className="text-center text-nowrap">
                           <button
                             type="button"
                             className="btn btn-outline-danger btn-sm"
@@ -489,9 +484,7 @@ const SubjectPage: React.FC = () => {
           </div>
         </div>
       ))}
-      {/* </div>
-  </div> */}
-      {/* Modal เพิ่มข้อ */}
+
       <AddQuestionModal
         open={questionModalOpen}
         subjectCode={questionModalSubjectCode}
@@ -501,7 +494,7 @@ const SubjectPage: React.FC = () => {
         onConfirm={handleConfirmAddQuestion}
       />
 
-    </>
+    </div>
   );
 };
 

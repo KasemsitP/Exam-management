@@ -54,8 +54,7 @@ export default function SignSheetsPage() {
     if (session) {
       setCourse(session.subjects?.[0]?.name ?? course);
       setSessionText(
-        `${new Date(session.examDate).toLocaleDateString("th-TH")} ${
-          session.label
+        `${new Date(session.examDate).toLocaleDateString("th-TH")} ${session.label
         }`
       );
     }
@@ -175,7 +174,7 @@ export default function SignSheetsPage() {
 
   return (
     <ShowIfCan permission="view_sessions">
-      <div className="container py-4">
+      <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
         {/* Header */}
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div className="d-flex align-items-center gap-3">

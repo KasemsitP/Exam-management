@@ -48,7 +48,7 @@ export default function KeyManagementPage() {
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
 
       <ShowIfCan anyOf={["manage_keys"]}>
-        <div className="container-fluid px-3 px-sm-4 py-4">
+       <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
           <KeyHeader activeCampaign={activeCampaign}
             headerSummary={headerSummary}
           />

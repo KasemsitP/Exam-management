@@ -27,6 +27,7 @@ interface ScannerPanelProps {
   bagNo: number | null;
   slotId: number | null;
   QuestionMaxScore: number | null;
+  QrActive: boolean;
 
   onChangePauseAfterSuccess: (checked: boolean) => void;
   onChangeCooldown: (ms: number) => void;
@@ -69,7 +70,8 @@ export default function ScannerPanel({
   bagNo,
   slotId,
   setQuestionMaxScore,
-  QuestionMaxScore
+  QuestionMaxScore,
+  QrActive
 }: ScannerPanelProps) {
   return (
     <div className="card shadow-sm border-0">
@@ -222,6 +224,7 @@ export default function ScannerPanel({
               cooldownMs={cooldownMs}
               aspectRatio="1/1" // ลองปรับเป็น 4/3 หรือ 1/1 ตามความสวยงามของหน้าจอ
               minHeight={300}
+              // qrActive={QrActive}
             />
           </div>
         </div>

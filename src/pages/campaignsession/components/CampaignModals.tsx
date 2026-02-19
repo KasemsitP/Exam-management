@@ -116,15 +116,15 @@ export function CampaignModal({
                   </label>
                 </div>
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-column flex-sm-row gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary"
+                  className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
                   onClick={() => onOpenChange(false)}
                 >
                   ยกเลิก
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary w-100 w-sm-auto order-1 order-sm-2">
                   {editingCampaignName ? "บันทึกการแก้ไข" : "สร้างแคมเปญ"}
                 </button>
               </div>
@@ -217,15 +217,15 @@ export function SessionModal({
                   />
                 </div> */}
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer flex-column flex-sm-row gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary"
+                  className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
                   onClick={() => onOpenChange(false)}
                 >
                   ยกเลิก
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary w-100 w-sm-auto order-1 order-sm-2">
                   {isEdit ? "บันทึกการแก้ไข" : "เพิ่มเซสชัน"}
                 </button>
               </div>
@@ -399,15 +399,15 @@ export function SubjectModal({
                 </div>
               </div>
 
-              <div className="modal-footer">
+              <div className="modal-footer flex-column flex-sm-row gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary"
+                  className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
                   onClick={() => onOpenChange(false)}
                 >
                   ยกเลิก
                 </button>
-                <button type="submit" className="btn btn-primary">
+                <button type="submit" className="btn btn-primary w-100 w-sm-auto order-1 order-sm-2">
                   {isEdit ? "บันทึกการแก้ไข" : "เพิ่มรายวิชา"}
                 </button>
               </div>

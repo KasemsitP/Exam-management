@@ -380,7 +380,7 @@ export default function AccountsPage() {
 
   return (
  
-    <div className="d-flex flex-column gap-4">
+    <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
       <GradersHeader stats={stats} />
 
       <GradersToolbar

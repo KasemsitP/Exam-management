@@ -39,7 +39,7 @@ export default function ImportCsvPage() {
   return (
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
     <ShowIfCan permission="importcsv">
-      <div className="flex-grow-1 overflow-auto p-2 p-sm-3 p-lg-4">
+     <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
         <ImportHeader />
 
         <div className="card shadow-sm mb-4">

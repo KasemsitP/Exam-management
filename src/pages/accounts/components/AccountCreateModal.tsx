@@ -153,17 +153,17 @@ export default function AccountCreateModal({
                 </div>
               </div>
 
-              <div className="modal-footer">
+              <div className="modal-footer flex-column flex-sm-row gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary"
+                  className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
                   onClick={onClose}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
+                  className="btn btn-primary w-100 w-sm-auto order-1 order-sm-2"
                   disabled={loading || isSubmitting}
                 >
                   {(loading || isSubmitting) && (

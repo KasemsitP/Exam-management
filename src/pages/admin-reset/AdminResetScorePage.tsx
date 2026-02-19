@@ -6,7 +6,7 @@ import { Loader2, QrCode } from "lucide-react";
 import { Scanner, boundingBox, IDetectedBarcode } from "@yudiel/react-qr-scanner";
 
 import { useAppSelector } from "@/store/hook";
-import { selectActiveCampaign, selectIsSystemLocked } from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectIsSystemLocked , selectQrActiveCampaign} from "@/store/slices/examData.slice";
 import { DeleteCamp } from "@/utils/camp";
 import type { DisputedQuestionDto } from "./types";
 
@@ -18,7 +18,7 @@ import ScannerModal from "./components/VerificationScannerModal";
 export default function AdminResetScoresPage() {
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const locked = useAppSelector(selectIsSystemLocked);
-
+  const QRActive = useAppSelector(selectQrActiveCampaign);
   const [rows, setRows] = useState<DisputedQuestionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [resettingSlotId, setResettingSlotId] = useState<number | null>(null);
@@ -99,7 +99,7 @@ export default function AdminResetScoresPage() {
   return (
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
       <div className="d-flex flex-column gap-4">
-        <div className="container-fluid px-3 px-sm-4 py-4">
+        <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
           <div className="card shadow-sm mb-3">
             <div className="card-header bg-white">
               <div className="d-flex justify-content-between align-items-center">

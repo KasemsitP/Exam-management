@@ -14,7 +14,7 @@ import {
 import axios from "axios";
 import Swal from "sweetalert2";
 import { ExamRoom, deleteRoomThunk, saveRoomThunk } from "@/store/slices/examRooms.slice";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useForm } from 'react-hook-form';
 
 type SeatCell = {
@@ -666,16 +666,16 @@ export default function SeatAllocationPage() {
   };
 
   return (
-    <div className="container-fluid px-0">
+   <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
       <div className="d-flex flex-column gap-4">
         {/* ===== Header ===== */}
         <div className="card shadow-sm">
           {/* Card Header */}
-          <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+          <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 gap-lg-3">
             <div>
-              <h5 className="mb-1 d-flex align-items-center gap-2">จัดการที่นั่งสอบ</h5>
+              <h5 className="mb-0 d-flex align-items-center gap-2">จัดการที่นั่งสอบ</h5>
             </div>
-            <div className="d-flex flex-wrap align-items-center gap-2">
+            <div className="d-flex flex-column flex-lg-row align-items-lg-center gap-2">
               {/* Search */}
               <div className="position-relative">
                 <Search
@@ -690,7 +690,6 @@ export default function SeatAllocationPage() {
                 />
                 <input
                   className="form-control ps-5"
-                  style={{ width: 220 }}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="ค้นหาห้องสอบ"
@@ -698,7 +697,7 @@ export default function SeatAllocationPage() {
               </div>
 
               <button
-                className="btn btn-primary d-inline-flex align-items-center gap-2"
+                className="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 text-nowrap"
                 onClick={openCreate}
                 disabled={locked}
               >
@@ -780,7 +779,7 @@ export default function SeatAllocationPage() {
 
           <div className="card-body">
             <div className="table-responsive">
-              <table className="table table-hover align-middle mb-0 table-striped">
+              <table className="table table-hover align-middle mb-0 table-striped text-nowrap">
                 <thead className="table-light">
                   <tr>
                     <th style={{ width: "20%" }}>ห้องสอบ</th>
@@ -900,53 +899,36 @@ export default function SeatAllocationPage() {
             </div>
 
             {/* Pagination */}
-            <nav className="mt-3 d-flex justify-content-between align-items-center">
+            <nav className="mt-3 d-flex justify-content-between align-items-center gap-2">
               <div>
-                <button className="btn btn-outline-secondary" onClick={handleResetSeat} disabled={locked}>
-                  รีเซ็ตการจัดสรรทั้งหมด
+                <button className="btn btn-sm btn-outline-secondary" onClick={handleResetSeat} disabled={locked}>
+                  รีเซ็ต
                 </button>
               </div>
 
-              <ul className="pagination mb-0">
-                <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-                  <button
-                    className="page-link"
-                    onClick={() =>
-                      setCurrentPage((p) => clamp(p - 1, 1, totalPages))
-                    }
-                  >
-                    ก่อนหน้า
-                  </button>
-                </li>
-
-                {Array.from({ length: totalPages }).map((_, idx) => (
-                  <li
-                    key={idx}
-                    className={`page-item ${currentPage === idx + 1 ? "active" : ""}`}
-                  >
-                    <button
-                      className="page-link"
-                      onClick={() => setCurrentPage(idx + 1)}
-                    >
-                      {idx + 1}
-                    </button>
-                  </li>
-                ))}
-
-                <li
-                  className={`page-item ${currentPage === totalPages ? "disabled" : ""
-                    }`}
+              <div className="d-flex align-items-center gap-1 gap-sm-2">
+                <button
+                  className={`btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 ${currentPage === 1 ? "disabled" : ""}`}
+                  onClick={() => setCurrentPage((p) => clamp(p - 1, 1, totalPages))}
+                  disabled={currentPage === 1}
                 >
-                  <button
-                    className="page-link"
-                    onClick={() =>
-                      setCurrentPage((p) => clamp(p + 1, 1, totalPages))
-                    }
-                  >
-                    ต่อไป
-                  </button>
-                </li>
-              </ul>
+                  <ChevronLeft size={16} />
+                  <span className="d-none d-sm-inline">ก่อนหน้า</span>
+                </button>
+
+                <span className="text-muted small px-1 px-sm-2 text-nowrap" style={{ fontSize: "0.85rem" }}>
+                  {currentPage}/{totalPages}
+                </span>
+
+                <button
+                  className={`btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 ${currentPage === totalPages ? "disabled" : ""}`}
+                  onClick={() => setCurrentPage((p) => clamp(p + 1, 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  <span className="d-none d-sm-inline">ต่อไป</span>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </nav>
           </div>
         </div>

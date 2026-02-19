@@ -136,16 +136,17 @@ export default function ProctorScanPage() {
     handleClear,
     toggleScanner,
     toggleFacingMode,
+    QRActive
   } = useProctorScan();
 
-  // ✅ รับค่าเป็น string ตรงๆ ตามที่ CustomQrScanner ส่งมาให้
+  //  รับค่าเป็น string ตรงๆ ตามที่ CustomQrScanner ส่งมาให้
   const onScannerResult = useCallback((val: string) => {
     handleScan(val);
   }, [handleScan]);
 
   return (
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
-      <div className="container py-4">
+      <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
         {/* Header */}
         <div className="card shadow-sm mb-4">
           <div className="card-header bg-white">
@@ -245,6 +246,7 @@ export default function ProctorScanPage() {
                   cooldownMs={cooldownMs}
                   aspectRatio="1/1" 
                   minHeight={350}  
+                  qrActive={QRActive}
                 />
 
                 {/* Manual input */}

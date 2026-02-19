@@ -12,6 +12,8 @@ import {
   createAccountThunk,
   updateAccountThunk,
   deleteAccountThunk,
+  RevokeAccountThunk,
+  UnrevokeAccountThunk,
 } from "@/store/slices/account.slice";
 
 import AccountsHeader from "./components/AccountsHeader";
@@ -28,6 +30,8 @@ import type {
   CreateAccountFormValues,
   UpdateAccountFormValues,
 } from "./types";
+import Swal from "sweetalert2";
+import { confirmAction } from "@/components/ui/comfirmaction";
 
 export default function AccountsPage() {
   const dispatch = useAppDispatch();
@@ -151,45 +155,110 @@ export default function AccountsPage() {
     }
   };
 
+  const handleRevoke = async (acc: Account) => {
+    const ok = await confirmAction({
+      title: "ระงับบัญชี?",
+      text: `ต้องการ Revoke ผู้ใช้ ${acc.username} ใช่หรือไม่`,
+      confirmText: "Revoke",
+      confirmColor: "#DC2626",
+    });
+    if (!ok) return;
+
+    try {
+      await dispatch(RevokeAccountThunk(acc.id)).unwrap();
+
+      await Swal.fire({
+        icon: "success",
+        title: "Revoke สำเร็จ",
+        text: acc.username,
+        timer: 1200,
+        showConfirmButton: false,
+      });
+      setEditingAccount(null);
+      await dispatch(fetchAccountsThunk()).unwrap();
+      await dispatch(fetchRolesThunk()).unwrap();
+
+    } catch (err: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "ดำเนินการล้มเหลว",
+        text: err?.message ?? "",
+      });
+    }
+  };
+
+  const handleUnrevoke = async (acc: Account) => {
+    const ok = await confirmAction({
+      title: "คืนสิทธิ์ผู้ใช้?",
+      text: `ต้องการ Un-Revoke ผู้ใช้ ${acc.username} ใช่หรือไม่`,
+      confirmText: "Un-Revoke",
+    });
+    if (!ok) return;
+
+    try {
+      await dispatch(UnrevokeAccountThunk(acc.id)).unwrap();
+
+      await Swal.fire({
+        icon: "success",
+        title: "คืนสิทธิ์สำเร็จ",
+        text: acc.username,
+        timer: 1200,
+        showConfirmButton: false,
+      });
+      setEditingAccount(null);
+      await dispatch(fetchAccountsThunk()).unwrap();
+      await dispatch(fetchRolesThunk()).unwrap();
+
+    } catch (err: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "ดำเนินการล้มเหลว",
+        text: err?.message ?? "",
+      });
+    }
+  };
+
   return (
-    <div className="d-flex flex-column gap-4">
-        <AccountsHeader stats={stats} />
+   <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
+      <AccountsHeader stats={stats} />
 
-        <AccountsToolbar
-          searchText={searchText}
-          onSearchChange={setSearchText}
-          roleFilter={roleFilter}
-          onRoleFilterChange={setRoleFilter}
-          activeFilter={activeFilter}
-          onActiveFilterChange={setActiveFilter}
-          roles={roles}
-          onOpenCreate={() => setCreateOpen(true)}
-        />
+      <AccountsToolbar
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        roleFilter={roleFilter}
+        onRoleFilterChange={setRoleFilter}
+        activeFilter={activeFilter}
+        onActiveFilterChange={setActiveFilter}
+        roles={roles}
+        onOpenCreate={() => setCreateOpen(true)}
+      />
 
-        <AccountsTable
-          accounts={filteredAccounts}
-          roles={roles}
-          status={accountStatus}
-          onEdit={setEditingAccount}
-          onDelete={handleDelete}
-        />
+      <AccountsTable
+        accounts={filteredAccounts}
+        roles={roles}
+        status={accountStatus}
+        onEdit={setEditingAccount}
+        onDelete={handleDelete}
+        onRevoke={handleRevoke}
+        onUnrevoke={handleUnrevoke}
+      />
 
-        <AccountCreateModal
-          open={isCreateOpen}
-          roles={roles}
-          loading={accountStatus === "loading"}
-          onClose={() => setCreateOpen(false)}
-          onSubmit={handleCreate}
-        />
+      <AccountCreateModal
+        open={isCreateOpen}
+        roles={roles}
+        loading={accountStatus === "loading"}
+        onClose={() => setCreateOpen(false)}
+        onSubmit={handleCreate}
+      />
 
-        <AccountEditModal
-          open={!!editingAccount}
-          account={editingAccount}
-          roles={roles}
-          loading={accountStatus === "loading"}
-          onClose={() => setEditingAccount(null)}
-          onSubmit={handleUpdate}
-        />
-      </div>
+      <AccountEditModal
+        open={!!editingAccount}
+        account={editingAccount}
+        roles={roles}
+        loading={accountStatus === "loading"}
+        onClose={() => setEditingAccount(null)}
+        onSubmit={handleUpdate}
+      />
+    </div>
   );
 }

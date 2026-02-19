@@ -1,8 +1,10 @@
 import axios from "axios";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, use } from "react";
 import Swal from "sweetalert2";
 
 import { CustomQrScanner } from "@/lib/Scanner";
+import { selectQrActiveCampaign } from "@/store/slices/examData.slice";
+import { useAppSelector } from "@/store/hook";
 
 interface ScannerModalProps {
   onClose: () => void;
@@ -13,6 +15,7 @@ interface ScannerModalProps {
 export default function ScannerModal({ onClose, activeCampaignId, initialCode = "" }: ScannerModalProps) {
   const [manualCode, setManualCode] = useState("");
   const [scannerEnabled, setScannerEnabled] = useState(true);
+  const QRactive = useAppSelector(selectQrActiveCampaign);  
   const isProcessing = useRef(false);
 
   const handleVerify = useCallback(async (rawCode: string) => {
@@ -83,6 +86,7 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
                   onResult={handleVerify}
                   isLoading={!scannerEnabled} 
                   minHeight={360} 
+                  // qrActive={QRactive}
                 />
               </div>
 

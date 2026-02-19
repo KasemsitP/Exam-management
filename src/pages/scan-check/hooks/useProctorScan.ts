@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import Swal from "sweetalert2";
 
-import { selectActiveCampaign } from "@/store/slices/examData.slice";
+import { selectActiveCampaign , selectQrActiveCampaign } from "@/store/slices/examData.slice";
 import {
   verifyQrCodeThunk,
   selectProctorScanState,
@@ -14,6 +14,8 @@ export function useProctorScan() {
   const dispatch = useAppDispatch();
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
+  const QRActive = useAppSelector(selectQrActiveCampaign);
+  
   const { status, error, scannedUser } = useAppSelector(selectProctorScanState);
 
   const [scannerEnabled, setScannerEnabled] = useState(true);
@@ -28,9 +30,10 @@ export function useProctorScan() {
   const campaignLabel = activeCampaign?.name ?? "N/A";
 
   const canScan = useMemo(
-    () => scannerEnabled && !pause && status !== "loading",
+    () => scannerEnabled && !pause && status !== "loading" && QRActive,
     [scannerEnabled, pause, status]
   );
+  console.log("QRActive:", QRActive, " | canScan:", canScan);
 
   const scanConfigRef = useRef({ canScan, cooldownMs, pauseAfterSuccess, activeCampaign });
   useEffect(() => {
@@ -115,8 +118,6 @@ export function useProctorScan() {
         })
       ).unwrap();
     } catch (err: any) {
-      // ❌ ลบ Swal.fire ตรงนี้ออก เพราะ useEffect ด้านบนจะดักจับ status === 'failed' ให้เอง
-      // ช่วยลดปัญหา Alert เด้งซ้อนกัน
     }
   }, [dispatch]);
 
@@ -194,5 +195,6 @@ export function useProctorScan() {
     handleClear,
     toggleScanner,
     toggleFacingMode,
+    QRActive
   };
 }

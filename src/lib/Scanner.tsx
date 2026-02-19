@@ -12,6 +12,7 @@ interface CustomQrScannerProps {
   cooldownMs?: number;
   formats?: BarcodeFormat[];
   aspectRatio?: string;
+  qrActive?: boolean;           
   minHeight?: string | number; // ✅ เพิ่ม minHeight
 }
 
@@ -20,6 +21,7 @@ export const CustomQrScanner = React.memo(({
   isLoading = false,
   isPaused = false,
   facingMode = "environment",
+  qrActive = true,   
   cooldownMs = 1200,
   formats = DEFAULT_FORMATS,
   aspectRatio = "1/1", // ✅ เปลี่ยน Default เป็น จัตุรัส (1:1) จะพอดีสุด
@@ -63,32 +65,45 @@ export const CustomQrScanner = React.memo(({
     tracker: customTracker,
   }), []);
 
+    const effectivePaused = isPaused || !qrActive;   // ✅ ถ้า backend ปิด -> หยุดทันที
+
 
   return (
-    <div
-      className="rounded overflow-hidden border bg-black position-relative w-100"
-      // ✅ นำ minHeight มาใช้คู่กับ aspectRatio
-      style={{ aspectRatio, minHeight }}
-    >
-      {!isPaused ? (
-        <Scanner
-          formats={formats}
-          onScan={handleScan}
-          onError={handleError}
-          constraints={constraints}
-          styles={styles}
-          components={components}
-          allowMultiple={false}
-          scanDelay={cooldownMs}
-          paused={isLoading}
-        />
-      ) : (
-        <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-white">
-          <Pause size={48} className="mb-3 opacity-50 text-white" />
-          <div className="fw-medium">กล้องถูกหยุดการใช้งาน</div>
-          <div className="small mt-1 text-light">กดปุ่ม “เริ่ม” เพื่อเปิดกล้องอีกครั้ง</div>
+  <div
+    className="rounded overflow-hidden border bg-black position-relative w-100"
+    style={{ aspectRatio, minHeight }}
+  >
+    {!effectivePaused ? (
+      <Scanner
+        formats={formats}
+        onScan={handleScan}
+        onError={handleError}
+        constraints={constraints}
+        styles={styles}
+        components={components}
+        allowMultiple={false}
+        scanDelay={cooldownMs}
+        paused={isLoading}
+      />
+    ) : !qrActive ? (
+      // 🔴 เคส backend ปิด
+      <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-white">
+        <Pause size={48} className="mb-3 opacity-50 text-danger" />
+        <div className="fw-medium">ระบบสแกนคิวอาร์โค้ดถูกปิดโดยผู้ดูแล</div>
+        <div className="small mt-1 text-light">
+          กรุณาติดต่อเจ้าหน้าที่
         </div>
-      )}
+      </div>
+    ) : (
+      // 🟡 เคส user กด pause เอง
+      <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-white">
+        <Pause size={48} className="mb-3 opacity-50 text-white" />
+        <div className="fw-medium">กล้องถูกหยุดการใช้งาน</div>
+        <div className="small mt-1 text-light">
+          กดปุ่ม “เริ่ม” เพื่อเปิดกล้องอีกครั้ง
+        </div>
+      </div>
+    )}
 
       {isLoading && (
         <div

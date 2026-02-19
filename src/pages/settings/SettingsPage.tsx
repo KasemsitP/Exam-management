@@ -167,37 +167,37 @@ export default function SettingsPage() {
   return (
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
       <ShowIfCan anyOf={["manage_graders"]}>
-        <div className="container-fluid px-3 px-sm-4 py-4">
-          <div className="card shadow-sm">
-            <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+        <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
+          <div className="card shadow-sm border-0">
+            <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
               <div>
-                <h5 className="mb-1 d-flex align-items-center gap-2">
+                <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
                   ตั้งค่ารอบสอบ
                 </h5>
-                <small className="text-muted">
+                <small className="text-muted d-block">
                   ตั้งค่ารอบสอบใน {activeCampaign?.name ?? "-"}
                 </small>
               </div>
             </div>
-            <div className="card-body">
-              <div className="row g-3">
+            <div className="card-body p-2 p-sm-3 p-md-4">
+              <div className="row g-2 g-sm-3">
 
                 {/* Card 1: สถานะรอบสอบ */}
-                <div className="col-sm-6 col-lg-6">
+                <div className="col-12 col-md-6">
                   <div className="card shadow-none border h-100">
-                    <div className="card-body">
-                      <div className="small text-muted mb-3">สถานะรอบสอบ</div>
+                    <div className="card-body p-2 p-sm-3">
+                      <div className="small text-muted mb-2 mb-sm-3">สถานะรอบสอบ</div>
 
-                      <div className="d-flex justify-content-between align-items-center border rounded px-3 py-3">
+                      <div className="d-flex flex-row justify-content-between align-items-center border rounded px-2 px-sm-3 py-2 py-sm-3 gap-2">
                         {/* แสดงข้อความสถานะ */}
-                        <span className={`badge ${isCampActive ? 'bg-success' : 'bg-secondary'} fs-6 py-2 px-3`}>
-                          {isCampActive ? "รอบสอบนี้เปิดใช้งานอยู่" : "รอบสอบนี้ปิดใช้งานอยู่"}
+                        <span className={`badge ${isCampActive ? 'bg-success' : 'bg-secondary'} fs-6 py-1 px-2 py-sm-2 px-sm-3 text-nowrap`}>
+                          {isCampActive ? "เปิดใช้งาน" : "ปิดใช้งาน"}
                         </span>
 
-                        {/* ปุ่ม Toggle สวิตช์ (ขยายขนาดด้วย scale) */}
+                        {/* ปุ่ม Toggle สวิตช์ */}
                         <div
-                          className="form-check form-switch mb-0"
-                          style={{ transform: "scale(1.6)", transformOrigin: "right center" }}
+                          className="form-check form-switch mb-0 flex-shrink-0 toggle-switch-mobile"
+                          style={{ transform: "scale(1.1)", transformOrigin: "right center" }}
                         >
                           <input
                             className="form-check-input shadow-none"
@@ -216,23 +216,23 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Card 2: สถานะคิวอาร์โค้ด */}
-                <div className="col-sm-6 col-lg-6">
+                <div className="col-12 col-md-6">
                   <div className="card shadow-none border h-100">
-                    <div className="card-body">
-                      <div className="small text-muted mb-3">
-                        สถานะเปิด-ปิดการใช้งานคิวอาร์โค้ด
+                    <div className="card-body p-2 p-sm-3">
+                      <div className="small text-muted mb-2 mb-sm-3">
+                        สถานะคิวอาร์โค้ด
                       </div>
 
-                      <div className="d-flex justify-content-between align-items-center border rounded px-3 py-3">
+                      <div className="d-flex flex-row justify-content-between align-items-center border rounded px-2 px-sm-3 py-2 py-sm-3 gap-2">
                         {/* แสดงข้อความสถานะ */}
-                        <span className={`badge ${isQrActive ? 'bg-success' : 'bg-secondary'} fs-6 py-2 px-3`}>
-                          {isQrActive ? "คิวอาร์โค้ดเปิดใช้งานอยู่" : "คิวอาร์โค้ดปิดใช้งานอยู่"}
+                        <span className={`badge ${isQrActive ? 'bg-success' : 'bg-secondary'} fs-6 py-1 px-2 py-sm-2 px-sm-3 text-nowrap`}>
+                          {isQrActive ? "เปิดใช้งาน" : "ปิดใช้งาน"}
                         </span>
 
-                        {/* ปุ่ม Toggle สวิตช์ (ขยายขนาดด้วย scale) */}
+                        {/* ปุ่ม Toggle สวิตช์ */}
                         <div
-                          className="form-check form-switch mb-0"
-                          style={{ transform: "scale(1.6)", transformOrigin: "right center" }}
+                          className="form-check form-switch mb-0 flex-shrink-0 toggle-switch-mobile"
+                          style={{ transform: "scale(1.1)", transformOrigin: "right center" }}
                         >
                           <input
                             className="form-check-input shadow-none"
@@ -255,6 +255,13 @@ export default function SettingsPage() {
           </div>
         </div>
       </ShowIfCan>
+      <style>{`
+        @media (min-width: 768px) {
+          .toggle-switch-mobile {
+            transform: scale(1.5) !important;
+          }
+        }
+      `}</style>
     </fieldset>
   );
 }

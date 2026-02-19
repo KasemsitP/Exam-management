@@ -42,9 +42,9 @@ export default function RoomsHeader({ activeCampaign,
 
   return (
     <div className="card shadow-sm">
-      <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+      <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 gap-lg-3">
         <div>
-          <h5 className="mb-1 d-flex align-items-center gap-2">
+          <h5 className="mb-0 d-flex align-items-center gap-2">
             จัดการเข้ารหัส
           </h5>
           <small className="text-muted">
@@ -54,26 +54,26 @@ export default function RoomsHeader({ activeCampaign,
       </div>
 
       <div className="card-body">
-        <div className="row g-3">
+        <div className="row g-2 g-md-3">
           {/* Card 1: สถานะการสร้างรอบสอบ */}
-          <div className="col-sm-6 col-lg-4">
+          <div className="col-6 col-lg-4">
             <div className="card shadow-none border">
-              <div className="card-body">
-                <div className="text-uppercase small text-muted mb-1 ">
+              <div className="card-body p-2 p-sm-3">
+                <div className="text-uppercase small text-muted mb-2">
                   <div className="small text-muted mb-1">สถานะสร้างคีย์</div>
 
-                  <div className="d-flex justify-content-between align-items-center border rounded px-3 py-2">
-                    <div className="d-flex gap-3">
+                  <div className="d-flex justify-content-between align-items-center border rounded px-2 px-sm-3 py-2">
+                    <div className="d-flex gap-2 gap-sm-3">
                       <div>
                         <div className="small text-muted">คีย์ที่ 1</div>
-                        <div className={headerSummary?.keyStatusDashboard?.key1_status ? "text-success fw-semibold" : "text-warning fw-semibold"}>
+                        <div className={`text-nowrap ${headerSummary?.keyStatusDashboard?.key1_status ? "text-success fw-semibold" : "text-warning fw-semibold"}`} style={{ fontSize: "0.85rem" }}>
                           {headerSummary?.keyStatusDashboard?.key1_status ? "สร้างแล้ว" : "ยังไม่สร้าง"}
                         </div>
                       </div>
 
                       <div>
                         <div className="small text-muted">คีย์ที่ 2</div>
-                        <div className={headerSummary?.keyStatusDashboard?.key2_status ? "text-success fw-semibold" : "text-warning fw-semibold"}>
+                        <div className={`text-nowrap ${headerSummary?.keyStatusDashboard?.key2_status ? "text-success fw-semibold" : "text-warning fw-semibold"}`} style={{ fontSize: "0.85rem" }}>
                           {headerSummary?.keyStatusDashboard?.key2_status ? "สร้างแล้ว" : "ยังไม่สร้าง"}
                         </div>
                       </div>
@@ -87,20 +87,16 @@ export default function RoomsHeader({ activeCampaign,
           </div>
 
           {/* Card 2: สถานะการนำเข้าข้อมูล */}
-          <div className="col-sm-6 col-lg-4">
+          <div className="col-6 col-lg-4">
             <div className="card shadow-none border">
-              <div className="card-body">
+              <div className="card-body p-2 p-sm-3">
                 <div className="text-uppercase small text-muted mb-1">
-                  สถานะการนำเข้าข้อมูลผู้สมัครสอบ
+                  สถานะนำเข้าข้อมูลผู้สอบ
                 </div>
-                {/* <div className="h3 mb-0">
-                  {importedSessions} / {totalSessions}
-                </div> */}
-                <div className={importedSessions === totalSessions ? "text-success h3 mb-0" : "text-warning h3 mb-0"}>
+                <div className={`h5 h-sm-4 mb-0 ${importedSessions === totalSessions ? "text-success" : "text-warning"}`}>
                   {importedSessions === totalSessions
                     ? "นำเข้าข้อมูลครบแล้ว"
-                    : "ยังนำเข้าไม่ครบ"}
-
+                    : `นำเข้าข้อมูลไม่ครบ (${importedSessions}/${totalSessions})`}
                 </div>
                 <small
                   className={
@@ -116,25 +112,17 @@ export default function RoomsHeader({ activeCampaign,
           </div>
 
           {/* Card 3: สถานะการเข้ารหัส */}
-          <div className="col-sm-6 col-lg-4">
+          <div className="col-6 col-lg-4">
             <div className="card shadow-none border">
-              <div className="card-body">
+              <div className="card-body p-2 p-sm-3">
                 <div className="text-uppercase small text-muted mb-1">
-                  สถานะการสร้างคิวอาร์โค้ด
+                  สถานะเข้ารหัสเพื่อสร้างคิวอาร์โค้ด
                 </div>
-                {/* <div className="h3 mb-0">
-                  {encryptedSessions} / {totalSessions}
-                </div> */}
-                <div className={encryptedSessions === totalSessions ? "text-success h3 mb-0 " : "text-warning h3 mb-0"}>
+                <div className={`h5 h-sm-4 mb-0 ${encryptedSessions === totalSessions ? "text-success" : "text-warning"}`}>
                   {encryptedSessions === totalSessions
-                    ? "สร้างคิวอาร์โค้ดครบแล้ว"
-                    : "ยังสร้างคิวอาร์โค้ดไม่ครบ"}
+                    ? "เข้ารหัสครบแล้ว"
+                    : `เข้ารหัสไม่ครบ (${encryptedSessions}/${totalSessions})`}
                 </div>
-                {/* <small className={encryptedSessions === totalSessions ? "text-success" : "text-warning"}>
-                  {encryptedSessions === totalSessions
-                    ? "เข้ารหัสครบทุก Session แล้ว"
-                    : "ยังมี Session ที่ยังไม่เข้ารหัสครบ"}
-                </small> */}
                 <small className={encryptedSessions === totalSessions ? "text-success" : "text-warning"}>
                   &nbsp;
                 </small>
@@ -142,34 +130,40 @@ export default function RoomsHeader({ activeCampaign,
             </div>
           </div>
 
-          <div className="col-sm-6 col-lg-12">
+          <div className="col-12">
             <div className="card shadow-none border">
-              <div className="card-body">
+              <div className="card-body p-2 p-sm-3">
                 <small>
-                  รายละเอียดวันที่สอบและหัวข้อที่ต้องสอบในแต่ละวัน โดยสอบทั้งหมด {totalSessions} วิชา ซึ่งแต่ละวิชาก็มีหัวข้อที่ต้องสอบแตกต่างกันไป
+                  รายละเอียดวันที่สอบและหัวข้อที่ต้องสอบในแต่ละวัน โดยสอบทั้งหมด {totalSessions} วิชา
                 </small>
 
                 <div className="table-responsive">
-                  <table className="table table-sm align-middle mb-0 table-striped">
+                  <table className="table table-sm align-middle mb-0 table-striped text-nowrap">
+                    <colgroup>
+                      <col style={{ minWidth: 140 }} />
+                      <col style={{ minWidth: 120 }} />
+                      <col style={{ minWidth: 120 }} />
+                      <col style={{ minWidth: 120 }} />
+                    </colgroup>
                     <thead>
                       <tr>
-                        <th>วิชา</th>
-                        <th>วันที่สอบ</th>
-                        <th>เวลา</th>
-                        <th className="text-end">รายหัวข้อ</th>
+                        <th className="text-nowrap">วิชา</th>
+                        <th className="text-nowrap">วันที่สอบ</th>
+                        <th className="text-nowrap">เวลา</th>
+                        <th className="text-nowrap text-end">รายหัวข้อ</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Object.values(headerSummary.sessionInfo).map((session) =>
                         session.subjects.map((subject) => (
                           <tr key={`${session.session_id}-${subject.subject_id}`}>
-                            <td>{subject.subject_name}</td>
+                            <td className="text-nowrap">{subject.subject_name}</td>
 
-                            <td>
+                            <td className="text-nowrap">
                               {new Date(session.exam_date).toLocaleDateString("th-TH")}
                             </td>
 
-                            <td>
+                            <td className="text-nowrap">
                               {new Date(session.start_at).toLocaleTimeString("th-TH", {
                                 hour: "2-digit",
                                 minute: "2-digit",
@@ -181,12 +175,12 @@ export default function RoomsHeader({ activeCampaign,
                               })}
                             </td>
 
-                            <td className="text-end">
+                            <td className="text-nowrap text-end">
                               <button
-                                className="btn btn-sm btn-outline-primary"
+                                className="btn btn-xs btn-outline-primary text-nowrap"
                                 onClick={() => handleOpenModel(session.session_id)}
                               >
-                                ดูหัวข้อที่ต้องสอบ
+                                ดู
                               </button>
 
                             </td>
@@ -210,13 +204,13 @@ export default function RoomsHeader({ activeCampaign,
       {openModel && selectedSession && (
         <>
           <div className="modal fade show d-block" tabIndex={-1}>
-            <div className="modal-dialog modal-lg modal-dialog-centered">
+            <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
               <div className="modal-content">
 
                 <div className="modal-header">
-                  <h5 className="modal-title">
+                  <h6 className="modal-title">
                     {selectedSession.session_code}
-                  </h5>
+                  </h6>
                   <button
                     type="button"
                     className="btn-close"
@@ -224,7 +218,7 @@ export default function RoomsHeader({ activeCampaign,
                   />
                 </div>
 
-                <div className="modal-body">
+                <div className="modal-body p-2 p-sm-3">
 
                   <p>
                     <strong>วันที่สอบ:</strong>{" "}
@@ -245,27 +239,34 @@ export default function RoomsHeader({ activeCampaign,
                   <hr />
 
                   {selectedSession.subjects.map((subject: any) => (
-                    <div key={subject.subject_id} className="mb-4">
-                      <h6 className="fw-bold">{subject.subject_name}</h6>
+                    <div key={subject.subject_id} className="mb-3 pb-2 border-bottom">
+                      <h6 className="fw-bold text-nowrap">{subject.subject_name}</h6>
 
-                      <table className="table table-sm table-striped">
-                        <thead>
-                          <tr>
-                            <th>ข้อที่</th>
-                            <th>หัวข้อ</th>
-                            <th>คะแนนเต็ม</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {subject.questions.map((q: any) => (
-                            <tr key={q.id}>
-                              <td>{q.questionNo}</td>
-                              <td>{q.label}</td>
-                              <td>{q.maxScore}</td>
+                      <div className="table-responsive">
+                        <table className="table table-sm table-striped text-nowrap mb-0">
+                          <colgroup>
+                            <col style={{ minWidth: 60 }} />
+                            <col style={{ minWidth: 150 }} />
+                            <col style={{ minWidth: 80 }} />
+                          </colgroup>
+                          <thead>
+                            <tr>
+                              <th className="text-nowrap">ข้อที่</th>
+                              <th className="text-nowrap">หัวข้อ</th>
+                              <th className="text-nowrap">คะแนน</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {subject.questions.map((q: any) => (
+                              <tr key={q.id}>
+                                <td className="text-nowrap">{q.questionNo}</td>
+                                <td className="text-nowrap">{q.label}</td>
+                                <td className="text-nowrap">{q.maxScore}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   ))}
 

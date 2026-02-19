@@ -79,72 +79,39 @@ export function CampaignList({
       {visibleCampaigns.map(({ campaign, sessions, matchesCampaignOnly }) => (
         <div key={campaign.id} className="card shadow-sm">
           {/* Campaign header */}
-          <div className="card-header bg-light d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center justify-content-lg-between">
-            <div>
-              <div className="d-flex align-items-center gap-2">
+          <div className="card-header bg-light">
+            <div className="d-flex flex-column gap-3">
+              <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
                 <h6 className="mb-0">{campaign.name}</h6>
-                <span className="badge text-bg-light d-inline-flex align-items-center gap-1 ">
-                  {/* <CalendarDays size={14} />
-                  {formatDateDisplay(campaign.startDate)} -{" "}
-                  {formatDateDisplay(campaign.endDate)} */}
-                  <div className="d-flex justify-content-end gap-2">
+                <ShowIfCan permission="manage_subjects">
+                  <div className="d-flex flex-wrap gap-2">
                     <button
-                      className={`btn btn-sm d-inline-flex align-items-center rounded gap-2 ${campaign.isActive ? "btn-danger" : "btn-success"
-                        }`}
+                      className={`btn btn-sm d-inline-flex align-items-center rounded gap-1 text-nowrap ${
+                        campaign.isActive ? "btn-danger" : "btn-success"
+                      }`}
                       onClick={() => onActiveCampaign(campaign)}
                     >
-                      {campaign.isActive ? "ปิดใช้งานรอบสอบ" : "เปิดใช้งานรอบสอบ"}
+                      {campaign.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                     </button>
 
                     <button
-                      className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
+                      className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
                       onClick={() => onEditCampaign(campaign)}
                     >
                       <Pencil size={14} />
                       แก้ไข
                     </button>
                     <button
-                      className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
+                      className="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
                       onClick={() => onDeleteCampaign(campaign)}
                     >
                       <Trash2 size={14} />
                       ลบ
                     </button>
                   </div>
-                </span>
+                </ShowIfCan>
               </div>
-              {/* {campaign.description && (
-                <p className="mb-0 mt-1 text-muted small">
-                  {campaign.description}
-                </p>
-              )} */}
             </div>
-
-            <ShowIfCan permission="manage_subjects">
-              <div className="d-flex flex-wrap gap-2">
-                {/* <button
-                  className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
-                  onClick={() => onEditCampaign(campaign)}
-                >
-                  <Pencil size={14} />
-                  แก้ไข
-                </button>
-                <button
-                  className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
-                  onClick={() => onDeleteCampaign(campaign)}
-                >
-                  <Trash2 size={14} />
-                  ลบ
-                </button>
-                <button
-                  className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
-                  onClick={() => onCreateSession(campaign.id)}
-                >
-                  <BadgePlus size={14} />
-                  เพิ่มเซสชัน
-                </button> */}
-              </div>
-            </ShowIfCan>
           </div>
 
           {/* Sessions & subjects */}
@@ -154,24 +121,9 @@ export function CampaignList({
                 แคมเปญนี้ไม่มีรายการที่ตรงกับเงื่อนไข / กรุณาเพิ่มเซสชัน
               </div>
             )}
-            <div className=" d-flex flex-row justify-content-end mb-2 gap-2">
-
-              {/* <button
-                className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
-                onClick={() => onEditCampaign(campaign)}
-              >
-                <Pencil size={14} />
-                แก้ไข
-              </button>
+            <div className="d-flex flex-row justify-content-end mb-2 gap-2">
               <button
-                className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
-                onClick={() => onDeleteCampaign(campaign)}
-              >
-                <Trash2 size={14} />
-                ลบ
-              </button> */}
-              <button
-                className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
+                className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 text-nowrap"
                 onClick={() => onCreateSession(campaign.id)}
               >
                 <BadgePlus size={14} />
@@ -182,118 +134,86 @@ export function CampaignList({
             {sessions.map((session) => (
               <div
                 key={session.id}
-                className="border rounded-3 bg-white p-4 mb-3"
+                className="border rounded-3 bg-white p-3 p-sm-4 mb-3"
               >
-                <div className="d-flex flex-column flex-sm-row gap-3 align-items-start align-items-sm-center justify-content-sm-between">
-                  <div>
-                    <div className="d-flex flex-wrap align-items-center gap-2">
-                      <h6 className="mb-0">{session.label}</h6>
-                      {/* <span className="badge text-bg-secondary d-inline-flex align-items-center gap-1">
-                        <MoreHorizontal size={14} />
-                        {session.subjects.length} วิชา
-                      </span> */}
+                <div className="d-flex flex-column gap-3">
+                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
+                    <div>
+                      <h6 className="mb-1">{session.label}</h6>
+                      <p className="mb-0 small text-muted">
+                        วันที่สอบ: {formatDateDisplay(session.examDate)}
+                      </p>
                     </div>
-                    <p className="mb-0 mt-1 small text-muted">
-                      วันที่สอบ: {formatDateDisplay(session.examDate)}
-                    </p>
-                  </div>
 
-                  <ShowIfCan permission="manage_subjects">
-                    <div className="d-flex flex-wrap gap-2">
-                      {/* <button
-                        className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2"
-                        onClick={() => onEditSession(campaign.id, session)}
-                      >
-                        <Pencil size={14} />
-                        แก้ไข
-                      </button> */}
-                      <button
-                        className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
-                        onClick={() => onDeleteSession(campaign.id, session)}
-                      >
-                        <Trash2 size={14} />
-                        ลบ
-                      </button>
-                      <button
-                        className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
-                        onClick={() => onCreateSubject(campaign.id, session.id)}
-                      >
-                        <Plus size={14} />
-                        เพิ่มรายวิชา
-                      </button>
-                    </div>
-                  </ShowIfCan>
+                    <ShowIfCan permission="manage_subjects">
+                      <div className="d-flex flex-wrap gap-2">
+                        <button
+                          className="btn btn-danger btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
+                          onClick={() => onDeleteSession(campaign.id, session)}
+                        >
+                          <Trash2 size={14} />
+                          ลบ
+                        </button>
+                        <button
+                          className="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
+                          onClick={() => onCreateSubject(campaign.id, session.id)}
+                        >
+                          <Plus size={14} />
+                          เพิ่มรายวิชา
+                        </button>
+                      </div>
+                    </ShowIfCan>
+                  </div>
                 </div>
 
                 <div className="table-responsive mt-3">
-                  <table className="table align-middle table-hover ">
+                  <table className="table align-middle table-hover">
                     <colgroup>
-                      <col style={{ width: 110 }} />
+                      <col style={{ width: 100, minWidth: 100 }} />
                       <col />
-                      <col style={{ width: 140 }} />
-                      <col style={{ width: 110 }} />
-                      <col style={{ width: 170 }} />
-                      <col style={{ width: 110 }} />
+                      <col style={{ width: 130, minWidth: 130 }} />
+                      <col style={{ width: 90, minWidth: 90 }} />
+                      <col style={{ width: 140, minWidth: 140 }} />
+                      <col style={{ width: 100, minWidth: 100 }} />
                     </colgroup>
 
                     <thead>
                       <tr>
-                        <th>รหัสวิชา</th>
-                        <th>ชื่อวิชา</th>
-                        <th>เวลา</th>
-                        <th>จำนวนข้อ</th>
-                        <th>ชุดเล่มข้อสอบ</th>
-                        <th>การจัดการ</th>
+                        <th className="text-nowrap">รหัสวิชา</th>
+                        <th className="text-nowrap">ชื่อวิชา</th>
+                        <th className="text-nowrap">เวลา</th>
+                        <th className="text-center text-nowrap">จำนวนข้อ</th>
+                        <th className="text-nowrap">ชุดเล่มข้อสอบ</th>
+                        <th className="text-center text-nowrap">การจัดการ</th>
                       </tr>
                     </thead>
                     <tbody>
                       {session.subjects.map((subject) => (
                         <tr key={subject.id}>
-                          <td className="fw-medium">{subject.code}</td>
+                          <td className="fw-medium text-nowrap">{subject.code}</td>
                           <td>
                             <div>{subject.name}</div>
-                            {/* <div className="small text-muted d-flex align-items-center gap-1">
-                              <Clock size={12} />
-                              {subject.startTime} - {subject.endTime}
-                            </div> */}
                           </td>
-                          <td className="small">
+                          <td className="small text-nowrap">
                             {subject.startTime} - {subject.endTime}
                           </td>
-                          <td className="text-center">{subject.questions}</td>
-                          <td>{subject.bookletRange || "-"}</td>
-                          <td>
-                            <div className="d-flex justify-content-end gap-2">
-                              {/* <button
-                                className="btn btn-link p-0"
-                                onClick={() =>
-                                  onEditSubject(
-                                    campaign.id,
-                                    session.id,
-                                    subject
-                                  )
-                                }
-                                aria-label="แก้ไขรายวิชา"
-                              >
-                                <Pencil size={16} />
-                              </button> */}
-                              <div className="d-flex flex-wrap gap-2">
-                                <button
-                                  className="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
-                                  onClick={() =>
-                                    onDeleteSubject(
-                                      campaign.id,
-                                      session.id,
-                                      subject
-                                    )
-                                  }
-                                  aria-label="ลบรายวิชา"
-                                >
-                                  <Trash2 size={16} />
-                                  ลบ
-                                </button>
-                              </div>
-                            </div>
+                          <td className="text-center text-nowrap">{subject.questions}</td>
+                          <td className="text-nowrap">{subject.bookletRange || "-"}</td>
+                          <td className="text-center text-nowrap">
+                            <button
+                              className="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
+                              onClick={() =>
+                                onDeleteSubject(
+                                  campaign.id,
+                                  session.id,
+                                  subject
+                                )
+                              }
+                              aria-label="ลบรายวิชา"
+                            >
+                              <Trash2 size={14} />
+                              <span className="d-none d-sm-inline">ลบ</span>
+                            </button>
                           </td>
                         </tr>
                       ))}

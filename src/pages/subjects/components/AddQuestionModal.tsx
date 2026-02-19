@@ -29,25 +29,25 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
   }, [open, maxQuestionNo]);
   if (!open) return null;
 
-const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  const trimmed = label.trim();
-  if (!trimmed) return;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = label.trim();
+    if (!trimmed) return;
 
-  let targetNo = questionNo || maxQuestionNo + 1;
-  if (targetNo < 1) targetNo = 1;
-  if (targetNo > maxQuestionNo + 1) targetNo = maxQuestionNo + 1;
+    let targetNo = questionNo || maxQuestionNo + 1;
+    if (targetNo < 1) targetNo = 1;
+    if (targetNo > maxQuestionNo + 1) targetNo = maxQuestionNo + 1;
 
-  const scoreStr = maxScore.trim();
-  const score = Number(scoreStr);
+    const scoreStr = maxScore.trim();
+    const score = Number(scoreStr);
 
-  // กันเคสว่าง / ไม่ใช่ตัวเลข / น้อยกว่าหรือเท่ากับ 0
-  if (!scoreStr || Number.isNaN(score) || score <= 0) {
-    return;
-  }
+    // กันเคสว่าง / ไม่ใช่ตัวเลข / น้อยกว่าหรือเท่ากับ 0
+    if (!scoreStr || Number.isNaN(score) || score <= 0) {
+      return;
+    }
 
-  onConfirm({ label: trimmed, questionNo: targetNo, maxScore: score });
-};
+    onConfirm({ label: trimmed, questionNo: targetNo, maxScore: score });
+  };
   return (
     <>
       <div
@@ -99,7 +99,7 @@ const handleSubmit = (e: React.FormEvent) => {
                     className="form-control"
                     min={1}
                     value={maxScore}
-                    onChange={(e) => setMaxScore(e.target.value)}  
+                    onChange={(e) => setMaxScore(e.target.value)}
                     placeholder="เช่น 5 หรือ 10"
                   />
                 </div>
@@ -118,18 +118,18 @@ const handleSubmit = (e: React.FormEvent) => {
               </div>
 
 
-              <div className="modal-footer">
+              <div className="modal-footer flex-column flex-sm-row gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary"
+                  className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
                   onClick={onClose}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary"
-                  disabled={!label.trim() || !maxScore ||  Number(maxScore) <= 0}
+                  className="btn btn-primary w-100 w-sm-auto order-1 order-sm-2"
+                  disabled={!label.trim() || !maxScore || Number(maxScore) <= 0}
                 >
                   บันทึกข้อสอบ
                 </button>

@@ -461,77 +461,86 @@ export default function SignSheetsPage() {
         <div className="card shadow-sm mb-4">
           {/* Header */}
           <div className="card-header bg-white">
-            <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-              {/* Left */}
-              <div>
-                <h5 className="mb-1">รายชื่อผู้เข้าสอบและคิวอาร์โค้ด (QR-code)</h5>
-                <small className="text-muted">
-                  ในรอบสอบ {activeCampaign?.name ?? "-"}
-                </small>
+            {/* Row 1: Title + Buttons */}
+            <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
+              <div className="flex-shrink-0">
+                <h6 className="mb-0 text-nowrap">รายชื่อผู้เข้าสอบและ QR</h6>
               </div>
 
-              {/* Right */}
-              <div className="d-flex flex-wrap align-items-center gap-2 mt-2 mt-lg-0">
-                <div className="input-group" style={{ width: 260 }}>
-                  <span className="input-group-text bg-white border-end-0">
-                    <Search size={16} className="text-muted" />
-                  </span>
-                  <input
-                    className="form-control border-start-0"
-                    placeholder="ค้นหา ชื่อ/รหัส/ห้อง"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                  />
-                </div>
+              {/* Buttons on right */}
+              <div className="d-flex align-items-center gap-1 flex-wrap justify-content-end">
                 <button
-                  className="btn btn-success d-inline-flex align-items-center gap-2"
+                  className="btn btn-sm btn-success d-inline-flex align-items-center justify-content-center gap-1 text-nowrap"
                   onClick={handleDownloadSeatPlanNameList}
                   disabled={isExportingPdf || !selectedSessionId}
+                  title="ดาวน์โหลดรายชื่อผู้มีสิทธิ์สอบ"
                 >
                   {isExportingPdf ? (
-                    <Loader2 size={16} className="spin-animation" />
+                    <Loader2 size={14} className="spin-animation" />
                   ) : (
-                    <FileDown size={16} />
+                    <FileDown size={14} />
                   )}
-                  ดาวน์โหลดรายชื่อผู้มีสิทธิ์สอบ
+                  <span className="d-none d-md-inline">รายชื่อ</span>
                 </button>
 
                 <button
-                  className="btn btn-warning d-inline-flex align-items-center gap-2"
+                  className="btn btn-sm btn-warning d-inline-flex align-items-center justify-content-center gap-1 text-nowrap"
                   onClick={handleDownloadSeatPlan}
                   disabled={isExportingPdf || !selectedSessionId}
+                  title="ดาวน์โหลดผังที่นั่งสอบ"
                 >
                   {isExportingPdf ? (
-                    <Loader2 size={16} className="spin-animation" />
+                    <Loader2 size={14} className="spin-animation" />
                   ) : (
-                    <FileDown size={16} />
+                    <FileDown size={14} />
                   )}
-                  ดาวน์โหลดผังที่นั่งสอบ
+                  <span className="d-none d-md-inline">ผังที่นั่ง</span>
                 </button>
 
                 <button
-                  className="btn btn-info d-inline-flex align-items-center gap-2 text-white"
+                  className="btn btn-sm btn-info text-white d-inline-flex align-items-center justify-content-center gap-1 text-nowrap"
                   onClick={handleDownloadPdf}
                   disabled={isExportingPdf || !selectedSessionId}
+                  title="ดาวน์โหลดใบรายชื่อ"
                 >
                   {isExportingPdf ? (
-                    <Loader2 size={16} className="spin-animation" />
+                    <Loader2 size={14} className="spin-animation" />
                   ) : (
-                    <FileDown size={16} />
+                    <FileDown size={14} />
                   )}
-                  ดาวน์โหลดใบรายชื่อ
+                  <span className="d-none d-md-inline">ใบรายชื่อ</span>
                 </button>
               </div>
+            </div>
+
+            {/* Row 2: Campaign Info */}
+            <div className="mb-2">
+              <small className="text-muted text-nowrap">
+                ในรอบสอบ {activeCampaign?.name ?? "-"}
+              </small>
+            </div>
+
+            {/* Row 3: Search */}
+            <div className="input-group">
+              <span className="input-group-text bg-white border-end-0">
+                <Search size={14} className="text-muted" />
+              </span>
+              <input
+                className="form-control form-control-sm border-start-0"
+                placeholder="ค้นหา ชื่อ/รหัส/ห้อง"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
           </div>
 
           {/* Body */}
-          <div className="card-body">
-            <div className="row g-3">
+          <div className="card-body p-2 p-sm-3">
+            <div className="row g-2 g-md-3">
               {/* ===== Exam info (การ์ดย่อยแบบเรียบ เข้าธีม) ===== */}
               <div className="col-12">
                 <div className="card shadow-none border">
-                  <div className="card-body">
+                  <div className="card-body p-2 p-sm-3">
                     <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
                       <div>
                         <div className="text-uppercase mb-1">
@@ -559,11 +568,11 @@ export default function SignSheetsPage() {
                     </div> */}
                     </div>
 
-                    <div className="row g-3">
+                    <div className="row g-2 g-md-3">
                       <div className="col-12 col-md-6 col-lg-3">
-                        <label className="form-label">วิชาที่สอบ</label>
+                        <label className="form-label small text-nowrap">วิชาที่สอบ</label>
                         <select
-                          className="form-select"
+                          className="form-select form-select-sm"
                           value={selectedSessionId}
                           onChange={(e) => setSelectedSessionId(e.target.value)}
                         >
@@ -586,9 +595,9 @@ export default function SignSheetsPage() {
                       </div>
 
                       <div className="col-12 col-md-6 col-lg-3">
-                        <label className="form-label">วิชา</label>
+                        <label className="form-label small text-nowrap">วิชา</label>
                         <input
-                          className="form-control"
+                          className="form-control form-control-sm"
                           value={course}
                           onChange={(e) => setCourse(e.target.value)}
                           placeholder="เช่น วิชากฎหมาย..."
@@ -597,9 +606,9 @@ export default function SignSheetsPage() {
                       </div>
 
                       <div className="col-12 col-md-6 col-lg-3">
-                        <label className="form-label">วัน / เวลา</label>
+                        <label className="form-label small text-nowrap">วัน / เวลา</label>
                         <input
-                          className="form-control"
+                          className="form-control form-control-sm"
                           value={sessionText}
                           onChange={(e) => setSessionText(e.target.value)}
                           placeholder="เช่น 31 ม.ค. 2569 09:00–12:00"
@@ -608,9 +617,9 @@ export default function SignSheetsPage() {
                       </div>
 
                       <div className="col-12 col-md-6 col-lg-3">
-                        <label className="form-label">รอบสอบ</label>
+                        <label className="form-label small text-nowrap">รอบสอบ</label>
                         <input
-                          className="form-control"
+                          className="form-control form-control-sm"
                           value={org}
                           onChange={(e) => setOrg(e.target.value)}
                           placeholder="เช่น สนามใหญ่อัยการ 2568"
@@ -629,23 +638,23 @@ export default function SignSheetsPage() {
           Card B: Table (no A4 split)
          ========================= */}
         <div className="card shadow-sm">
-          <div className="card-header d-flex justify-content-between align-items-center">
+          <div className="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
             <div>
-              <div className="fw-semibold">{course}</div>
+              <div className="fw-semibold small text-nowrap">{course}</div>
               {/* <div className="small text-muted">
                 {org} — {sessionText}
               </div> */}
             </div>
 
-            <div className="small text-muted d-flex align-items-center gap-2">
-              <span>
+            <div className="small text-muted d-flex align-items-center gap-2 flex-wrap justify-content-start justify-content-md-end">
+              <span className="text-nowrap">
                 พบ {totalCount} คน | หน้า {page}/{totalPages}
               </span>
               {isLoading && (
                 <Loader2
-                  size={16}
+                  size={14}
                   className="spin-animation"
-                  style={{ marginTop: -2 }}
+                  style={{ marginTop: -1 }}
                 />
               )}
             </div>
@@ -673,16 +682,24 @@ export default function SignSheetsPage() {
             )}
 
             <div className="table-responsive" style={{ minHeight: "300px" }}> {/* กำหนด minHeight กันตารางยุบ */}
-              <table className="table table-hover align-middle mb-0 table-striped">
+              <table className="table table-hover align-middle mb-0 table-striped table-sm">
+                <colgroup>
+                  <col style={{ minWidth: 50 }} />
+                  <col style={{ minWidth: 100 }} />
+                  <col style={{ minWidth: 140 }} />
+                  <col style={{ minWidth: 45 }} />
+                  <col style={{ minWidth: 140 }} />
+                  <col style={{ minWidth: 80 }} />
+                </colgroup>
                 <thead className="table-light sticky-top">
                   <tr>
                     {/* ... หัวตารางเหมือนเดิม ... */}
-                    <th style={{ width: 60 }} className="text-center text-nowrap">ลำดับ</th>
-                    <th style={{ width: 140 }} className="text-nowrap">รหัสผู้เข้าสอบ</th>
-                    <th>ชื่อ - นามสกุล</th>
-                    <th style={{ width: 50 }} className="text-center">แถว</th>
-                    <th style={{ width: 180 }}>ห้อง / ที่นั่ง</th>
-                    <th style={{ width: 140 }} className="text-center">QR</th>
+                    <th className="text-center text-nowrap small">ลำดับ</th>
+                    <th className="text-nowrap small">รหัส</th>
+                    <th className="text-nowrap small">ชื่อ - นามสกุล</th>
+                    <th className="text-center text-nowrap small">แถว</th>
+                    <th className="text-nowrap small">ห้อง / ที่นั่ง</th>
+                    <th className="text-center text-nowrap small">QR</th>
                   </tr>
                 </thead>
 
@@ -712,43 +729,43 @@ export default function SignSheetsPage() {
                     <tr
                       key={r.user_session_id}
                       style={{
-                        height: "65px",
+                        height: "55px",
                         opacity: isLoading ? 0.4 : 1,   // <--- จุดสำคัญที่ช่วยลดการกระพริบ
                         transition: "opacity 0.2s ease" // <--- ช่วยให้นุ่มนวลขึ้น
                       }}
                     >
-                      <td className="text-center text-muted small">
+                      <td className="text-center text-muted small text-nowrap">
                         {(page - 1) * ITEMS_PER_PAGE + idx + 1}
                       </td>
-                      <td className="fw-semibold text-nowrap">{r.userCode}</td>
+                      <td className="fw-semibold text-nowrap small">{r.userCode}</td>
                       <td>
-                        <div className="fw-medium">
+                        <div className="fw-medium small text-nowrap">
                           {r.firstName} {r.lastName}
                         </div>
                       </td>
-                      <td className="text-center">
-                        <span className="badge bg-light text-dark">{r.row_no ?? "-"}</span>
+                      <td className="text-center text-nowrap">
+                        <span className="badge bg-light text-dark small">{r.row_no ?? "-"}</span>
                       </td>
                       <td>
                         <div className="d-flex flex-column gap-1">
-                          <span className="badge bg-secondary-subtle text-secondary-emphasis align-self-start">
+                          <span className="badge bg-secondary-subtle text-secondary-emphasis align-self-start small" style={{ fontSize: "0.7rem" }}>
                             ห้อง {r.roomName ?? "-"}
                           </span>
                           {r.seat_code && (
-                            <small className="text-muted">ที่นั่ง: {r.seat_code}</small>
+                            <small className="text-muted text-nowrap" style={{ fontSize: "0.75rem" }}>ที่นั่ง: {r.seat_code}</small>
                           )}
                         </div>
                       </td>
-                      <td className="text-center">
+                      <td className="text-center text-nowrap">
                         {r.qr_payload ? (
                           <QrPreview
                             value={r.qr_payload}
-                            size={52}
+                            size={44}
                             onClick={() => setEnlargedQr(r.qr_payload)}
                           />
                         ) : (
-                          <span className="badge bg-danger-subtle text-danger-emphasis">
-                            ไม่มี QR
+                          <span className="badge bg-danger-subtle text-danger-emphasis small" style={{ fontSize: "0.65rem" }}>
+                            ไม่มี
                           </span>
                         )}
                       </td>
@@ -760,7 +777,7 @@ export default function SignSheetsPage() {
             ========================================================= */}
                   {emptyRows > 0 && rows.length > 0 && (
                     Array.from({ length: emptyRows }).map((_, index) => (
-                      <tr key={`empty-${index}`} style={{ height: "65px" }}> {/* ความสูงต้องเท่ากับ Row ปกติ */}
+                      <tr key={`empty-${index}`} style={{ height: "55px" }}> {/* ความสูงต้องเท่ากับ Row ปกติ */}
                         <td colSpan={6} />
                       </tr>
                     ))
@@ -772,27 +789,33 @@ export default function SignSheetsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="card-footer d-flex justify-content-between align-items-center">
-              <div className="small text-muted">
-                แสดง {rows.length} รายการ / หน้า — ทั้งหมด {totalCount} รายการ
+            <div className="card-footer d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+              <div className="small text-muted text-nowrap order-2 order-md-1">
+                แสดง {rows.length} / {totalCount}
               </div>
-              <div className="d-flex align-items-center gap-2">
+              <div className="d-flex align-items-center justify-content-end gap-1 order-1 order-md-2">
                 <button
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-xs btn-outline-secondary d-inline-flex align-items-center justify-content-center"
                   disabled={page <= 1 || isLoading}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  title="ก่อนหน้า"
+                  style={{ minWidth: "32px", height: "32px" }}
                 >
-                  ก่อนหน้า
+                  <span className="d-none d-sm-inline">ก่อนหน้า</span>
+                  <span className="d-sm-none">«</span>
                 </button>
-                <span className="small">
-                  หน้า {page} / {totalPages}
+                <span className="small text-nowrap px-2">
+                  {page}/{totalPages}
                 </span>
                 <button
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-xs btn-outline-secondary d-inline-flex align-items-center justify-content-center"
                   disabled={page >= totalPages || isLoading}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  title="ถัดไป"
+                  style={{ minWidth: "32px", height: "32px" }}
                 >
-                  ถัดไป
+                  <span className="d-none d-sm-inline">ถัดไป</span>
+                  <span className="d-sm-none">»</span>
                 </button>
               </div>
             </div>

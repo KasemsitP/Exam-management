@@ -558,34 +558,33 @@ export default function BagScoresPage() {
   // Render
   // -----------------------------
   return (
-    <div className="container-fluid px-3 px-sm-4 py-3">
+    <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
 
       <div className="card shadow-sm mb-3">
-        <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-          <div>
-            <h5 className="mb-1 d-flex align-items-center gap-2">
-              เอกสารสรุปคะแนน
-            </h5>
-            <small className="text-muted">
-              เอกสารสรุปคะแนนสำหรับผู้เข้าสอบและผู้ตรวจ (กรณีที่ยังไม่ถอดรหัสคะแนนจะเป็นเลขสุ่มแทน)
-            </small>
-          </div>
+        <div className="card-header bg-white">
+          <div className="d-flex flex-column flex-md-row align-items-md-start gap-2">
+            <div className="flex-shrink-0">
+              <h6 className="mb-1 text-nowrap">เอกสารสรุปคะแนน</h6>
+              <small className="text-muted">
+                เอกสารสรุปคะแนนสำหรับผู้เข้าสอบและผู้ตรวจ (กรณีที่ยังไม่ถอดรหัสคะแนนจะเป็นเลขสุ่มแทน)
+              </small>
+            </div>
 
-          <div className="d-flex flex-row align-items-center gap-2">
-            {viewMode === "score" ? (
+            <div className="d-grid gap-2 gap-md-1 d-md-flex flex-md-wrap justify-content-md-end flex-md-grow-1">
+              {viewMode === "score" ? (
               <>
                 <button
                   type="button"
-                  className="btn btn-primary btn-lg"
+                  className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center text-nowrap"
                   disabled={!selectedBagId}
                   onClick={handlePDFAllBags}
                 >
-                 ดาวน์โหลดใบคะแนนรายถุงทั้งหมด
+                 ดาวน์โหลดใบคะแนนทั้งหมด
                 </button>
 
                 <button
                   type="button"
-                  className="btn btn-outline-primary btn-lg"
+                  className="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center text-nowrap"
                   disabled={!selectedBagId}
                   onClick={handlePDFperBags}
                 >
@@ -594,7 +593,7 @@ export default function BagScoresPage() {
 
                 <button
                   type="button"
-                  className="btn btn-danger btn-lg"
+                  className="btn btn-sm btn-danger d-inline-flex align-items-center justify-content-center text-nowrap"
                   disabled={filteredBags.length === 0 || isDecrypted}
                   onClick={openDecryptModal}
                 >
@@ -605,39 +604,42 @@ export default function BagScoresPage() {
               <>
                 <button
                   type="button"
-                  className="btn btn-primary btn-lg"
+                  className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center text-nowrap"
                   disabled={!selectedBagId}
                   onClick={handleDownloadGradersAllBags}
                 >
-                  ดาวน์โหลดใบรายชื่อผู้ตรวจรายถุงทั้งหมด
+                  ดาวน์โหลดรายชื่อผู้ตรวจทั้งหมด
                 </button>
 
                 <button
                   type="button"
-                  className="btn btn-outline-primary btn-lg"
+                  className="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center text-nowrap"
                   disabled={!selectedBagId}
                   onClick={handleDownloadGradersEachBags}
                 >
-                  ดาวน์โหลดใบรายชื่อผู้ตรวจรายถุง
+                  ดาวน์โหลดรายชื่อผู้ตรวจรายถุง
                 </button>
 
                 <button
                   type="button"
-                  className="btn btn-danger btn-lg"
+                  className="btn btn-sm btn-danger d-inline-flex align-items-center justify-content-center text-nowrap"
                   disabled={filteredBags.length === 0 || isDecrypted}
                   onClick={openDecryptModal}
                 >
                   ถอดรหัส
-                </button></>}
+                </button>
+              </>
+            }
+            </div>
           </div>
         </div>
 
-        <div className="card-body">
-          <div className="row g-3">
+        <div className="card-body p-2 p-sm-3">
+          <div className="row g-2 g-md-3">
             {/* Card 1: สถานะการสร้างรอบสอบ */}
-            <div className="col-sm-6 col-lg-12">
+            <div className="col-12">
               <div className="card shadow-none border">
-                <div className="card-body">
+                <div className="card-body p-2 p-sm-3">
                   <div className="text-uppercase small text-muted mb-1">
                     สถานะการถอดรหัส
                   </div>
@@ -660,16 +662,18 @@ export default function BagScoresPage() {
       </div>
       {/* BAR ด้านบน: filter + เปลี่ยนถุง */}
       <div className="card border-0 shadow-sm mb-3">
-        <div className="card-body py-2">
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div className="card-body p-2 p-sm-3">
+          <div className="d-flex flex-column flex-md-row gap-2 gap-md-3">
 
             {/* ========== ซ้าย: Session filter ========== */}
-            <div className="d-flex flex-wrap align-items-center gap-2">
-              <span className="text-muted small">วิชาที่สอบ</span>
+            <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 flex-md-shrink-0">
+              <label className="form-label mb-0 d-flex align-items-center text-nowrap small fw-medium">
+                วิชาที่สอบ
+              </label>
 
               <select
                 className="form-select form-select-sm"
-                style={{ width: 220 }}
+                style={{ maxHeight: "300px" }}
                 value={selectedSessionId}
                 onChange={(e) => setSelectedSessionId(e.target.value)}
               >
@@ -682,28 +686,30 @@ export default function BagScoresPage() {
                 ))}
               </select>
 
-              <span className="small text-muted ms-1">
+              <span className="small text-muted d-flex align-items-center text-nowrap">
                 ถุงทั้งหมด {filteredBags.length} ใบ
               </span>
             </div>
 
             {/* ========== ขวา: Bag navigation + view mode ========== */}
-            <div className="d-flex flex-wrap align-items-center gap-2">
+            <div className="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 flex-md-grow-1 flex-md-wrap justify-content-md-end">
 
               {/* Pagination แบบกลุ่มเดียว */}
-              <div className="btn-group" role="group" aria-label="Bag navigation">
+              <div className="d-flex align-items-stretch gap-0" role="group" aria-label="Bag navigation">
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-xs btn-outline-secondary d-inline-flex align-items-center justify-content-center"
+                  style={{ minWidth: "32px" }}
                   disabled={currentBagIndex <= 0}
                   onClick={() => handleNavigateBag("prev")}
+                  title="ถุงก่อนหน้า"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={14} />
                 </button>
 
                 <select
-                  className="form-select form-select-sm"
-                  style={{ minWidth: 260 }}
+                  className="form-select form-select-sm border-start-0 border-end-0"
+                  style={{ maxHeight: "300px" }}
                   value={selectedBagId ?? ""}
                   onChange={(e) => setSelectedBagId(Number(e.target.value))}
                   disabled={filteredBags.length === 0}
@@ -718,26 +724,28 @@ export default function BagScoresPage() {
 
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-xs btn-outline-secondary d-inline-flex align-items-center justify-content-center"
+                  style={{ minWidth: "32px" }}
                   disabled={
                     currentBagIndex === -1 ||
                     currentBagIndex >= filteredBags.length - 1
                   }
                   onClick={() => handleNavigateBag("next")}
+                  title="ถุงถัดไป"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={14} />
                 </button>
               </div>
 
               {/* toggle view mode */}
               <button
                 type="button"
-                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                className="btn btn-xs btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1 text-nowrap"
                 onClick={() =>
                   setViewMode((m) => (m === "score" ? "grader" : "score"))
                 }
               >
-                <Users size={14} />
+                <Users size={12} />
                 <span className="small">
                   {viewMode === "score" ? "ชื่อผู้ตรวจ" : "คะแนนตัวเลข"}
                 </span>

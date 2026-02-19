@@ -8,9 +8,9 @@ interface AccountsHeaderProps {
 
 export default function AccountsHeader({ stats }: AccountsHeaderProps) {
   return (
-    <div className="card shadow-sm ">
+    <div className="card shadow-sm">
       <div className="card-header bg-white">
-        <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+        <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
           <div>
             <h5 className="mb-1">จัดการบัญชีผู้ใช้</h5>
             <small className="text-muted">
@@ -19,13 +19,13 @@ export default function AccountsHeader({ stats }: AccountsHeaderProps) {
           </div>
 
           <div className="d-flex flex-wrap gap-2">
-            <span className="badge text-bg-secondary d-inline-flex align-items-center gap-1">
+            <span className="badge text-bg-secondary d-inline-flex align-items-center gap-1 text-nowrap">
               <Users size={14} /> ทั้งหมด {stats.total}
             </span>
-            <span className="badge text-bg-success d-inline-flex align-items-center gap-1">
+            <span className="badge text-bg-success d-inline-flex align-items-center gap-1 text-nowrap">
               <CheckCircle2 size={14} /> Active {stats.active}
             </span>
-            <span className="badge text-bg-light d-inline-flex align-items-center gap-1">
+            <span className="badge text-bg-light d-inline-flex align-items-center gap-1 text-nowrap">
               <X size={14} /> Inactive {stats.inactive}
             </span>
           </div>

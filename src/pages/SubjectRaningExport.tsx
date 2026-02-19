@@ -683,27 +683,28 @@ export default function SubjectRankingExportPage() {
 
 
   return (
-    <div className="container-fluid px-3 px-sm-4 py-3">
+    <div className="container-fluid px-2 px-sm-3 px-md-4 py-2 py-sm-3">
       <div className="card shadow-sm border-0 mb-3">
-        <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+        <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
           <div>
-            <h5 className="mb-1 d-flex align-items-center gap-2">
+            <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
               สร้างบัญชีรายชื่อผู้สอบผ่าน
             </h5>
-            <small className="text-muted">
+            <small className="text-muted d-block">
               คำนวณคะแนนรวมจากทุกรายวิชาที่มีในแคมเปญนี้
             </small>
           </div>
 
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-2 flex-shrink-0 align-self-start align-self-lg-center">
             <button
               type="button"
-              className="btn btn-outline-primary d-flex align-items-center gap-2"
+              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 text-nowrap"
               onClick={() => setShowGroupModal(true)}
               disabled={selectedSubjectIds.length === 0}
             >
-              <Layers size={16} />
-              จัดกลุ่มวิชาสอบ
+              <Layers size={14} />
+              <span className="d-none d-sm-inline">จัดกลุ่มวิชาสอบ</span>
+              <span className="d-sm-none">กลุ่ม</span>
             </button>
 
             {/* <button
@@ -731,41 +732,41 @@ export default function SubjectRankingExportPage() {
           <div className="row g-3">
             {/* Left: Subjects List (Read Only) */}
             <div className="col-12 col-lg-6">
-              <div className="border rounded-3 p-3 h-100 bg-light-subtle">
-                <div className="d-flex align-items-center justify-content-between">
-                  <div className="small text-muted d-flex align-items-center gap-2">
+              <div className="border rounded-3 p-2 p-sm-3 h-100 bg-light-subtle">
+                <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                  <div className="small text-muted d-flex align-items-center gap-1">
                     {/* <Settings size={14} /> */}
-                    <span>รายวิชาที่สามารถเลือกได้</span>
+                    <span className="text-nowrap">รายวิชาที่สามารถเลือกได้</span>
                   </div>
-                  <span className="badge bg-success border border-success-subtle">
+                  <span className="badge bg-success border border-success-subtle flex-shrink-0">
                     {selectedSubjectIds.length} วิชา
                   </span>
                 </div>
 
                 <div
                   className="mt-2 border rounded-3 p-2 bg-white"
-                  style={{ maxHeight: 260, overflowY: "auto" }}
+                  style={{ maxHeight: "220px", overflowY: "auto" }}
                 >
                   {loadingRows ? (
-                    <div className="text-center text-muted small py-3">กำลังโหลด...</div>
+                    <div className="text-center text-muted small py-2 py-sm-3">กำลังโหลด...</div>
                   ) : groupedSubjects.length === 0 ? (
-                    <div className="text-center text-muted small py-3">ไม่พบข้อมูลรายวิชา</div>
+                    <div className="text-center text-muted small py-2 py-sm-3">ไม่พบข้อมูลรายวิชา</div>
                   ) : (
                     <div className="d-flex flex-column gap-2">
                       {groupedSubjects.map((s) => (
                         <div
                           key={s.subjectId}
-                          className="d-flex align-items-center gap-2 px-2 py-2 rounded border border-light-subtle"
+                          className="d-flex align-items-center gap-1 px-2 py-2 rounded border border-light-subtle"
                         >
                           {/* เปลี่ยนจาก checkbox เป็น icon ติ๊กถูกสีเขียว */}
                           {/* <CheckCircle2 size={18} className="text-success flex-shrink-0" /> */}
 
                           <div className="flex-grow-1 overflow-hidden">
-                            <div className="fw-semibold text-truncate">{s.subjectName}</div>
-                            <div className="small text-muted d-flex gap-2">
+                            <div className="fw-semibold text-truncate small"><span>{s.subjectName}</span></div>
+                            <div className="small text-muted d-flex gap-1 text-nowrap">
                               <span>{s.questions.length} ข้อ</span>
                               <span>•</span>
-                              <span>Session: {s.sessionIds.join(", ")}</span>
+                              <span className="text-truncate">Session: {s.sessionIds.join(", ")}</span>
                             </div>
                           </div>
                         </div>
@@ -778,15 +779,15 @@ export default function SubjectRankingExportPage() {
 
             {/* Right: Options & Tie-break */}
             <div className="col-12 col-lg-6">
-              <div className="border rounded-3 p-3 h-100">
-                <div className="small text-muted d-flex align-items-center gap-2">
+              <div className="border rounded-3 p-2 p-sm-3 h-100">
+                <div className="small text-muted d-flex align-items-center gap-2 text-nowrap">
                   <span>กรอกจำนวนผู้สอบผ่าน</span>
                 </div>
 
                 <div>
                   <input
                     type="number"
-                    className="form-control"
+                    className="form-control form-control-sm"
                     value={passCount}
                     min={1}
                     onChange={(e) => setPassCount(e.target.value)}
@@ -924,12 +925,12 @@ export default function SubjectRankingExportPage() {
         </div>
       </div>
       <div className="card shadow-sm border-0 mb-3">
-        <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+        <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
           <div>
-            <h5 className="mb-1 d-flex align-items-center gap-2">
+            <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
               สร้างเอกสารอื่น
             </h5>
-            <small className="text-muted">
+            <small className="text-muted d-block">
               เลือกเอกสารที่ต้องการสร้างจากปุ่มด้านล่างนี้
             </small>
           </div>
@@ -961,14 +962,14 @@ export default function SubjectRankingExportPage() {
           <div className="row g-3">
             {buttonData.map((btn) => (
               // จัดเลย์เอาต์เป็น 2x2 บนหน้าจอขนาดกลางขึ้นไป
-              <div key={btn.id} className="col-12 col-md-6">
+              <div key={btn.id} className="col-12 col-sm-6 col-md-6">
                 <div
                   key={btn.id}
                   role="button"
                   onClick={() => handleButtonClick(btn.id)}
                   onMouseEnter={() => setHoveredId(btn.id)}
                   onMouseLeave={() => setHoveredId(null)}
-                  className="h-100 p-4 d-flex flex-column justify-content-center align-items-center rounded-3 border bg-white"
+                  className="h-100 p-3 p-sm-4 d-flex flex-column justify-content-center align-items-center rounded-3 border bg-white"
                   style={{
                     cursor: "pointer",
                     transition: "all 0.3s ease",
@@ -983,14 +984,14 @@ export default function SubjectRankingExportPage() {
                 >
                   {/* ไอคอน */}
                   <div
-                    className={`mb-3 d-flex justify-content-center align-items-center rounded-circle bg-${btn.theme} bg-opacity-10 text-${btn.theme}`}
-                    style={{ width: "60px", height: "60px", fontSize: "1.5rem" }}
+                    className={`mb-2 mb-sm-3 d-flex justify-content-center align-items-center rounded-circle bg-${btn.theme} bg-opacity-10 text-${btn.theme}`}
+                    style={{ width: "50px", height: "50px", fontSize: "1.25rem" }}
                   >
                     {btn.icon}
                   </div>
 
                   {/* ข้อความ */}
-                  <div className={`fw-bold fs-5 mb-1 text-${btn.theme === 'warning' ? 'dark' : btn.theme}`}>
+                  <div className={`fw-bold fs-6 fs-sm-5 mb-1 text-center text-${btn.theme === 'warning' ? 'dark' : btn.theme}`}>
                     {btn.title}
                   </div>
                   <div className="small text-muted text-center">
