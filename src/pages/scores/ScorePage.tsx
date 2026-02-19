@@ -276,7 +276,7 @@ export default function BagScoresPage() {
   // -----------------------------
   // 4) header ข้อสอบ + helper
   // -----------------------------
-  
+
   const headerQuestions: { questionNo: number; label: string }[] = useMemo(() => {
     if (!bagScores || !bagScores.booklets.length) return [];
     const first = bagScores.booklets[0];
@@ -299,7 +299,7 @@ export default function BagScoresPage() {
   }, [bagScores]);
   const sortedBooklets = useMemo(() => {
     if (!bagScores || !bagScores.booklets) return [];
-    
+
     // spread array [...] เพื่อสร้าง array ใหม่ป้องกันการแก้ state โดยตรง
     return [...bagScores.booklets].sort((a, b) => {
       // ใช้ localeCompare + numeric: true เพื่อรองรับเลขที่มี 0 นำหน้า หรือเลขจำนวนหลักไม่เท่ากัน
@@ -475,6 +475,82 @@ export default function BagScoresPage() {
 
   }
 
+  const handleDownloadGradersAllBags = async () => {
+    if (!activeCampaign?.id) return;
+
+    try {
+      //  เปิด loading ก่อน
+      Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      const res = await axios.get(
+        `/api/reports/campaigns/${activeCampaign.id}/bags/graders/pdf`,
+        { responseType: "blob" }
+      );
+
+      // 
+      Swal.close();
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+    } catch (err) {
+      Swal.close(); // ปิด loading ก่อน
+
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "ดาวน์โหลดรายชื่อผู้ตรวจในแต่ละถุงไม่สำเร็จ",
+      });
+    }
+  };
+  const handleDownloadGradersEachBags = async () => {
+    console.log(selectedBagId)
+    if (!activeCampaign?.id || !selectedBagId) return;
+
+    try {
+      //  เปิด loading ก่อน
+      Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      const res = await axios.get(
+        `/api/reports/campaigns/${selectedBagId}/score/pdf`,
+        { responseType: "blob" }
+      );
+
+      // 
+      Swal.close();
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+    } catch (err) {
+      Swal.close(); // ปิด loading ก่อน
+
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "ดาวน์โหลดรายชื่อผู้ตรวจรายถุงไม่สำเร็จ",
+      });
+    }
+  };
+
 
 
 
@@ -488,42 +564,72 @@ export default function BagScoresPage() {
         <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
           <div>
             <h5 className="mb-1 d-flex align-items-center gap-2">
-              จัดการเข้ารหัส
+              เอกสารสรุปคะแนน
             </h5>
             <small className="text-muted">
-              การเข้ารหัสใน {activeCampaign?.name ?? "-"}
+              เอกสารสรุปคะแนนสำหรับผู้เข้าสอบและผู้ตรวจ (กรณีที่ยังไม่ถอดรหัสคะแนนจะเป็นเลขสุ่มแทน)
             </small>
           </div>
 
           <div className="d-flex flex-row align-items-center gap-2">
-            <button
-              type="button"
-              className="btn btn-primary btn-lg"
-              disabled={!selectedBagId}
-              onClick={handlePDFAllBags}
-            >
-              ดาวน์โหลดใบคะแนนรายถุงทั้งหมด
-            </button>
+            {viewMode === "score" ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-lg"
+                  disabled={!selectedBagId}
+                  onClick={handlePDFAllBags}
+                >
+                 ดาวน์โหลดใบคะแนนรายถุงทั้งหมด
+                </button>
 
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-lg"
-              disabled={!selectedBagId}
-              onClick={handlePDFperBags}
-            >
-              ดาวน์โหลดใบคะแนนรายถุง
-            </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-lg"
+                  disabled={!selectedBagId}
+                  onClick={handlePDFperBags}
+                >
+                  ดาวน์โหลดใบคะแนนรายถุง
+                </button>
 
-            <button
-              type="button"
-              className="btn btn-danger btn-lg"
-              disabled={filteredBags.length === 0 || isDecrypted}
-              onClick={openDecryptModal}
-            >
-              ถอดรหัส
-            </button>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-lg"
+                  disabled={filteredBags.length === 0 || isDecrypted}
+                  onClick={openDecryptModal}
+                >
+                  ถอดรหัส
+                </button>
+              </>
+            ) :
+              <>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-lg"
+                  disabled={!selectedBagId}
+                  onClick={handleDownloadGradersAllBags}
+                >
+                  ดาวน์โหลดใบรายชื่อผู้ตรวจรายถุงทั้งหมด
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-lg"
+                  disabled={!selectedBagId}
+                  onClick={handleDownloadGradersEachBags}
+                >
+                  ดาวน์โหลดใบรายชื่อผู้ตรวจรายถุง
+                </button>
+
+                <button
+                  type="button"
+                  className="btn btn-danger btn-lg"
+                  disabled={filteredBags.length === 0 || isDecrypted}
+                  onClick={openDecryptModal}
+                >
+                  ถอดรหัส
+                </button></>}
           </div>
-
         </div>
 
         <div className="card-body">

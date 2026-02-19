@@ -275,7 +275,7 @@ export default function Dashboard() {
     fetchDashboard();
   }, [activeCampaign?.id]);
 
-  const USE_MOCK_SCORE = true; // <-- เปลี่ยนเป็น false ตอนอยากกลับไปใช้ของจริง
+  const USE_MOCK_SCORE = false; // <-- เปลี่ยนเป็น false ตอนอยากกลับไปใช้ของจริง
 
   useEffect(() => {
     if (USE_MOCK_SCORE) {

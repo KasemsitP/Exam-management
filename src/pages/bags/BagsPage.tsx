@@ -1,5 +1,5 @@
 // src/pages/bags/BagsPage.tsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { useToast } from "@/components/ui/use-toast";
@@ -257,66 +257,50 @@ export default function BagsPage() {
   // ------------------------------
   // Scan logic
   // ------------------------------
-  const handleScan = (raw: string) => {
+
+  const handleScan = useCallback((raw: string) => {
     if (!activeCampaign || !scannerEnabled) return;
-
-
     const data = normalizePayload(raw);
-    //console.log("TEST PAYLOAD" , data)
+    const dateTime = new Date();
 
-    const dateTime = new Date()
-    // const thaiTime = dateTime.toLocaleString("th-TH", {
-    //   timeZone: "Asia/Bangkok",
-    // });
-
-    console.log(dateTime);
-
-    // กันสแกนถี่
+    // เช็ค duplicate จาก ref (เร็วมาก)
     if (recentScanSetRef.current.has(data)) return;
     recentScanSetRef.current.add(data);
-    setTimeout(
-      () => recentScanSetRef.current.delete(data),
-      RECENT_WINDOW_MS
-    );
+    setTimeout(() => recentScanSetRef.current.delete(data), RECENT_WINDOW_MS);
 
-
-    // กันซ้ำใน local list
     if (qrPayloads.includes(data)) {
-      // toast({
-      //   title: "สแกนซ้ำ",
-      //   description: "QR Code นี้ถูกสแกนแล้ว",
-      //   variant: "destructive",
-      // });
       Swal.fire({
         icon: "error",
         title: "QR code นี้ถูกสแกนแล้ว",
-        text: "กรุณาสแกนอีกครั้ง"
-      })
+        text: "กรุณาสแกนอีกครั้ง",
+        timer: 1500,
+        showConfirmButton: false
+      });
       return;
     }
 
-
-
     setQrPayloads((prev) => [...prev, data]);
-    setDatePaylaods((prev) => [...prev, dateTime])
+    setDatePaylaods((prev) => [...prev, dateTime]);
 
-    // console.log(qrPayloads)
-
-
+    // Reset manual code ถ้าสแกนสำเร็จ (optional)
     setManualCode("");
+
+    // Trick: หยุด Scanner ชั่วคราวเพื่อให้ user รู้ว่าสแกนติดแล้ว (เสียง beep หรือ ui กระพริบ)
     setScannerEnabled(false);
     setTimeout(() => setScannerEnabled(true), 500);
-  };
 
+  }, [activeCampaign, scannerEnabled, qrPayloads]); // Dependencies ที่จำเป็น
 
-
-  const handleManualAdd = () => {
+  // 2. Optimize handleManualAdd
+  const handleManualAdd = useCallback(() => {
     const v = normalizePayload(manualCode);
     if (!v) return;
     handleScan(v);
-  };
+  }, [manualCode, handleScan]);
 
-  // finalize
+
+
+
   const handleFinalizeAndLink = async () => {
     console.log("CLICK FINALIZE");
 
@@ -396,7 +380,7 @@ export default function BagsPage() {
 
 
   const handleRemoveCode = (code: string) => {
-    if (!composeBag || !activeCampaign) return;
+    if ( !activeCampaign) return;
     const n = normalizePayload(code);
     dispatch(
       bagScanRemoved({
@@ -408,18 +392,33 @@ export default function BagsPage() {
     scannedSetRef.current.delete(n);
   };
 
-  const handleClearCodes = () => {
-    if (!composeBag || !activeCampaign) return;
-    if (window.confirm("ลบรายการสแกนทั้งหมดหรือไม่?")) {
-      dispatch(
-        bagScansCleared({
-          campaignId: activeCampaign.id,
-          bagId: composeBag.id,
-        })
-      );
-      scannedSetRef.current.clear();
-      recentScanSetRef.current.clear();
-    }
+  const handleClearCodes = async () => {
+    console.log("Clearing codes...");
+    if ( !activeCampaign) return;
+
+    const result = await Swal.fire({
+      icon: "warning",
+      title: "ยืนยันการลบ",
+      text: "ลบรายการสแกนทั้งหมดหรือไม่?",
+      showCancelButton: true,
+      confirmButtonText: "ลบทั้งหมด",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#d33",
+    });
+
+    if (!result.isConfirmed) return;
+
+    setQrPayloads([]);
+    setDatePaylaods([]);
+    scannedSetRef.current.clear();
+    recentScanSetRef.current.clear();
+
+    await Swal.fire({
+      icon: "success",
+      title: "ลบเรียบร้อยแล้ว",
+      timer: 1200,
+      showConfirmButton: false,
+    });
   };
 
   const handleDeleteBag = async (bagId: string) => {

@@ -15,7 +15,10 @@ import {
   QrCode,
   LucideIcon,
   BookOpen,
-  User2Icon
+  User2Icon,
+  ClipboardMinus,
+  RotateCcw,
+  Settings
 } from "lucide-react";
 import type { Permission } from "@/lib/rbac";
 
@@ -136,13 +139,19 @@ export const NAV_ITEMS: NavItem[] = [
   {
     to: "/admin-reset",
     label: "รีเซ็ตคะแนน",
-    icon: QrCode,
+    icon: RotateCcw,
     permissions: ["manage_grading"],
   },
   {
     to: "/subject-ranking-export",
     label: "ออกใบสรุป",
-    icon: QrCode,
+    icon: ClipboardMinus,
     permissions: ["manage_grading"],
+  },
+  {
+    to: "/settings",
+    label: "ตั้งค่ารอบสอบ",
+    icon: Settings,
+    permissions: ["manage_settings"],
   },
 ];

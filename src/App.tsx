@@ -39,6 +39,7 @@ import SubjectRankingExportPage from "./pages/SubjectRaningExport";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BootstrapToastViewport } from "@/components/ui/bootstrap-toast";
 import { OverlayLoader } from "@/components/ui/Loading";
+import SettingsPage from "./pages/settings/SettingsPage";
 
 function ProtectedApp() {
   return (
@@ -109,6 +110,7 @@ function AppContent() {
           <Route path="/graders" element={<GraderPage />} />
           <Route path="/admin-reset" element={< AdminResetPage />} />
           <Route path="/subject-ranking-export" element={<SubjectRankingExportPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         <Route path="*" element={<NotFound />} />

@@ -1,7 +1,7 @@
 // src/pages/proctor-scan/hooks/useProctorScan.ts
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { useToast } from "@/components/ui/use-toast";
+import Swal from "sweetalert2";
 
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
 import {
@@ -12,21 +12,17 @@ import {
 
 export function useProctorScan() {
   const dispatch = useAppDispatch();
-  const { toast } = useToast();
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const { status, error, scannedUser } = useAppSelector(selectProctorScanState);
 
-  // กล้อง & สถานะสแกน
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const [pauseAfterSuccess, setPauseAfterSuccess] = useState(true);
   const [pause, setPause] = useState(false);
-  const [facingMode, setFacingMode] = useState<"environment" | "user">(
-    "environment"
-  );
+  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
   const [cooldownMs, setCooldownMs] = useState(1200);
-  const lastScanRef = useRef<number>(0);
 
+  const lastScanRef = useRef<number>(0);
   const [manualPayload, setManualPayload] = useState("");
 
   const campaignLabel = activeCampaign?.name ?? "N/A";
@@ -36,8 +32,21 @@ export function useProctorScan() {
     [scannerEnabled, pause, status]
   );
 
-  // จัดการ pause / resume ตาม status
+  const scanConfigRef = useRef({ canScan, cooldownMs, pauseAfterSuccess, activeCampaign });
   useEffect(() => {
+    scanConfigRef.current = { canScan, cooldownMs, pauseAfterSuccess, activeCampaign };
+  }, [canScan, cooldownMs, pauseAfterSuccess, activeCampaign]);
+
+  useEffect(() => {
+    dispatch(clearScanResult()); // ล้างค่าตอนเข้ามา
+    return () => {
+      dispatch(clearScanResult()); // ล้างค่าตอนออกไปหน้าอื่น
+    };
+  }, [dispatch]);
+  // จัดการกล้องเมื่อสถานะเปลี่ยน
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
     if (status === "loading") {
       setPause(true);
     }
@@ -48,19 +57,52 @@ export function useProctorScan() {
     }
 
     if (status === "failed") {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         setPause(false);
         setScannerEnabled(true);
       }, 600);
     }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [status, pauseAfterSuccess]);
 
-  const verifyPayload = async (payload: string) => {
-    if (!activeCampaign) {
-      toast({
+  // ✅ รวมการแจ้งเตือน Swal.fire ผลการสแกนไว้ใน Hook 
+  useEffect(() => {
+    if (status === "succeeded" && scannedUser) {
+      Swal.fire({
+        icon: "success",
+        title: "ยืนยันตัวตนสำเร็จ",
+        html: `
+          <div class="mt-2">
+            <div class="fs-5 fw-bold text-primary">${scannedUser.firstName} ${scannedUser.lastName}</div>
+            <div class="text-muted mt-1 font-monospace">รหัส: ${scannedUser.userCode}</div>
+          </div>
+        `,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } else if (status === "failed") {
+      Swal.fire({
+        icon: "error",
+        title: "สแกนล้มเหลว",
+        text: error ?? "QR Code ไม่ถูกต้องหรือไม่พบข้อมูล",
+        confirmButtonText: "ตกลง",
+        confirmButtonColor: "#d33",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    }
+  }, [status, scannedUser, error]);
+
+  const verifyPayload = useCallback(async (payload: string, campaign: typeof activeCampaign) => {
+    if (!campaign) {
+      Swal.fire({
+        icon: "warning",
         title: "ข้อผิดพลาด",
-        description: "กรุณาเลือก Campaign ก่อน",
-        variant: "destructive",
+        text: "กรุณาเลือกรอบสอบ (Campaign) ก่อนเริ่มสแกน",
+        confirmButtonText: "ตกลง",
       });
       return;
     }
@@ -69,27 +111,26 @@ export function useProctorScan() {
       await dispatch(
         verifyQrCodeThunk({
           qrPayload: payload,
-          campaignId: activeCampaign.id,
+          campaignId: campaign.id,
         })
       ).unwrap();
     } catch (err: any) {
-      toast({
-        title: "สแกนล้มเหลว",
-        description: err?.message ?? "ไม่สามารถตรวจสอบ QR ได้",
-        variant: "destructive",
-      });
+      // ❌ ลบ Swal.fire ตรงนี้ออก เพราะ useEffect ด้านบนจะดักจับ status === 'failed' ให้เอง
+      // ช่วยลดปัญหา Alert เด้งซ้อนกัน
     }
-  };
+  }, [dispatch]);
 
-  const handleScan = async (data: string) => {
+  const handleScan = useCallback(async (data: string) => {
     const now = Date.now();
+    const { canScan, cooldownMs, pauseAfterSuccess, activeCampaign } = scanConfigRef.current;
+
     if (!canScan) return;
-    if (now - lastScanRef.current < cooldownMs) return; // กันยิงรัว ๆ
+    if (now - lastScanRef.current < cooldownMs) return;
     lastScanRef.current = now;
 
     setScannerEnabled(false);
     setPause(true);
-    await verifyPayload(data);
+    await verifyPayload(data, activeCampaign);
 
     if (!pauseAfterSuccess) {
       setTimeout(() => {
@@ -97,48 +138,48 @@ export function useProctorScan() {
         setScannerEnabled(true);
       }, cooldownMs);
     }
-  };
+  }, [verifyPayload]);
 
-  const handleManualSubmit = async () => {
+  const handleManualSubmit = useCallback(async () => {
     const value = manualPayload.trim();
     if (!value) {
-      toast({
+      Swal.fire({
+        icon: "warning",
         title: "ไม่มีข้อมูล",
-        description: "กรุณาวาง/พิมพ์ QR payload ก่อน",
-        variant: "destructive",
+        text: "กรุณาวางหรือพิมพ์ QR payload ก่อนกดยืนยัน",
+        confirmButtonText: "ตกลง",
       });
       return;
     }
     setScannerEnabled(false);
     setPause(true);
-    await verifyPayload(value);
-  };
+    await verifyPayload(value, scanConfigRef.current.activeCampaign);
+  }, [manualPayload, verifyPayload]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     dispatch(clearScanResult());
     setManualPayload("");
     setPause(false);
     setScannerEnabled(true);
-  };
+  }, [dispatch]);
 
-  const toggleScanner = () => {
-    const next = !scannerEnabled;
-    setScannerEnabled(next);
-    setPause(!next ? true : false);
-  };
+  const toggleScanner = useCallback(() => {
+    setScannerEnabled((prev) => {
+      const next = !prev;
+      setPause(!next ? true : false);
+      return next;
+    });
+  }, []);
 
-  const toggleFacingMode = () => {
+  const toggleFacingMode = useCallback(() => {
     setFacingMode((m) => (m === "environment" ? "user" : "environment"));
-  };
+  }, []);
 
   return {
-    // data
     campaignLabel,
     status,
     error,
     scannedUser,
-
-    // scanner state
     scannerEnabled,
     pauseAfterSuccess,
     setPauseAfterSuccess,
@@ -148,8 +189,6 @@ export function useProctorScan() {
     setCooldownMs,
     manualPayload,
     setManualPayload,
-
-    // handlers
     handleScan,
     handleManualSubmit,
     handleClear,

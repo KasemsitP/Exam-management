@@ -1,10 +1,9 @@
-import { Scanner, boundingBox } from "@yudiel/react-qr-scanner";
+import React, { useCallback } from "react";
+import Swal from "sweetalert2";
 import {
-  QrCode,
   Loader2,
   XCircle,
   CheckCircle2,
-  AlertTriangle,
   ScanLine,
   Camera,
   Pause,
@@ -14,12 +13,13 @@ import {
 } from "lucide-react";
 
 import { useProctorScan } from "./hooks/useProctorScan";
-import { userQR } from "@/store/slices/qrscanner.slice"
+import { userQR } from "@/store/slices/qrscanner.slice";
 import { selectIsSystemLocked } from "@/store/slices/examData.slice";
 import { useAppSelector } from "@/store/hook";
+import { CustomQrScanner } from "@/lib/Scanner";
 
 /* --------------------------- Scan Result Card --------------------------- */
-const ScanResult = ({
+const ScanResult = React.memo(({
   status,
   error,
   user,
@@ -32,10 +32,10 @@ const ScanResult = ({
 }) => {
   if (status === "loading") {
     return (
-      <div className="card shadow-sm border-0">
-        <div className="card-body text-center py-5">
-          <Loader2 size={36} className="spin-animation text-primary" />
-          <div className="mt-3 small text-muted">กำลังตรวจสอบข้อมูล...</div>
+      <div className="card shadow-sm border-0 h-100">
+        <div className="card-body d-flex flex-column align-items-center justify-content-center py-5">
+          <Loader2 size={48} className="spin-animation text-primary mb-3" />
+          <div className="fw-semibold">กำลังตรวจสอบข้อมูล...</div>
         </div>
       </div>
     );
@@ -43,16 +43,13 @@ const ScanResult = ({
 
   if (status === "failed" || error) {
     return (
-      <div className="card border-0 shadow-sm">
-        <div className="card-body text-center py-4">
-          <XCircle size={48} className="mb-2 text-danger" />
+      <div className="card border-0 shadow-sm h-100">
+        <div className="card-body d-flex flex-column align-items-center justify-content-center py-5">
+          <XCircle size={56} className="mb-3 text-danger" />
           <h5 className="mb-2">สแกนล้มเหลว</h5>
-          <div className="text-danger">
+          <div className="text-danger text-center px-3 mb-4">
             {error ?? "QR Code ไม่ถูกต้องหรือไม่พบข้อมูล"}
           </div>
-          <button className="btn btn-outline-danger mt-3" onClick={onClear}>
-            ลองสแกนอีกครั้ง
-          </button>
         </div>
       </div>
     );
@@ -60,41 +57,41 @@ const ScanResult = ({
 
   if (status === "succeeded" && user) {
     return (
-      <div className="card border-0 shadow-sm">
+      <div className="card border-0 shadow-sm h-100">
         <div className="card-body py-4">
-          <div className="d-flex align-items-center gap-2 text-success mb-3">
-            <CheckCircle2 /> <h5 className="mb-0">ยืนยันตัวตนสำเร็จ</h5>
+          <div className="d-flex align-items-center gap-2 text-success mb-4 justify-content-center">
+            <CheckCircle2 size={24} /> <h5 className="mb-0">ยืนยันตัวตนสำเร็จ</h5>
           </div>
           <ul className="list-group list-group-flush">
-            <li className="list-group-item d-flex justify-content-between">
-              <span className="text-muted">รอบสอบ</span>
-              <span className="fw-semibold">{user.campaignName ?? "N/A"}</span>
+            <li className="list-group-item d-flex justify-content-between align-items-center px-1">
+              <span className="text-muted small">รอบสอบ</span>
+              <span className="fw-semibold text-end">{user.campaignName ?? "N/A"}</span>
             </li>
-            <li className="list-group-item d-flex justify-content-between">
-              <span className="text-muted">รอบสอบและวิชา </span>
-              <span className="fw-semibold">{user.session_code} {user.subjectName ?? "N/A"}</span>
+            <li className="list-group-item d-flex justify-content-between align-items-center px-1">
+              <span className="text-muted small">รหัส/วิชา</span>
+              <span className="fw-semibold text-end">{user.session_code} {user.subjectName ?? "N/A"}</span>
             </li>
-            <li className="list-group-item d-flex justify-content-between">
-              <span className="text-muted">ชื่อ-สกุล:</span>
-              <span className="fw-semibold text-end">
+            <li className="list-group-item d-flex justify-content-between align-items-center px-1">
+              <span className="text-muted small">ชื่อ-สกุล</span>
+              <span className="fw-bold text-end text-primary">
                 {user.firstName} {user.lastName}
               </span>
             </li>
-            <li className="list-group-item d-flex justify-content-between">
-              <span className="text-muted">รหัสผู้สอบ:</span>
-              <span className="fw-semibold">{user.userCode}</span>
+            <li className="list-group-item d-flex justify-content-between align-items-center px-1">
+              <span className="text-muted small">รหัสผู้สอบ</span>
+              <span className="fw-semibold text-end font-monospace">{user.userCode}</span>
             </li>
-            <li className="list-group-item d-flex justify-content-between">
-              <span className="text-muted">ห้องสอบ:</span>
-              <span className="fw-semibold">{user.roomName ?? "N/A"}</span>
+            <li className="list-group-item d-flex justify-content-between align-items-center px-1">
+              <span className="text-muted small">ห้องสอบ</span>
+              <span className="fw-semibold text-end">{user.roomName ?? "N/A"}</span>
             </li>
-            <li className="list-group-item d-flex justify-content-between">
-              <span className="text-muted">แถว:</span>
-              <span className="fw-semibold">{user.rowNo ?? "N/A"}</span>
+            <li className="list-group-item d-flex justify-content-between align-items-center px-1">
+              <span className="text-muted small">แถว</span>
+              <span className="fw-semibold text-end">{user.rowNo ?? "N/A"}</span>
             </li>
           </ul>
-          <div className="text-center mt-3">
-            <button className="btn btn-primary" onClick={onClear}>
+          <div className="text-center mt-4">
+            <button className="btn btn-primary w-100 py-2" onClick={onClear}>
               สแกนคนต่อไป
             </button>
           </div>
@@ -104,22 +101,22 @@ const ScanResult = ({
   }
 
   return (
-    <div className="card border-0 shadow-sm">
-      <div className="card-body text-center py-5 text-muted">
-        <ScanLine size={32} />
-        <div className="mt-2">
-          ยังไม่มีผลลัพธ์ — กรุณาสแกน QR Code ที่ใบเซ็นชื่อ
+    <div className="card border-0 shadow-sm h-100">
+      <div className="card-body d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+        <ScanLine size={48} className="mb-3 opacity-50" />
+        <h6 className="fw-normal">รอรับผลสแกน</h6>
+        <div className="small px-4 text-center">
+          กรุณาสแกน QR Code ที่ใบเซ็นชื่อเพื่อตรวจสอบข้อมูลผู้สอบ
         </div>
       </div>
     </div>
   );
-};
+});
 
 /* --------------------------- Page Component ---------------------------- */
 export default function ProctorScanPage() {
   const locked = useAppSelector(selectIsSystemLocked);
-  
-  
+
   const {
     campaignLabel,
     status,
@@ -141,12 +138,16 @@ export default function ProctorScanPage() {
     toggleFacingMode,
   } = useProctorScan();
 
+  // ✅ รับค่าเป็น string ตรงๆ ตามที่ CustomQrScanner ส่งมาให้
+  const onScannerResult = useCallback((val: string) => {
+    handleScan(val);
+  }, [handleScan]);
+
   return (
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
       <div className="container py-4">
         {/* Header */}
         <div className="card shadow-sm mb-4">
-          {/* Header */}
           <div className="card-header bg-white">
             <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
               {/* Title */}
@@ -212,51 +213,21 @@ export default function ProctorScanPage() {
               </div>
             </div>
           </div>
-
-          {/* Body */}
-          <div className="">
-            {status === "loading" && (
-              <div className="alert alert-primary py-2 d-flex align-items-center gap-2 mb-0">
-                <Loader2 className="spin-animation" size={16} />
-                <span className="small">กำลังตรวจสอบข้อมูล…</span>
-              </div>
-            )}
-
-            {status === "failed" && (
-              <div className="alert alert-danger py-2 d-flex align-items-center gap-2 mb-0">
-                <AlertTriangle size={16} />
-                <span className="small">{error ?? "ตรวจสอบไม่สำเร็จ"}</span>
-              </div>
-            )}
-
-            {status === "succeeded" && scannedUser && (
-              <div className="alert alert-success py-2 d-flex align-items-center gap-2 mb-0">
-                <CheckCircle2 size={16} />
-                <span className="small">
-                  ยืนยัน: {scannedUser.firstName} {scannedUser.lastName} (
-                  {scannedUser.userCode})
-                </span>
-              </div>
-            )}
-          </div>
         </div>
-
 
         {/* Content */}
         <div className="row g-4">
           {/* Left: Scanner */}
           <div className="col-12 col-lg-7">
-            <div className="card shadow-sm border-0">
+            <div className="card shadow-sm border-0 h-100">
               <div className="card-header bg-white d-flex align-items-center justify-content-between">
                 <div className="d-flex align-items-center gap-2">
-                  {/* <ScanLine className="text-primary" size={18} /> */}
                   <span className="fw-semibold">กล้องสแกน QR</span>
                 </div>
                 <div className="small text-muted">
                   สถานะกล้อง:{" "}
                   <span
-                    className={`badge ${scannerEnabled ? "bg-success" : "bg-secondary"
-                      }`}
+                    className={`badge ${scannerEnabled ? "bg-success" : "bg-secondary"}`}
                   >
                     {scannerEnabled ? "พร้อม" : "หยุดอยู่"}
                   </span>
@@ -264,56 +235,35 @@ export default function ProctorScanPage() {
               </div>
 
               <div className="card-body">
-                {scannerEnabled ? (
-                  <div className="rounded overflow-hidden border bg-black">
-                    <Scanner
-                      formats={["qr_code", "micro_qr_code", "rm_qr_code"]}
-                      onScan={(codes) => {
-                        if (!codes?.length) return;
-                        const val = codes[0].rawValue;
-                        handleScan(val);
-                      }}
-                      onError={(e) => console.warn("scanner error:", e)}
-                      constraints={{ facingMode }}
-                      styles={{
-                        container: { width: "100%" },
-                        video: { width: "100%" },
-                      }}
-                      components={{
-                        onOff: true,
-                        torch: true,
-                        zoom: true,
-                        finder: true,
-                        tracker: boundingBox,
-                      }}
-                      allowMultiple={false}
-                      scanDelay={cooldownMs}
-                      paused={pause}
-                    />
-                  </div>
-                ) : (
-                  <div className="text-center text-muted py-5 border rounded">
-                    <Pause className="mb-2" />
-                    <div>กล้องถูกหยุดอยู่ — กด “เริ่ม” เพื่อใช้งาน</div>
-                  </div>
-                )}
+
+                {/* 🎯 เรียกใช้ CustomQrScanner (ในตัวมันมี Overlay และกรอบล็อคขนาดให้อยู่แล้ว) */}
+                <CustomQrScanner
+                  onResult={onScannerResult}
+                  isLoading={status === "loading"}
+                  isPaused={!scannerEnabled || pause}
+                  facingMode={facingMode}
+                  cooldownMs={cooldownMs}
+                  aspectRatio="1/1" 
+                  minHeight={350}  
+                />
 
                 {/* Manual input */}
-                <div className="mt-3">
-                  <label className="form-label small d-flex align-items-center gap-2">
-                    <Keyboard size={16} /> กรอก/วาง QR Payload (สำรอง)
+                <div className="mt-4">
+                  <label className="form-label small d-flex align-items-center gap-2 fw-semibold text-muted">
+                    กรอกรหัสคิวอาร์โค้ดด้วยตนเอง
                   </label>
                   <div className="input-group">
                     <input
-                      className="form-control"
-                      placeholder="วางสตริงจาก QR ที่นี่…"
+                      className="form-control font-monospace"
+                      placeholder="รหัสคิวอาร์โค้ดจากใบเซ็นชื่อ"
                       value={manualPayload}
                       onChange={(e) => setManualPayload(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
                     />
                     <button
-                      className="btn btn-outline-primary"
+                      className="btn btn-primary px-4"
                       onClick={handleManualSubmit}
-                      disabled={status === "loading"}
+                      disabled={status === "loading" || !manualPayload}
                     >
                       ตรวจสอบ
                     </button>
@@ -323,7 +273,7 @@ export default function ProctorScanPage() {
             </div>
           </div>
 
-          {/* Right: Result + Tips */}
+          {/* Right: Result */}
           <div className="col-12 col-lg-5">
             <ScanResult
               status={status}
@@ -331,17 +281,6 @@ export default function ProctorScanPage() {
               user={scannedUser}
               onClear={handleClear}
             />
-
-            {/* <div className="card border-0 shadow-sm mt-3">
-            <div className="card-body small text-muted">
-              <div className="fw-semibold mb-2">คำแนะนำ</div>
-              <ul className="mb-0 ps-3">
-                <li>เลือก “พักกล้องเมื่อสแกนสำเร็จ” เพื่อกันสแกนซ้ำซ้อน</li>
-                <li>ปรับ Cooldown ให้เหมาะกับความเร็วการทำงานหน้างาน</li>
-                <li>สลับกล้องหน้า/หลัง หากอุปกรณ์ถือไม่สะดวก</li>
-              </ul>
-            </div>
-          </div> */}
           </div>
         </div>
       </div>

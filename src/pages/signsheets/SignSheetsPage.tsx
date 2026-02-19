@@ -247,7 +247,7 @@ export default function SignSheetsPage() {
 
   /* ------------------------------ Handlers -------------------------------- */
 
-  const handleDownloadPdf = async () => {
+ const handleDownloadPdf = async () => {
     if (!activeCampaign?.id || !selectedSessionId) return;
 
     const numericSessionId = parseInt(
