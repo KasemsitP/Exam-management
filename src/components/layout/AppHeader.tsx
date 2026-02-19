@@ -67,9 +67,9 @@ export function AppHeader({
           aria-label="Open menu"
           style={{
             background: headerSurface,
-            border: `1px solid ${headerBorder}`,
+            border: `1.5px solid ${theme.border}`,
             color: theme.text,
-            boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+            boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
           }}
         >
           <Menu size={20} />
@@ -87,18 +87,29 @@ export function AppHeader({
                 boxShadow: "0 0 0 3px rgba(255,255,255,0.8)",
               }}
             />
+            
+            {/* Mobile: แสดงชื่อรอบสอบ */}
+            <span
+              className="small fw-medium d-sm-none"
+              style={{ color: theme.textMuted, fontFamily: "monospace" }}
+            >
+              {activeCampaign ? campaignLabel : "ไม่มีรอบสอบ"}
+            </span>
+            
+            {/* Desktop: แสดง Console */}
             <span
               className="small fw-medium d-none d-sm-inline"
-              style={{ color: theme.textMuted }}
+              style={{ color: theme.textMuted, fontFamily: "monospace" }}
             >
               Console
             </span>
+            
             <ChevronRight
               size={14}
               className="d-none d-sm-inline"
               style={{ color: theme.textMuted }}
             />
-            <h1 className="h6 mb-0 fw-semibold" style={{ color: theme.text }}>
+            <h1 className="h6 mb-0 fw-semibold d-none d-sm-block" style={{ color: theme.text, fontFamily: "monospace" }}>
               {onclickSidebar || "Dashboard"}
             </h1>
           </div>
@@ -112,8 +123,8 @@ export function AppHeader({
               className="d-flex align-items-center gap-3 px-4 py-2 rounded-pill"
               style={{
                 background: headerSurface, // ✅ tinted แทน white
-                border: `1px solid ${headerBorder}`,
-                boxShadow: "0 1px 6px rgba(15,23,42,0.05)",
+                border: `1.5px solid ${theme.border}`,
+                boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
               }}
             >
               <span
@@ -133,13 +144,14 @@ export function AppHeader({
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   color: theme.text,
+                  fontFamily: "monospace",
                 }}
               >
                 รอบสอบ {campaignLabel}
               </span>
             </div>
           ) : (
-            <span className="small fst-italic" style={{ color: theme.textMuted }}>
+            <span className="small fst-italic" style={{ color: theme.textMuted, fontFamily: "monospace" }}>
               ยังไม่ได้เลือกรอบสอบ
             </span>
           )}
@@ -151,18 +163,18 @@ export function AppHeader({
             className="btn btn-sm d-flex align-items-center gap-2"
             style={{
               background: headerSurface,
-              border: `1px solid ${headerBorder}`,
+              border: `1.5px solid ${theme.border}`,
               color: theme.text,
               borderRadius: 10,
               padding: "8px 14px",
-              boxShadow: "0 1px 6px rgba(15,23,42,0.05)",
+              boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
               opacity: isAdmin ? 1 : 0.5,
               cursor: isAdmin ? "pointer" : "not-allowed",
             }}
             onClick={isAdmin ? onOpenCampaignModal : undefined}
           >
             <CalendarDays size={16} style={{ color: theme.color }} />
-            <span className="d-none d-sm-inline fw-medium small">
+            <span className="d-none d-sm-inline fw-medium small" style={{ fontFamily: "monospace" }}>
               เปลี่ยนรอบสอบ
             </span>
           </button>
@@ -186,13 +198,13 @@ export function AppHeader({
           style={{
             height: 36,
             background: headerSurface, // ✅ tinted
-            border: `1px solid ${headerBorder}`,
+            border: `1.5px solid ${theme.border}`,
             color: theme.text,
-            boxShadow: "0 1px 6px rgba(15,23,42,0.05)",
+            boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
           }}
         >
           <LogOut size={16} style={{ color: "#9B1C1C" }} />
-          <span className="d-none d-sm-inline fw-medium small">ออกจากระบบ</span>
+          <span className="d-none d-sm-inline fw-medium small" style={{ fontFamily: "monospace" }}>ออกจากระบบ</span>
         </button>
       </div>
     </header>

@@ -514,18 +514,35 @@ export default function Dashboard() {
     const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
 
     return (
-      <text
-        x={x}
-        y={y}
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={12}
-        fontWeight={600}
-        fill="#fff"
-        pointerEvents="none"
-      >
-        {value}
-      </text>
+      <g>
+        {/* Shadow/outline for better visibility */}
+        <text
+          x={x}
+          y={y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={18}
+          fontWeight={700}
+          fill="none"
+          strokeWidth={3}
+          pointerEvents="none"
+        >
+          {value}
+        </text>
+        {/* Main text */}
+        <text
+          x={x}
+          y={y}
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={18}
+          fontWeight={700}
+          fill="#fff"
+          pointerEvents="none"
+        >
+          {value}
+        </text>
+      </g>
     );
   };
   // รายวิชาทั้งหมดจาก subjectQuestion

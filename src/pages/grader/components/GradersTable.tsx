@@ -44,8 +44,7 @@ export default function AccountsTable({
               <tr>
                 <th>ชื่อผู้ใช้</th>
                 <th>ชื่อ-นามสกุล</th>
-                <th>Email</th>
-                <th>Role</th>
+                <th>สถานะ</th>
                 <th className="text-center">Active</th>
                 <th className="text-end">จัดการ</th>
               </tr>
@@ -55,9 +54,9 @@ export default function AccountsTable({
                 <tr key={acc.id} className="text-sm">
                   <td className="fw-semibold">{acc.username}</td>
                   <td>{acc.full_name}</td>
-                  <td className="text-truncate" style={{ maxWidth: 260 }}>
+                  {/* <td className="text-truncate" style={{ maxWidth: 260 }}>
                     {acc.email ?? "-"}
-                  </td>
+                  </td> */}
                   <td>
                     <span className="badge text-bg-light">
                       {roleName(acc.role_id)} ({roleCode(acc.role_id)})

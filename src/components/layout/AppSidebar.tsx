@@ -53,22 +53,51 @@ export function AppSidebar({
       <div className="d-flex flex-column h-100 sidebar-shell" style={{ background: SB.bg }}>
         {/* Logo / Title */}
         <div
-          className="px-4 py-4 d-flex align-items-center"
+          className="px-4 py-4 d-flex align-items-center position-relative"
           style={{
             height: 150,
             position: "sticky",
             top: 0,
             zIndex: 10,
             borderBottom: `1px solid ${SB.border}`,
-            background: SB.bg,
+            overflow: "hidden",
           }}
         >
-          <div className="d-flex align-items-center gap-3 w-100">
+          {/* ✅ Striped pattern background */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `
+                repeating-linear-gradient(
+                  45deg,
+                  ${theme.color}0D,
+                  ${theme.color}0D 10px,
+                  transparent 10px,
+                  transparent 20px
+                )
+              `,
+              opacity: 0.5,
+              zIndex: 0,
+            }}
+          />
+          
+          {/* ✅ Base background */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: SB.bg,
+              zIndex: -1,
+            }}
+          />
+
+          <div className="d-flex align-items-center gap-3 w-100 position-relative" style={{ zIndex: 1 }}>
             <div className="px-0 d-flex align-items-center w-100 flex-column text-center">
-              <img src={Logo} alt="Logo" style={{ width: 96, height: "auto" }} />
+              <img src={Logo} alt="Logo" style={{ width: 96, height: "auto", position: "relative", zIndex: 2 }} />
               <h2
-                className="h6 mb-0 fw-bold mt-2"
-                style={{ fontSize: "1.05rem", color: SB.text, letterSpacing: 0.2 }}
+                className="h6 mb-0 fw-bold mt-2 font-monospace"
+                style={{ fontSize: "1.05rem", color: SB.text, letterSpacing: 0.2, position: "relative", zIndex: 2 }}
               >
                 ระบบจัดการข้อสอบ
               </h2>
@@ -80,6 +109,8 @@ export function AppSidebar({
                   height: 1,
                   width: "70%",
                   background: `linear-gradient(90deg, transparent, ${SB.border}, transparent)`,
+                  position: "relative",
+                  zIndex: 2,
                 }}
               />
             </div>

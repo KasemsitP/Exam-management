@@ -31,58 +31,52 @@ export default function AccountsTable({
   const filteredAccounts = accounts;
 
   return (
-    <div className="card shadow-sm">
+    <div className="card shadow-sm border-0">
       <div className="card-body p-0">
         <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
+          <table className="table table-hover align-middle mb-0 table-striped">
             <colgroup>
-              <col style={{ width: 120, minWidth: 120 }} />
-              <col style={{ minWidth: 180 }} />
-              <col style={{ minWidth: 200 }} />
-              <col style={{ width: 180, minWidth: 180 }} />
-              <col style={{ width: 80, minWidth: 80 }} />
-              <col style={{ width: 260, minWidth: 260 }} />
+              <col style={{ width: "15%", minWidth: 120 }} />
+              <col style={{ width: "25%", minWidth: 180 }} />
+              <col style={{ width: "20%", minWidth: 160 }} />
+              <col style={{ width: "10%", minWidth: 80 }} />
+              <col style={{ width: "30%", minWidth: 280 }} />
             </colgroup>
-            <thead className="table-light text-uppercase small">
+            <thead className="table-light text-uppercase small fw-semibold">
               <tr>
-                <th className="text-nowrap">Username</th>
-                <th className="text-nowrap">ชื่อ-นามสกุล</th>
-                <th className="text-nowrap">Email</th>
-                <th className="text-nowrap">Role</th>
-                <th className="text-center text-nowrap">Active</th>
-                <th className="text-end text-nowrap">จัดการ</th>
+                <th className="px-3 py-3">ชื่อผู้ใช้</th>
+                <th className="px-3 py-3">ชื่อ-นามสกุล</th>
+                <th className="px-3 py-3">สถานะ</th>
+                <th className="text-center px-3 py-3">Active</th>
+                <th className="text-end px-3 py-3">จัดการ</th>
               </tr>
             </thead>
             <tbody>
               {filteredAccounts.map((acc) => (
-                <tr key={acc.id} className="text-sm">
-                  <td className="fw-semibold text-nowrap">{acc.username}</td>
-                  <td className="text-nowrap">{acc.full_name}</td>
-                  <td className="text-truncate" style={{ maxWidth: 200 }}>
-                    {acc.email ?? "-"}
-                  </td>
-                  <td className="text-nowrap">
-                    <span className="badge text-bg-light">
+                <tr key={acc.id}>
+                  <td className="fw-semibold text-nowrap px-3 py-2">{acc.username}</td>
+                  <td className="text-nowrap px-3 py-2">{acc.full_name}</td>
+                  <td className="text-nowrap px-3 py-2">
+                    <span className="badge bg-light text-dark border">
                       {roleName(acc.role_id)} ({roleCode(acc.role_id)})
                     </span>
                   </td>
-                  <td className="text-center text-nowrap">
+                  <td className="text-center text-nowrap px-3 py-2">
                     {acc.active ? (
-                      <CheckCircle2 size={16} className="text-success" />
+                      <CheckCircle2 size={18} className="text-success" />
                     ) : (
-                      <X size={16} className="text-muted" />
+                      <X size={18} className="text-muted" />
                     )}
                   </td>
-                  <td className="text-end text-nowrap">
+                  <td className="text-end text-nowrap px-3 py-2">
                     <div className="d-flex justify-content-end gap-1 flex-wrap">
                       {/* ปุ่มแก้ไข */}
                       <button
                         className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
                         onClick={() => onEdit(acc)}
                         title="แก้ไข"
-                      //  disabled={locked}
                       >
-                        <Edit size={14} /> <span className="d-none d-md-inline">แก้ไข</span>
+                        <Edit size={14} /> <span className="d-none d-lg-inline">แก้ไข</span>
                       </button>
 
                       {/* ถ้า active = true → แสดงปุ่ม Revoke */}
@@ -95,36 +89,32 @@ export default function AccountsTable({
                           <X size={14} /> <span className="d-none d-lg-inline">ถอนสิทธิ์</span>
                         </button>
                       ) : (
-                        // ถ้า active = false → แสดงปุ่มคืนสิทธิ์
                         <button
                           className="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
                           onClick={() => onUnrevoke(acc)}
                           title="คืนสิทธิ์"
-                        // disabled={locked}
                         >
                           <CheckCircle2 size={14} /> <span className="d-none d-lg-inline">คืนสิทธิ์</span>
                         </button>
                       )}
 
-                      {/* บุ่มลบ (เฉพาะคนมี permission) */}
+                      {/* ปุ่มลบ (เฉพาะคนมี permission) */}
                       <ShowIfCan permission="manage_accounts">
                         <button
                           className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
                           onClick={() => onDelete(acc)}
                           title="ลบบัญชี"
-                        // disabled={locked}
                         >
-                          <Trash2 size={14} /> <span className="d-none d-sm-inline">ลบ</span>
+                          <Trash2 size={14} /> <span className="d-none d-lg-inline">ลบ</span>
                         </button>
                       </ShowIfCan>
                     </div>
                   </td>
-
                 </tr>
               ))}
               {filteredAccounts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-5">
+                  <td colSpan={5} className="py-5 text-center">
                     <div className="d-flex flex-column align-items-center justify-content-center text-muted">
                       {status === "loading" ? (
                         <>
