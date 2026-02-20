@@ -293,7 +293,7 @@ export default function Dashboard() {
         dispatch(fetchBagsForCampaignThunk(activeCampaign.id))
 
         const res = await axios.get<DashboardApiResponse>(
-          `http://localhost:8000/api/dashboard/campaign/${activeCampaign.id}`
+          `/api/dashboard/campaign/${activeCampaign.id}`
         );
 
         console.log("Dashboard API:", res.data);
