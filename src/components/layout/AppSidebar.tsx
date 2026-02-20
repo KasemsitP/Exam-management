@@ -5,6 +5,7 @@ import type { NavItem } from "./navItems";
 import type { AuthUser } from "@/store/slices/auth.slice";
 import Logo from "../../assets/kmutnblogo.png";
 import type { Theme } from "@/components/layout/theme";
+import { useNavigate } from "react-router-dom";
 
 interface AppSidebarProps {
   user: AuthUser | null;
@@ -45,6 +46,7 @@ export function AppSidebar({
     grader: "ผู้ตรวจข้อสอบ Grader",
     manager: "ผู้จัดการคีย์ Manager"
   };
+  const navigate = useNavigate();
   const SidebarInner = (
 
     <>
@@ -81,7 +83,7 @@ export function AppSidebar({
               zIndex: 0,
             }}
           />
-          
+
           {/* ✅ Base background */}
           <div
             style={{
@@ -94,7 +96,12 @@ export function AppSidebar({
 
           <div className="d-flex align-items-center gap-3 w-100 position-relative" style={{ zIndex: 1 }}>
             <div className="px-0 d-flex align-items-center w-100 flex-column text-center">
-              <img src={Logo} alt="Logo" style={{ width: 96, height: "auto", position: "relative", zIndex: 2 }} />
+              <img
+                src={Logo}
+                alt="Logo"
+                style={{ width: 96, height: "auto", position: "relative", zIndex: 2, cursor: "pointer" }}
+                onClick={() => navigate("/home")}
+              />
               <h2
                 className="h6 mb-0 fw-bold mt-2 font-monospace"
                 style={{ fontSize: "1.05rem", color: SB.text, letterSpacing: 0.2, position: "relative", zIndex: 2 }}

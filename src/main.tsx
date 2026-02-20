@@ -9,9 +9,9 @@ import "./App.css";
 import { clearAuth } from "@/store/slices/auth.slice";
 import Swal from "sweetalert2";
 
-axios.defaults.baseURL = "http://localhost:8000";
+//axios.defaults.baseURL = "http://localhost:8000";
 // axios.defaults.baseURL = "http://192.168.1.39:8000"; 
-//axios.defaults.baseURL = "https://backend-exam-yy5g.onrender.com"; 
+axios.defaults.baseURL = "https://backend-exam-yy5g.onrender.com"; 
 axios.defaults.withCredentials = true; //  เพื่อให้ส่ง/รับ httpOnly cookie ได้
 
 
