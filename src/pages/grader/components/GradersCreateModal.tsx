@@ -162,7 +162,7 @@ export default function AccountCreateModal({
                     )}
                   </div>
 
-                  <div className="col-md-6">
+                  {/* <div className="col-md-6">
                     <label className="form-label">Email</label>
                     <input
                       type="email"
@@ -172,7 +172,7 @@ export default function AccountCreateModal({
                     {errors.email && (
                       <div className="invalid-feedback">{errors.email.message}</div>
                     )}
-                  </div>
+                  </div> */}
 
                   <div className="col-md-6">
                     <label className="form-label">
@@ -196,7 +196,7 @@ export default function AccountCreateModal({
                     )}
                   </div>
 
-                  <div className="col-md-6">
+                  {/* <div className="col-md-6">
                     <div className="form-check mt-4 pt-1">
                       <input
                         className="form-check-input"
@@ -208,7 +208,7 @@ export default function AccountCreateModal({
                         Active
                       </label>
                     </div>
-                  </div>
+                  </div> */}
                 </div>
 
                 <hr className="my-3" />

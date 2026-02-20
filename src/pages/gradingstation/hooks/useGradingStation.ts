@@ -250,8 +250,8 @@ export const useGradingStation = () => {
     setPause(false);
     setScannerEnabled(true);
     setScore("");
-    setQuestionNo(null);
-    setQuestionMaxScore(null);
+    // setQuestionNo(null);
+    // setQuestionMaxScore(null);
   };
 
   const verifyManualPayload = async () => {

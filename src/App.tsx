@@ -38,6 +38,7 @@ import SubjectRankingExportPage from "./pages/SubjectRaningExport";
 // import GradingRecheckPage from "./pages/gradingrecheck/GradingRecheckPage"
 import { AppLayout } from "@/components/layout/AppLayout";
 import { BootstrapToastViewport } from "@/components/ui/bootstrap-toast";
+import HomePage from "./pages/HomePage";
 import { OverlayLoader } from "@/components/ui/Loading";
 import SettingsPage from "./pages/settings/SettingsPage";
 
@@ -90,6 +91,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route element={<ProtectedApp />}>
+           <Route path="/home" element={<HomePage />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/campaign-sessions" element={<CampaignsPage />} />
           <Route path="/seat-allocation" element={<SeatAllocationPage />} />

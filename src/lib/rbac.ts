@@ -65,6 +65,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "manage_grading",
     "dashboard",
     "manage_settings"
+    
   ],
   manager: [
     "manage_keys",

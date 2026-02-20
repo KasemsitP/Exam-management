@@ -42,7 +42,7 @@ export default function Login() {
       showLoginSuccessAlert(user.name);
       const redirect = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
       // navigate(redirect ?? "/dashboard", { replace: true });
-      navigate("/dashboard", { replace: true });
+      navigate("/home", { replace: true });
     }
       if (status === "error" && error) {
       showError("ล็อคอินไม่สำเร็จ", "ชื่อผู้ใช้หรือรหัสผ่านผิด");
@@ -63,7 +63,7 @@ export default function Login() {
     };
     dispatch(setAuthenticated(mockUser));
     showLoginSuccessAlertWithData(mockUser.name, "โหมด bypass");
-    navigate("/dashboard", { replace: true });
+    navigate("/home", { replace: true });
   };
 
   return (

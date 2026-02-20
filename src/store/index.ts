@@ -1,7 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { authSlice } from "./slices/auth.slice";
 import { sessionsSlice } from "./slices/sessions.slice";
-import { seatsSlice } from "./slices/seats.slice";
 import { gradingSlice } from "./slices/grading.slice";
 //import { campaignsSlice } from "./slices/campaigns.slice";
 import { examDataSlice } from "./slices/examData.slice"
@@ -23,7 +22,6 @@ export const store = configureStore({
   reducer: {
     auth: authSlice.reducer,
     sessions: sessionsSlice.reducer,
-    seats: seatsSlice.reducer,
     bags: bagsSlice.reducer,
     grading: gradingSlice.reducer,
     //campaigns: campaignsSlice.reducer,

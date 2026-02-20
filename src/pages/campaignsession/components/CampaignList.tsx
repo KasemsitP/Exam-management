@@ -121,7 +121,7 @@ export function CampaignList({
                 แคมเปญนี้ไม่มีรายการที่ตรงกับเงื่อนไข / กรุณาเพิ่มเซสชัน
               </div>
             )}
-            <div className="d-flex flex-row justify-content-end mb-2 gap-2">
+            <div className="d-flex flex-row justify-content-start mb-2 gap-2">
               <button
                 className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 text-nowrap"
                 onClick={() => onCreateSession(campaign.id)}
@@ -167,41 +167,38 @@ export function CampaignList({
                 </div>
 
                 <div className="table-responsive mt-3">
-                  <table className="table align-middle table-hover">
+                  <table className="table table-sm align-middle mb-0">
                     <colgroup>
-                      <col style={{ width: 100, minWidth: 100 }} />
-                      <col />
-                      <col style={{ width: 130, minWidth: 130 }} />
-                      <col style={{ width: 90, minWidth: 90 }} />
-                      <col style={{ width: 140, minWidth: 140 }} />
-                      <col style={{ width: 100, minWidth: 100 }} />
+                      <col style={{ width: "20%" }} />
+                      <col style={{ width: "35%" }} />
+                      <col style={{ width: "15%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "18%" }} />
                     </colgroup>
 
-                    <thead>
+                    <thead className="table-light">
                       <tr>
-                        <th className="text-nowrap">รหัสวิชา</th>
-                        <th className="text-nowrap">ชื่อวิชา</th>
-                        <th className="text-nowrap">เวลา</th>
-                        <th className="text-center text-nowrap">จำนวนข้อ</th>
-                        <th className="text-nowrap">ชุดเล่มข้อสอบ</th>
-                        <th className="text-center text-nowrap">การจัดการ</th>
+                        <th className="text-nowrap fw-semibold">รหัสวิชา</th>
+                        <th className="text-nowrap fw-semibold">ชื่อวิชา</th>
+                        <th className="text-nowrap fw-semibold">เวลา</th>
+                        <th className="text-center text-nowrap fw-semibold">จำนวนข้อ</th>
+                        <th className="text-center text-nowrap fw-semibold">การจัดการ</th>
                       </tr>
                     </thead>
                     <tbody>
                       {session.subjects.map((subject) => (
                         <tr key={subject.id}>
-                          <td className="fw-medium text-nowrap">{subject.code}</td>
-                          <td>
+                          <td className="fw-semibold text-nowrap small">{subject.code}</td>
+                          <td className="small">
                             <div>{subject.name}</div>
                           </td>
                           <td className="small text-nowrap">
                             {subject.startTime} - {subject.endTime}
                           </td>
-                          <td className="text-center text-nowrap">{subject.questions}</td>
-                          <td className="text-nowrap">{subject.bookletRange || "-"}</td>
+                          <td className="text-center text-nowrap small">{subject.questions}</td>
                           <td className="text-center text-nowrap">
                             <button
-                              className="btn btn-danger btn-sm d-inline-flex align-items-center gap-1"
+                              className="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
                               onClick={() =>
                                 onDeleteSubject(
                                   campaign.id,
@@ -210,6 +207,7 @@ export function CampaignList({
                                 )
                               }
                               aria-label="ลบรายวิชา"
+                              title="ลบรายวิชา"
                             >
                               <Trash2 size={14} />
                               <span className="d-none d-sm-inline">ลบ</span>
@@ -220,7 +218,7 @@ export function CampaignList({
 
                       {session.subjects.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="text-center text-muted py-4">
+                          <td colSpan={5} className="text-center text-muted py-3 small">
                             ยังไม่มีรายวิชาในเซสชันนี้ กรุณาเพิ่มรายวิชา
                           </td>
                         </tr>

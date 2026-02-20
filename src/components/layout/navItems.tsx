@@ -18,7 +18,8 @@ import {
   User2Icon,
   ClipboardMinus,
   RotateCcw,
-  Settings
+  Settings,
+  House
 } from "lucide-react";
 import type { Permission } from "@/lib/rbac";
 
@@ -31,6 +32,12 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
+      {
+    to: "/home",
+    label: "หน้าแรก",
+    icon: House,
+    notRequiredCampaignActive: true
+  },
 
     {
     to: "/subject",
