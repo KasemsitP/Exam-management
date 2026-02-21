@@ -46,7 +46,7 @@ export default function AccountsTable({
                 <th>ชื่อ-นามสกุล</th>
                 <th>สถานะ</th>
                 <th className="text-center">Active</th>
-                <th className="text-end">จัดการ</th>
+                <th className="text-end"></th>
               </tr>
             </thead>
             <tbody>
@@ -70,25 +70,15 @@ export default function AccountsTable({
                     )}
                   </td>
                   <td className="text-end">
-                    <div className="d-flex justify-content-end gap-2">
-                      <button
-                        className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
-                        onClick={() => {
-                          onViewSubjects(acc)
-                          console.log("TEST ACC", acc)
-                        }}
-                        title="แก้ไข"
-                      >
-                        <Pencil size={14} /> ดูรายวิชาที่ตรวจ
-                      </button>
+                    <div className="d-flex flex-wrap gap-1 justify-content-center justify-content-lg-end">
                       {/* ปุ่มแก้ไข */}
                       <button
                         className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
                         onClick={() => onEdit(acc)}
                         title="แก้ไข"
-                        disabled={locked}
                       >
-                        <Edit size={14} /> แก้ไข
+                        <Edit size={14} />
+                        <span>แก้ไข</span>
                       </button>
 
                       {/* ถ้า active = true → แสดงปุ่ม Revoke */}
@@ -97,19 +87,18 @@ export default function AccountsTable({
                           className="btn btn-outline-dark btn-sm d-inline-flex align-items-center gap-1"
                           onClick={() => onRevoke(acc)}
                           title="ถอนสิทธิ์"
-                          disabled={locked}
                         >
-                          <X size={14} /> ถอนสิทธิ์
+                          <X size={14} />
+                          <span>ถอนสิทธิ์</span>
                         </button>
                       ) : (
-                        // ถ้า active = false → แสดงปุ่มคืนสิทธิ์
                         <button
                           className="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1"
                           onClick={() => onUnrevoke(acc)}
                           title="คืนสิทธิ์"
-                          disabled={locked}
                         >
-                          <CheckCircle2 size={14} /> คืนสิทธิ์
+                          <CheckCircle2 size={14} />
+                          <span>คืนสิทธิ์</span>
                         </button>
                       )}
 
@@ -119,9 +108,9 @@ export default function AccountsTable({
                           className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
                           onClick={() => onDelete(acc)}
                           title="ลบบัญชี"
-                          disabled={locked}
                         >
-                          <Trash2 size={16} /> ลบ
+                          <Trash2 size={14} />
+                          <span>ลบ</span>
                         </button>
                       </ShowIfCan>
                     </div>

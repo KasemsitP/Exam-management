@@ -249,7 +249,7 @@ export default function BagScoresPage() {
 
       try {
         const res = await axios.get<BagScoresApiResponse>(
-          `http://localhost:8000/api/reports/bags/${selectedBagId}/scores`,
+          `/api/reports/bags/${selectedBagId}/scores`,
           { params: { campaignId: activeCampaign.id } }
         );
         console.log(res.data)

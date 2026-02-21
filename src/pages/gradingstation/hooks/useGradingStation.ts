@@ -33,6 +33,7 @@ import { DeleteCamp } from "@/utils/camp";
 import { set } from "react-hook-form";
 
 export interface RecordedScore {
+  random_num?: number;
   slotId: number;
   score: number;
   enteredAt: string;
@@ -166,15 +167,14 @@ export const useGradingStation = () => {
         records
           .slice(0, 5)
           .map((r) => ({
+            random_num: r.random_num,
             slotId: r.slotId ?? 0,
             score: r.score,
             qr_payload:
               r.qr_payload.length > 50
                 ? r.qr_payload.slice(0, 50) + "..."
                 : r.qr_payload,
-            enteredAt:
-              (r as any).enteredAt ??
-              new Date().toLocaleTimeString("th-TH"),
+            enteredAt: r.enteredAt ?? new Date().toISOString()
           }))
       );
     } else {
@@ -392,13 +392,16 @@ html: `
       const record: RecordedScore = {
         slotId: lastSlotId,
         score: Number(score),
-        enteredAt: new Date().toLocaleTimeString("th-TH"),
+       enteredAt: new Date().toISOString(),
         qr_payload: scanData
       };
 
-      setRecent((prev) => [record, ...prev].slice(0, 6));
+      //setRecent((prev) => [record, ...prev].slice(0, 6));
       setScanData(null);
       setScore("");
+
+
+      dispatch(fetchRecordThunk(activeAssignment.grader_id))
 
       await Swal.fire({
         icon: "success",

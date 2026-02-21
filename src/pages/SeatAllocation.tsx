@@ -555,37 +555,49 @@ export default function SeatAllocationPage() {
       return;
     }
 
-    // ให้ถามยืนยันก่อน
-    const ok = await Swal.fire({
+    const result = await Swal.fire({
       icon: "warning",
       title: "รีเซ็ตผังที่นั่งทั้งหมด",
-      text: `ระบบจะลบผังที่นั่งของแคมเปญ${campaign.name ?? campaign.campaign_size} ทุกห้อง`,
+      text: `ระบบจะลบผังที่นั่งของแคมเปญ ${campaign.name ?? campaign.campaign_size
+        } ทุกห้อง`,
       showCancelButton: true,
       confirmButtonText: "ตกลง",
       cancelButtonText: "ยกเลิก",
-    }).then((r) => r.isConfirmed);
+      confirmButtonColor: "#dc3545",
+    });
 
-    if (!ok) return;
+    if (!result.isConfirmed) return;
 
     try {
-      await axios.delete(`/api/seat/reset/${campaign.id}`);
-
-      // 1) เคลียร์ state layout ที่ cache ไว้ทั้งหมด
-      setRoomSeats({});       // ถ้าคุณใช้ useState<Record<string, SeatCell[]>>({})
-      setSelectedRoom(null);  // ปิด modal ถ้ามี
+      Swal.fire({
+        title: "กำลังรีเซ็ตผังที่นั่ง...",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+      await Promise.all([
+        axios.delete(`/api/seat/reset/${campaign.id}`),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+      ]);
+      // เคลียร์ state + reload
+      setRoomSeats({});
+      setSelectedRoom(null);
       setModalSearch("");
       setModalPage(1);
-
-      // 2) รีเซ็ตตัวเลขที่คุณใช้โชว์จำนวนคน (แล้วแต่ที่ประกาศ state ไว้)
       setAssignedCounts({});
-      // ถ้าอนาคตเปลี่ยนเป็น per-room ก็ใช้ setAssignedCounts({}) แล้วค่อย reload ใหม่
 
-      // 3) refresh รายการห้องจาก backend (จะได้ allocatedCount = 0)
-      dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
-      loadAssignedCounts(Number(campaign.id));
-      fetchUserAssigned(Number(campaign.id));
+      await Promise.all([
+        dispatch(fetchRoomsByCampaignThunk(Number(campaign.id))),
+        loadAssignedCounts(Number(campaign.id)),
+        fetchUserAssigned(Number(campaign.id)),
+      ]);
 
+      // ✅ ปิด loading ก่อน
+      Swal.close();
 
+      // ✅ แล้วค่อยแสดง success
       await Swal.fire({
         icon: "success",
         title: "รีเซ็ตผังที่นั่งเรียบร้อย",
@@ -594,9 +606,10 @@ export default function SeatAllocationPage() {
       });
     } catch (error) {
       console.error(error);
+
       Swal.fire({
         icon: "error",
-        title: "จัดที่นั่งไม่สำเร็จ",
+        title: "รีเซ็ตผังที่นั่งไม่สำเร็จ",
         text: "กรุณาลองใหม่อีกครั้ง",
       });
     }
@@ -666,7 +679,7 @@ export default function SeatAllocationPage() {
   };
 
   return (
-   <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
+    <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
       <div className="d-flex flex-column gap-4">
         {/* ===== Header ===== */}
         <div className="card shadow-sm">
@@ -1003,10 +1016,20 @@ export default function SeatAllocationPage() {
                     disabled={isCreatingLayout}
                     onClick={async () => {
                       if (!campaign?.id || !createRoom) return;
+
                       try {
                         setIsCreatingLayout(true);
 
-                        // เรียก confirm สร้างผัง
+                        // 🔥 เปิด loading ก่อนยิง API
+                        Swal.fire({
+                          title: "กำลังสร้างผังที่นั่ง...",
+                          allowOutsideClick: false,
+                          allowEscapeKey: false,
+                          didOpen: () => {
+                            Swal.showLoading();
+                          },
+                        });
+
                         await axios.post(
                           `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
                             createRoom.roomCode
@@ -1016,7 +1039,6 @@ export default function SeatAllocationPage() {
                           }
                         );
 
-                        // โหลดผังที่ commit แล้วมาเก็บใน state
                         const res = await axios.get<SeatApiResponse>(
                           `/api/seat/campaign/${campaign.id}/room/${encodeURIComponent(
                             createRoom.roomCode
@@ -1025,6 +1047,7 @@ export default function SeatAllocationPage() {
                         );
 
                         const data = res.data;
+
                         if (data.seats && data.seats.length > 0) {
                           const seatCells = mapApiSeatsToCells(data);
 
@@ -1034,7 +1057,8 @@ export default function SeatAllocationPage() {
                           }));
                         }
 
-                        await Swal.fire({
+                        // 🔥 ปิด loading แล้วแสดง success
+                        Swal.fire({
                           icon: "success",
                           title: "สร้างผังที่นั่งเรียบร้อย",
                           timer: 1500,

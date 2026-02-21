@@ -16,9 +16,9 @@ export default function SettingsPage() {
   const [isCampActive, setIsCampActive] = useState<boolean>(false);
   const [isQrActive, setIsQrActive] = useState<boolean>(false);
 
-  useEffect(() => {
-    dispatch(fetchInitialExamData());
-  }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(fetchInitialExamData());
+  // }, [dispatch]);
 
   useEffect(() => {
     if (activeCampaign?.id) {
@@ -28,6 +28,7 @@ export default function SettingsPage() {
 
   const loadsStatus = async () => {
     if (!activeCampaign?.id) return;
+    console.log(activeCampaign, "Loading campaign status for ID");
 
     try {
       const { data } = await axios.get(
@@ -37,13 +38,15 @@ export default function SettingsPage() {
       const loaded = data?.data ?? {};
       console.log(loaded)
 
-      const campList = Array.isArray(loaded.campStatus) ? loaded.campStatus : [];
+      //const campList = Array.isArray(loaded.campStatus) ? loaded.campStatus : [];
+     // const  campList = activeCampaign ? [activeCampaign] : []; 
 
       // เช็คสถานะรอบสอบ
-      const hasActiveCampaign = campList.some((item: any) => item.is_active === 1);
+      // const hasActiveCampaign = campList.some((item: any) => item.is_active === 1);
+     const hasActiveCampaign = activeCampaign?.isActive;
       setIsCampActive(hasActiveCampaign);
 
-      const QRactive = loaded.QRStatus
+      const QRactive = activeCampaign?.qrActive
       setIsQrActive(QRactive);  
       console.log(QRactive)
 

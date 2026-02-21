@@ -22,6 +22,8 @@ export interface DisputedQuestionDto {
   graderName1: string;
   graderName2: string;
 
+  random_num: string;
+
   // เพิ่มตรงนี้
   lastEnteredAt?: string | null; // หรือ Date ก็ได้แล้วแต่ backend ส่งอะไรมา
 }

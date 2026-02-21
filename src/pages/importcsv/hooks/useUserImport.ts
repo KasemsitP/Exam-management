@@ -196,10 +196,9 @@ export const useUserImport = () => {
     const result = await Swal.fire({
       title: "ยืนยันการนำเข้าข้อมูล",
       html: `คุณกำลังจะนำเข้าข้อมูลผู้ใช้งานจำนวน 
-    <strong>${parsed.rows.length.toLocaleString()}</strong> 
-    รายการเข้าสู่แคมเปญ 
-    <strong>${activeCampaign.name}</strong><br><br>
-    โปรดตรวจสอบให้แน่ใจว่าข้อมูลถูกต้องก่อนดำเนินการต่อ`,
+<strong>${parsed.rows.length.toLocaleString()}</strong> คน<br>
+เข้าสู่รอบสอบ <strong>${activeCampaign.name}</strong><br>
+โปรดตรวจสอบให้แน่ใจว่าข้อมูลถูกต้องก่อนดำเนินการต่อ`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "ยืนยัน",
@@ -227,9 +226,12 @@ export const useUserImport = () => {
       ).unwrap();
 
       const parts = [
-        `สร้างผู้ใช้งานใหม่ ${result.totalUsersCreated} รายการ`,
-        `พบผู้ใช้งานเดิม ${result.totalUsersFound} รายการ`,
-        `ผูกแคมเปญ ${result.totalCampaignLinks} รายการ`,
+        `ผู้เข้าสอบเดิมจำนวน ${result.totalUsersFound.toLocaleString()} คน`,
+        `นำเข้าข้อมูลผู้สอบจำนวน ${result.totalCampaignLinks.toLocaleString()} คน`,
+        `รวมทั้งสิ้นในรอบสอบ ${result.totalUsersCreated.toLocaleString()} คน`,
+        // //  `สร้างผู้ใช้งานใหม่ ${result.totalUsersCreated} รายการ`,
+        //  `พบผู้ใช้งานเดิม ${result.totalUsersFound} รายการ`,
+        //  `ผูกแคมเปญ ${result.totalCampaignLinks} รายการ`,
       ];
 
       //  ปิด loading แล้วเปิด success

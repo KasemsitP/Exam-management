@@ -62,6 +62,8 @@ export const useKeyManagement = () => {
   const subjectQuestionsGrouped = useAppSelector(selectSubjectQuestionsGrouped)
   const sessionInfo = useAppSelector(selectSession)
 
+  const NumberOfSession = sessions.length;
+
   // --- Local state ---
   // const [keyInput, setKeyInput] = useState("");
   const [selectedSessionId, setSelectedSessionId] = useState<string>("20");
@@ -88,6 +90,8 @@ export const useKeyManagement = () => {
   const isEncryptionLoading = encryptionStatus === "loading";
   const canEncrypt =
     !!prerequisites?.hasTwoKeys && !!prerequisites?.hasImportedUsers;
+
+    console.log(sessions, "sessions from useKeyManagement")
 
 
 
@@ -373,7 +377,7 @@ export const useKeyManagement = () => {
       await Swal.fire({
         icon: "success",
         title: "เข้ารหัสสำเร็จ!",
-        text: `เข้ารหัสผู้สอบ ${result.payload.usersEncrypted} คน ใน Session นี้`,
+        text: `เข้ารหัสผู้สอบ ${result.payload.usersEncrypted / NumberOfSession} คน ใน Session นี้`,
         timer: 2000,
         showConfirmButton: false,
       });

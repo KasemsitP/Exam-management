@@ -24,73 +24,54 @@ export function CampaignFiltersCard({
   return (
     <div className="card shadow-sm mb-4">
       <div className="card-header bg-white">
-        <div className="d-flex flex-column flex-lg-row gap-3 align-items-start align-items-lg-center justify-content-lg-between">
+        <div className="d-flex flex-column flex-lg-row gap-2 align-items-start align-items-lg-center justify-content-lg-between">
           <div>
-            <h5 className="card-title mb-1 fs-6">สร้างรอบสอบและวันที่สอบ</h5>
-            <p className="card-text text-muted mb-0 small">Campaign และ Session การสอบ</p>
+            <h5 className="card-title mb-1 fs-6">จัดการรอบสอบ</h5>
+            <p className="card-text text-muted mb-0 small">สร้างรอบสอบและวันที่สอบ</p>
           </div>
-          <ShowIfCan permission="manage_subjects">
-            <button
-              className="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
-              onClick={onCreateCampaign}
-            >
-              <Plus size={14} />
-              สร้างแคมเปญใหม่
-            </button>
-          </ShowIfCan>
         </div>
       </div>
 
-      <div className="card-body">
-        <div className="row g-3">
-          <div className="col-lg-6">
+      <div className="card-body p-3">
+        <div className="row g-2 g-md-3">
+          <div className="col-12 col-md-6">
             <label
               htmlFor="search"
-              className="form-label text-uppercase small text-muted mb-1"
+              className="form-label text-uppercase small text-muted mb-2"
             >
               ค้นหา
             </label>
-            <div className="position-relative">
-              <Search
-                className="position-absolute"
-                size={16}
-                style={{
-                  left: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "var(--bs-secondary-color)",
-                }}
-              />
-              <input
-                id="search"
-                className="form-control form-control-sm ps-5"
-                value={textFilter}
-                onChange={(e) => onTextFilterChange(e.target.value)}
-                placeholder="ค้นหาแคมเปญ / เซสชัน / รายวิชา"
-              />
-            </div>
+<div className="d-flex flex-column flex-lg-row gap-2">
+  <div className="position-relative flex-grow-1">
+    <Search
+      className="position-absolute"
+      size={16}
+      style={{
+        left: 12,
+        top: "50%",
+        transform: "translateY(-50%)",
+        color: "var(--bs-secondary-color)",
+      }}
+    />
+
+    <input
+      id="search"
+      className="form-control form-control-sm ps-5"
+      value={textFilter}
+      onChange={(e) => onTextFilterChange(e.target.value)}
+      placeholder="ค้นหารอบสอบ"
+    />
+  </div>
+
+  <button
+    className="btn btn-outline-secondary btn-sm"
+    onClick={onResetFilters}
+  >
+    ล้างตัวกรอง
+  </button>
+</div>
           </div>
 
-          <div className="col-lg-3">
-            <label
-              htmlFor="date"
-              className="form-label text-uppercase small text-muted mb-1"
-            >
-              วันที่สอบ
-            </label>
-            <input
-              id="date"
-              type="date"
-              className="form-control form-control-sm"
-              value={dateFilter}
-              onChange={(e) => onDateFilterChange(e.target.value)}
-            />
-          </div>
-          <div className="col-lg-3 d-flex align-items-end justify-content-start justify-content-lg-end">
-            <button className="btn btn-outline-secondary btn-sm w-100 w-sm-auto text-nowrap" onClick={onResetFilters}>
-              ล้างตัวกรอง
-            </button>
-          </div>
         </div>
       </div>
     </div>

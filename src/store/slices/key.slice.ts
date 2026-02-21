@@ -148,10 +148,10 @@ export const checkEncryptionPrerequisites = createAsyncThunk<
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         return rejectWithValue(
-          error.response?.data?.message ?? "Failed to check status"
+           error.response?.data?.message || "เกิดข้อผิดพลาด"
         );
       }
-      return rejectWithValue("Failed to check status");
+      return rejectWithValue("เกิดข้อผิดพลาด");
     }
   }
 );
@@ -173,10 +173,10 @@ export const runBulkEncryptionForSession = createAsyncThunk<
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         return rejectWithValue(
-          error.response?.data?.message ?? "Bulk Encryption failed"
+          error.response?.data?.message || "เกิดข้อผิดพลาด"
         );
       }
-      return rejectWithValue("Bulk Encryption failed");
+      return rejectWithValue("เกิดข้อผิดพลาด");
     }
   }
 );

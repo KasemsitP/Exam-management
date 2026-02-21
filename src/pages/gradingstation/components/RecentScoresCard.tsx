@@ -1,5 +1,4 @@
 // components/RecentScoresCard.tsx
-import { Timer } from "lucide-react";
 import type { RecordedScore } from "../hooks/useGradingStation";
 
 interface RecentScoresCardProps {
@@ -21,22 +20,46 @@ export default function RecentScoresCard({ recent }: RecentScoresCardProps) {
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="table align-middle">
-              <thead className="table-light">
+            <table className="table table-sm table-striped table-hover align-middle mb-0 text-nowrap">
+              <thead className="table-light sticky-top">
                 <tr>
-                  <th>เวลา</th>
-                  <th>รหัสผู้เข้าสอบ</th>
-                  <th className="text-end">คะแนน</th>
+                  <th style={{ width: 60 }} className="text-center">ลำดับ</th>
+                  <th className="text-center">เลขรหัส</th>
+                  <th className="text-center">คะแนน</th>
+                  <th className="text-center">Payload</th>
+                  <th className="text-center" style={{ width: 150 }}>เวลา</th>
                 </tr>
               </thead>
               <tbody>
-                {recent.map((r, idx) => (
-                  <tr key={`${r.slotId}-${idx}`}>
-                    <td>{r.enteredAt}</td>
-                    <td>{r.qr_payload}</td>
-                    <td className="text-end fw-semibold">{r.score}</td>
+                {recent.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="text-center text-muted py-4">
+                      ยังไม่มีรายการบันทึกคะแนน
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  recent.map((r, index) => (
+                    <tr key={`${r.slotId}-${index}`}>
+                      <td className="text-center">{index + 1}</td>
+                      <td className="text-center">{r.random_num}</td>
+                      <td className="text-center fw-semibold">{r.score}</td>
+                      <td className="text-truncate" style={{ maxWidth: 250 }}>
+                        <span className="font-monospace">{r.qr_payload}</span>
+                      </td>
+                      <td className="text-center">
+                        {new Date(r.enteredAt).toLocaleString("th-TH", {
+                          timeZone: "Asia/Bangkok",
+                          day: "numeric",
+                          month: "short",
+                          year: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

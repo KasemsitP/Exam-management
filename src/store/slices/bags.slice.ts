@@ -60,6 +60,7 @@ interface BagsState {
 }
 interface BagPayloadRecord {
     id: number;
+    random_num: number;
     sessionId: number;
     bagNo: number;
     seqInBag: number | null;
@@ -406,9 +407,10 @@ const bagsSlice = createSlice({
 
                 // ทำ key เพื่อสำหรับกัข้อมูลชนกัน
                 const key = `${campaignId}:${sessionId}:${bagNo}`;
-
+                console.log("Key for inBags:", action.payload);
                 state.inBags[key] = action.payload.map((row) => ({
                     id: row.id,
+                    random_num: Number(row.random_num),
                     sessionId: row.sessionId,
                     bagNo: row.bagNo,
                     seqInBag: row.seqInBag,
@@ -488,7 +490,7 @@ export const selectBagStatsForCampaign =
         };
 
 export const selectBookletsInBag =
-    (campaignId: number, sessionId: number, bagNo: number) =>
+    (campaignId: number, sessionId: number, bagNo: number ) =>
         (state: RootState) => {
             const key = `${campaignId}:${sessionId}:${bagNo}`;
             return state.bags.inBags[key] ?? [];

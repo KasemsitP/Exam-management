@@ -6,6 +6,7 @@ import { CampaignList } from "./components/CampaignList";
 import {
   CampaignModal,
   SessionModal,
+  SessionFormModal,
   SubjectModal,
 } from "./components/CampaignModals";
 
@@ -24,13 +25,13 @@ export default function CampaignsPage() {
     campaignDialog,
     sessionDialog,
     subjectDialog,
+    sessionsModal,
     actions,
-
   } = useCampaignsPage();
 
   return (
     <ShowIfCan permission="manage_subjects">
-     <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
+      <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
         <CampaignFiltersCard
           textFilter={textFilter}
           onTextFilterChange={setTextFilter}
@@ -40,65 +41,16 @@ export default function CampaignsPage() {
           onResetFilters={resetFilters}
           onCreateCampaign={() => actions.openCampaignDialog()}
         />
-
         <CampaignList
-          // visibleCampaigns={visibleCampaigns}
           visibleCampaigns={pagedCampaigns}
           onEditCampaign={actions.openCampaignDialog}
           onDeleteCampaign={actions.confirmAndRemoveCampaign}
           onActiveCampaign={actions.handleToggleActive}
-          onCreateSession={(campaignId) =>
-            actions.openSessionDialog(campaignId)
-          }
-          onEditSession={(campaignId, session) =>
-            actions.openSessionDialog(campaignId, session)
-          }
-          onDeleteSession={actions.confirmAndRemoveSession}
-          onCreateSubject={(campaignId, sessionId) =>
-            actions.openSubjectDialog(campaignId, sessionId)
-          }
-          onEditSubject={(campaignId, sessionId, subject) =>
-            actions.openSubjectDialog(campaignId, sessionId, subject)
-          }
-          onDeleteSubject={actions.confirmAndRemoveSubject}
+          onOpenSessions={actions.openSessionsModal}
+          onCreateCampaign={() => actions.openCampaignDialog()}
         />
-        <div className="position-fixed bottom-0 start-0 w-100 bg-white border-top p-2 p-sm-3 z-3">
-          <div className="d-flex flex-column flex-sm-row gap-2 align-items-center justify-content-between">
-            <div className="text-muted small text-center text-sm-start">
-              ทั้งหมด {pagination.totalCampaigns} แคมเปญ • หน้า {pagination.page} / {pagination.totalPages}
-            </div>
 
-            <div className="d-flex gap-2 align-items-center justify-content-center">
-              <div className="btn-group btn-group-sm">
-                <button
-                  className="btn btn-outline-secondary text-nowrap"
-                  disabled={pagination.page <= 1}
-                  onClick={() => pagination.setPage((p) => Math.max(1, p - 1))}
-                >
-                  ก่อนหน้า
-                </button>
-
-                <button className="btn btn-outline-secondary text-nowrap" disabled>
-                  {pagination.page}/{pagination.totalPages}
-                </button>
-
-                <button
-                  className="btn btn-outline-secondary text-nowrap"
-                  disabled={pagination.page >= pagination.totalPages}
-                  onClick={() =>
-                    pagination.setPage((p) =>
-                      Math.min(pagination.totalPages, p + 1)
-                    )
-                  }
-                >
-                  ถัดไป
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-
+        {/* ---- Campaign create/edit modal ---- */}
         <CampaignModal
           open={campaignDialog.open}
           editingCampaignName={campaignDialog.editingCampaign?.name ?? null}
@@ -107,7 +59,23 @@ export default function CampaignsPage() {
           onSubmit={campaignDialog.onSubmit}
         />
 
+        {/* ---- Sessions overview modal (ตารางวันสอบ + วิชาซ้อน) ---- */}
         <SessionModal
+          open={sessionsModal.open}
+          campaign={sessionsModal.campaign}
+          onOpenChange={sessionsModal.onOpenChange}
+          sessionForm={sessionDialog.form}
+          sessionContext={sessionDialog.context}
+          onSessionFormOpenChange={sessionDialog.onOpenChange}
+          onSessionSubmit={sessionDialog.onSubmit}
+          onOpenSessionDialog={actions.openSessionDialog}
+          onDeleteSession={actions.confirmAndRemoveSession}
+          onOpenSubjectDialog={actions.openSubjectDialog}
+          onDeleteSubject={actions.confirmAndRemoveSubject}
+        />
+
+        {/* ---- Session create/edit form modal ---- */}
+        <SessionFormModal
           open={sessionDialog.open}
           context={sessionDialog.context}
           form={sessionDialog.form}
@@ -115,6 +83,7 @@ export default function CampaignsPage() {
           onSubmit={sessionDialog.onSubmit}
         />
 
+        {/* ---- Subject create/edit modal ---- */}
         <SubjectModal
           open={subjectDialog.open}
           context={subjectDialog.context}

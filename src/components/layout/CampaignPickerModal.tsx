@@ -57,7 +57,7 @@ export function CampaignPickerModal({
       >
         <div className="p-4 border-bottom bg-light bg-opacity-50 d-flex align-items-center justify-content-between">
           <div>
-            <h5 className="mb-1 fw-bold text-dark">เลือกรอบสอบ (Campaign)</h5>
+            <h5 className="mb-1 fw-bold text-dark">เลือกรอบสอบ</h5>
             <p className="mb-0 small text-muted">เลือกรายการรอบสอบที่ต้องการจัดการ</p>
           </div>
           <button

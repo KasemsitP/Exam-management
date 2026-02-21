@@ -1,6 +1,6 @@
 // src/pages/campaigns/hooks/useCampaignsPage.ts
 import { useEffect, useMemo, useState } from "react";
-import { useForm, UseFormReturn } from "react-hook-form";
+import { set, useForm, UseFormReturn } from "react-hook-form";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import {
@@ -111,7 +111,18 @@ export function useCampaignsPage() {
   const [editingCampaign, setEditingCampaign] = useState<ExamCampaign | null>(
     null
   );
+  const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
+  const [sessionsCampaign, setSessionsCampaign] = useState<ExamCampaign | null>(null);
 
+  const openSessionsModal = (campaign: ExamCampaign) => {
+    setSessionsCampaign(campaign);
+    setSessionsModalOpen(true);
+  };
+
+  const closeSessionsModal = () => {
+    setSessionsModalOpen(false);
+    setSessionsCampaign(null);
+  };
   const [sessionContext, setSessionContext] = useState<{
     campaignId: string;
     session: CampaignSession | null;
@@ -124,7 +135,7 @@ export function useCampaignsPage() {
   } | null>(null);
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(1); // ปรับได้: 5/10/20
+  const [pageSize, setPageSize] = useState(10);
 
 
 
@@ -251,51 +262,71 @@ export function useCampaignsPage() {
 
   /* ------------------------------ Filtering logic -------------------------- */
 
-  const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
-    const keyword = textFilter.trim().toLowerCase();
+  const sizeOrder: Record<string, number> = {
+  "สนามใหญ่": 1,
+  "สนามเล็ก": 2,
+  "สนามจิ๋ว": 3,
+};
 
-    return campaigns
-      .map<VisibleCampaign | null>((campaign) => {
-        const campaignMatches = keyword
-          ? campaign.name.toLowerCase().includes(keyword.toLowerCase())
+const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
+  const keyword = textFilter.trim().toLowerCase();
+
+  return [...campaigns] // สำคัญ: clone ก่อน sort
+    .sort((a, b) => {
+      // 🔹 1. sort ตาม campaign_size
+      const sizeCompare =
+        (sizeOrder[a.campaign_size] ?? 99) -
+        (sizeOrder[b.campaign_size] ?? 99);
+
+      if (sizeCompare !== 0) return sizeCompare;
+
+      // 🔹 2. sort ตาม year_be (มาก → น้อย)
+      return Number(b.year_be) - Number(a.year_be);
+    })
+    .map<VisibleCampaign | null>((campaign) => {
+      const campaignMatches = keyword
+        ? campaign.name.toLowerCase().includes(keyword)
+        : true;
+
+      const sessions = campaign.sessions.filter((session) => {
+        const dateMatch = dateFilter ? session.examDate === dateFilter : true;
+
+        const textTargets = [
+          session.label,
+          session.note ?? "",
+          ...session.subjects.flatMap((subject) => [
+            subject.code,
+            subject.name,
+          ]),
+        ].map((entry) => entry.toLowerCase());
+
+        const sessionMatches = keyword
+          ? textTargets.some((value) => value.includes(keyword))
           : true;
 
-        const sessions = campaign.sessions.filter((session) => {
-          const dateMatch = dateFilter ? session.examDate === dateFilter : true;
-          const textTargets = [
-            session.label,
-            session.note ?? "",
-            ...session.subjects.flatMap((subject) => [
-              subject.code,
-              subject.name,
-            ]),
-          ].map((entry) => entry.toLowerCase());
-          const sessionMatches = keyword
-            ? textTargets.some((value) => value.includes(keyword))
-            : true;
-          return dateMatch && sessionMatches;
-        });
+        return dateMatch && sessionMatches;
+      });
 
-        if (!keyword && !dateFilter) {
-          return {
-            campaign,
-            sessions: campaign.sessions,
-            matchesCampaignOnly: false,
-          };
-        }
+      if (!keyword && !dateFilter) {
+        return {
+          campaign,
+          sessions: campaign.sessions,
+          matchesCampaignOnly: false,
+        };
+      }
 
-        if (sessions.length > 0) {
-          return { campaign, sessions, matchesCampaignOnly: false };
-        }
+      if (sessions.length > 0) {
+        return { campaign, sessions, matchesCampaignOnly: false };
+      }
 
-        if (campaignMatches) {
-          return { campaign, sessions: [], matchesCampaignOnly: true };
-        }
+      if (campaignMatches) {
+        return { campaign, sessions: [], matchesCampaignOnly: true };
+      }
 
-        return null;
-      })
-      .filter((item): item is VisibleCampaign => item !== null);
-  }, [campaigns, textFilter, dateFilter]);
+      return null;
+    })
+    .filter((item): item is VisibleCampaign => item !== null);
+}, [campaigns, textFilter, dateFilter]);
 
   const sessionCount = useMemo(
     () => visibleCampaigns.reduce((total, item) => total + item.sessions.length, 0),
@@ -414,6 +445,7 @@ export function useCampaignsPage() {
       });
       setSessionDialogOpen(false);
     } catch (error) {
+      setSessionDialogOpen(false);
       Swal.fire({
         icon: "error",
         title: "ไม่สามารถสร้างเซสชันได้",
@@ -489,6 +521,7 @@ export function useCampaignsPage() {
       });
       setSubjectDialogOpen(false);
     } catch (error) {
+      setSubjectDialogOpen(false);
       Swal.fire({
         icon: "error",
         title: "สร้างรายวิชาไม่สำเร็จ",
@@ -606,65 +639,65 @@ export function useCampaignsPage() {
   };
 
 
-const handleToggleActive = async (campaign: ExamCampaign) => {
-  const willActivate = !campaign.isActive;
+  const handleToggleActive = async (campaign: ExamCampaign) => {
+    const willActivate = !campaign.isActive;
 
-  // ถ้าจะ "เปิด" และมีตัวอื่น active อยู่แล้ว → กันไว้ฝั่งหน้าเว็บก่อน
-  if (willActivate) {
-    const hasOtherActive = campaigns.some(
-      (c) => c.isActive && c.id !== campaign.id
-    );
-    if (hasOtherActive) {
+    // ถ้าจะ "เปิด" และมีตัวอื่น active อยู่แล้ว → กันไว้ฝั่งหน้าเว็บก่อน
+    if (willActivate) {
+      const hasOtherActive = campaigns.some(
+        (c) => c.isActive && c.id !== campaign.id
+      );
+      if (hasOtherActive) {
+        await Swal.fire({
+          icon: "error",
+          title: "ไม่สามารถเปิดใช้งานรอบสอบนี้",
+          text: "กรุณาปิดรอบสอบที่กำลัง Active อยู่ก่อน",
+          confirmButtonText: "ตกลง",
+        });
+        return;
+      }
+    }
+
+    const confirmResult = await Swal.fire({
+      icon: "warning",
+      title: willActivate ? "ยืนยันเปิดใช้งานรอบสอบ" : "ยืนยันปิดใช้งานรอบสอบ",
+      text: willActivate
+        ? `คุณต้องการเปิดใช้งานรอบสอบ "${campaign.name}" ใช่หรือไม่?`
+        : `คุณต้องการปิดใช้งานรอบสอบ "${campaign.name}" ใช่หรือไม่?`,
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: willActivate ? "#16A34A" : "#DC2626",
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    try {
+      //  ยิง axios ตรง ๆ ไม่ผ่าน thunk
+      await axios.post(`/api/exam/active/${campaign.id}`);
+
+      await Swal.fire({
+        icon: "success",
+        title: willActivate ? "เปิดใช้งานสำเร็จ" : "ปิดใช้งานสำเร็จ",
+        text: `รอบสอบ "${campaign.name}" ถูก${willActivate ? "เปิดใช้งาน" : "ปิดใช้งาน"}แล้ว`,
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      //  รีโหลดข้อมูลจาก backend อีกทีให้ state redux sync (ใช้ thunk ตัวเดิมได้)
+      dispatch(fetchInitialExamData());
+    } catch (err: any) {
+      console.error(err);
       await Swal.fire({
         icon: "error",
-        title: "ไม่สามารถเปิดใช้งานรอบสอบนี้",
-        text: "กรุณาปิดรอบสอบที่กำลัง Active อยู่ก่อน",
+        title: "ไม่สามารถเปลี่ยนสถานะรอบสอบได้",
+        text:
+          err?.response?.data?.message ??
+          "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
         confirmButtonText: "ตกลง",
       });
-      return;
     }
-  }
-
-  const confirmResult = await Swal.fire({
-    icon: "warning",
-    title: willActivate ? "ยืนยันเปิดใช้งานรอบสอบ" : "ยืนยันปิดใช้งานรอบสอบ",
-    text: willActivate
-      ? `คุณต้องการเปิดใช้งานรอบสอบ "${campaign.name}" ใช่หรือไม่?`
-      : `คุณต้องการปิดใช้งานรอบสอบ "${campaign.name}" ใช่หรือไม่?`,
-    showCancelButton: true,
-    confirmButtonText: "ยืนยัน",
-    cancelButtonText: "ยกเลิก",
-    confirmButtonColor: willActivate ? "#16A34A" : "#DC2626",
-  });
-
-  if (!confirmResult.isConfirmed) return;
-
-  try {
-    //  ยิง axios ตรง ๆ ไม่ผ่าน thunk
-    await axios.post(`/api/exam/active/${campaign.id}`);
-
-    await Swal.fire({
-      icon: "success",
-      title: willActivate ? "เปิดใช้งานสำเร็จ" : "ปิดใช้งานสำเร็จ",
-      text: `รอบสอบ "${campaign.name}" ถูก${willActivate ? "เปิดใช้งาน" : "ปิดใช้งาน"}แล้ว`,
-      timer: 1500,
-      showConfirmButton: false,
-    });
-
-    //  รีโหลดข้อมูลจาก backend อีกทีให้ state redux sync (ใช้ thunk ตัวเดิมได้)
-    dispatch(fetchInitialExamData());
-  } catch (err: any) {
-    console.error(err);
-    await Swal.fire({
-      icon: "error",
-      title: "ไม่สามารถเปลี่ยนสถานะรอบสอบได้",
-      text:
-        err?.response?.data?.message ??
-        "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
-      confirmButtonText: "ตกลง",
-    });
-  }
-};
+  };
 
   /* ------------------------------- Dialog close handlers ------------------- */
 
@@ -714,6 +747,8 @@ const handleToggleActive = async (campaign: ExamCampaign) => {
     setDateFilter,
     resetFilters,
 
+
+
     // dialogs + forms
     campaignDialog: {
       open: campaignDialogOpen,
@@ -744,8 +779,11 @@ const handleToggleActive = async (campaign: ExamCampaign) => {
       totalPages,
       totalCampaigns,
     },
-
-    // actions for UI
+    sessionsModal: {
+      open: sessionsModalOpen,
+      campaign: sessionsCampaign,
+      onOpenChange: (open: boolean) => (open ? null : closeSessionsModal()),
+    },
     actions: {
       openCampaignDialog,
       openSessionDialog,
@@ -754,6 +792,9 @@ const handleToggleActive = async (campaign: ExamCampaign) => {
       confirmAndRemoveSession,
       confirmAndRemoveSubject,
       handleToggleActive,
+      openSessionsModal,
     },
-  };
+  }
+
+
 }

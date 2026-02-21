@@ -1259,7 +1259,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div className="card-body p-0">
-                    <div className="list-group list-group-flush">
+                    <div className="list-group  list-group-flush">
                       {dashboardData?.seatAssignmentStatus && dashboardData.seatAssignmentStatus.length > 0 ? (
                         dashboardData.seatAssignmentStatus.map((item, idx) => {
                           const occupancyPercent = item.capacity > 0
@@ -1270,12 +1270,12 @@ export default function Dashboard() {
                           return (
                             <div
                               key={idx}
-                              className="list-group-item d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
+                              className="list-group-item list-group-item border-bottom  d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
                             >
                               <div className="flex-grow-1">
                                 <div className="fw-medium text-dark small">{item.room_code}</div>
                                 <div className="small text-nowrap" style={{ color: muted, fontSize: "0.75rem" }}>
-                                  ผู้เข้าสอบ: {item.count_user} / {item.capacity} คน
+                                  จัดสรรที่นั่งผู้เข้าสอบแล้ว: {item.count_user} / {item.capacity} คน
                                 </div>
                               </div>
                               <span
@@ -1300,7 +1300,7 @@ export default function Dashboard() {
               <div className="col-lg-6">
                 <div className="card shadow-sm h-100" style={{ background: surface }}>
                   <div className="card-header bg-white py-3 py-sm-4">
-                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                    <div className="d-flex flex-column  flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
                       <h6 className="mb-0 fw-bold">สถานะการนำเส่งเล่มข้อสอบ (ลงถุง)</h6>
                       <span
                         className="badge rounded-pill fw-semibold text-nowrap"
@@ -1317,7 +1317,7 @@ export default function Dashboard() {
                           return (
                             <div
                               key={item.session_id}
-                              className="list-group-item d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
+                              className="list-group-item d-flex flex-column list-group-item border-bottom d-flex  flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
                             >
                               <div className="flex-grow-1">
                                 <div className="fw-medium text-dark small">{item.session_code} {item.subject_name}</div>

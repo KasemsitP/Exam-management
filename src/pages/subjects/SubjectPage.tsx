@@ -1,18 +1,17 @@
-// src/pages/SubjectPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Header } from "./components/Header";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import {
   selectAllSubjects,
   selectSubjectsLoading,
   selectSubjectsError,
-  updateQuestionLabel,
   fetchSubjectsThunk,
   createSubjectThunk,
   deleteSubjectThunk,
   addQuestionToSubjectThunk,
   deleteQuestionFromSubjectThunk,
 } from "@/store/slices/subjects.slice";
+
 import { showSuccess } from "../../components/ui/successAlert";
 import Swal from "sweetalert2";
 import AddQuestionModal from "./components/AddQuestionModal";
@@ -24,22 +23,44 @@ const SubjectPage: React.FC = () => {
   const loading = useAppSelector(selectSubjectsLoading);
   const error = useAppSelector(selectSubjectsError);
 
+  /* ---------------- create subject modal ---------------- */
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  // state สำหรับ modal เพิ่มข้อ
+  /* ---------------- view subject modal ---------------- */
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewSubjectId, setViewSubjectId] = useState<number | null>(null);
+
+  const openViewSubjectModal = (subjectId: number) => {
+    setViewSubjectId(subjectId);
+    setViewModalOpen(true);
+  };
+
+  const closeViewSubjectModal = () => {
+    setViewModalOpen(false);
+    setViewSubjectId(null);
+  };
+
+  const viewSubject = useMemo(
+    () => subjects.find((s) => s.id === viewSubjectId) ?? null,
+    [subjects, viewSubjectId]
+  );
+
+  /* ---------------- add question modal ---------------- */
   const [questionModalOpen, setQuestionModalOpen] = useState(false);
   const [questionModalSubjectId, setQuestionModalSubjectId] = useState<number | null>(null);
-  const [questionModalSubjectCode, setQuestionModalSubjectCode] = useState<string>("");
-  const [questionModalSubjectName, setQuestionModalSubjectName] = useState<string>("");
-  const [questionModalMaxNo, setQuestionModalMaxNo] = useState<number>(0);
+  const [questionModalSubjectCode, setQuestionModalSubjectCode] = useState("");
+  const [questionModalSubjectName, setQuestionModalSubjectName] = useState("");
+  const [questionModalMaxNo, setQuestionModalMaxNo] = useState(0);
 
   useEffect(() => {
     dispatch(fetchSubjectsThunk());
   }, [dispatch]);
 
-  /* --------------------- สร้างวิชาใหม่ --------------------- */
+  const SortedSubject = subjects.slice().sort((a, b) => b.id - a.id);
+
+  /* ---------------- CREATE SUBJECT ---------------- */
   const handleCreateSubject = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCode.trim() || !newName.trim()) return;
@@ -47,7 +68,7 @@ const SubjectPage: React.FC = () => {
     Swal.fire({
       title: "ยืนยันการสร้างวิชาใหม่?",
       html: `
-        <div class="text-start">
+        <div style="text-align:left">
           <div><b>รหัสวิชา:</b> ${newCode.trim()}</div>
           <div><b>ชื่อวิชา:</b> ${newName.trim()}</div>
         </div>
@@ -56,8 +77,8 @@ const SubjectPage: React.FC = () => {
       showCancelButton: true,
       confirmButtonText: "ยืนยัน",
       cancelButtonText: "ยกเลิก",
-    }).then((result) => {
-      if (!result.isConfirmed) return;
+    }).then((r) => {
+      if (!r.isConfirmed) return;
 
       dispatch(
         createSubjectThunk({
@@ -67,18 +88,52 @@ const SubjectPage: React.FC = () => {
       )
         .unwrap()
         .then(() => {
-          showSuccess("สร้างวิชาสำเร็จ", "ได้เพิ่มวิชาใหม่เข้าระบบแล้ว");
+          showSuccess("สำเร็จ", "สร้างวิชาเรียบร้อย");
           setNewCode("");
           setNewName("");
           setShowCreateForm(false);
+          dispatch(fetchSubjectsThunk());
         })
         .catch(() => {
-          Swal.fire("สร้างวิชาไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
+          Swal.fire("ผิดพลาด", "สร้างวิชาไม่สำเร็จ", "error");
         });
     });
   };
 
-  /* --------------------- เปิด / ปิด modal เพิ่มข้อ --------------------- */
+  /* ---------------- DELETE SUBJECT ---------------- */
+  const handleDeleteSubject = (subjectId: number) => {
+    const subj = subjects.find((s) => s.id === subjectId);
+
+    Swal.fire({
+      title: "ลบวิชานี้?",
+      html: subj
+        ? `<div style="text-align:left">
+            <div><b>รหัส:</b> ${subj.code}</div>
+            <div><b>วิชา:</b> ${subj.name}</div>
+          </div>`
+        : "คุณกำลังลบวิชา",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#d33",
+    }).then((r) => {
+      if (!r.isConfirmed) return;
+
+      dispatch(deleteSubjectThunk({ id: subjectId }))
+        .unwrap()
+        .then(() => {
+          showSuccess("ลบสำเร็จ", "ลบวิชาเรียบร้อย");
+          dispatch(fetchSubjectsThunk());
+          if (viewSubjectId === subjectId) closeViewSubjectModal();
+        })
+        .catch(() => {
+          Swal.fire("ผิดพลาด", "ลบวิชาไม่สำเร็จ", "error");
+        });
+    });
+  };
+
+  /* ---------------- ADD QUESTION ---------------- */
   const openAddQuestionModal = (subjectId: number) => {
     const subj = subjects.find((s) => s.id === subjectId);
     if (!subj) return;
@@ -86,7 +141,7 @@ const SubjectPage: React.FC = () => {
     setQuestionModalSubjectId(subj.id);
     setQuestionModalSubjectCode(subj.code);
     setQuestionModalSubjectName(subj.name);
-    setQuestionModalMaxNo(subj.questions.length); // จำนวนข้อเดิม
+    setQuestionModalMaxNo(subj.questions.length);
     setQuestionModalOpen(true);
   };
 
@@ -95,225 +150,163 @@ const SubjectPage: React.FC = () => {
     setQuestionModalSubjectId(null);
   };
 
-  // เวลา user กดยืนยันใน modal
-  // const handleConfirmAddQuestion = (payload: { label: string; questionNo: number }) => {
-  //   if (!questionModalSubjectId) return;
-
-  //   const { label, questionNo } = payload;
-
-  //   dispatch(
-  //     addQuestionToSubjectThunk({
-  //       subjectId: questionModalSubjectId,
-  //       label,
-  //       questionNo,
-  //     }) as any
-  //   )
-  //     .unwrap()
-  //     .then(() => {
-  //       showSuccess("เพิ่มข้อสำเร็จ", `ได้เพิ่มข้อที่ ${questionNo} : "${label}" แล้ว`);
-  //       setQuestionModalOpen(false);
-  //       setQuestionModalSubjectId(null);
-  //     })
-  //     .catch(() => {
-  //       Swal.fire("เพิ่มข้อไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
-  //     });
-  // };
   const handleConfirmAddQuestion = (payload: { label: string; questionNo: number; maxScore: number }) => {
     if (!questionModalSubjectId) return;
-
-    const { label, questionNo, maxScore } = payload;
 
     dispatch(
       addQuestionToSubjectThunk({
         subjectId: questionModalSubjectId,
-        label,
-        questionNo,
-        maxScore,              // ✅ เพิ่มไปที่ thunk
+        ...payload,
       }) as any
     )
       .unwrap()
       .then(() => {
-        showSuccess("เพิ่มข้อสำเร็จ", `ได้เพิ่มข้อที่ ${questionNo} : "${label}" (เต็ม ${maxScore} คะแนน) แล้ว`);
+        showSuccess("เพิ่มสำเร็จ", "สร้างหัวข้อแล้ว");
         setQuestionModalOpen(false);
-        setQuestionModalSubjectId(null);
         dispatch(fetchSubjectsThunk());
       })
       .catch(() => {
-        Swal.fire("เพิ่มข้อไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
+        Swal.fire("ผิดพลาด", "เพิ่มหัวข้อไม่สำเร็จ", "error");
       });
   };
 
-
-
-  /* --------------------- เปลี่ยน label ของข้อ (แก้ในตาราง) --------------------- */
-  const handleChangeQuestionLabel = (
-    subjectId: number,
-    questionId: string,
-    label: string
-  ) => {
-    dispatch(
-      updateQuestionLabel({
-        subjectId,
-        questionId,
-        label,
-      })
-    );
-  };
-
-  /* --------------------- ลบข้อ --------------------- */
+  /* ---------------- DELETE QUESTION ---------------- */
   const handleRemoveQuestion = (subjectId: number, questionId: string) => {
-    const subject = subjects.find((s) => s.id === subjectId);
-    const question = subject?.questions.find((q) => q.id === questionId);
+    const subj = subjects.find((s) => s.id === subjectId);
+    const q = subj?.questions.find((x) => x.id === questionId);
 
     Swal.fire({
-      title: "ยืนยันการลบข้อสอบ?",
-      html: question
-        ? `<div class="text-start">
-           <div><b>วิชา:</b> ${subject?.code} - ${subject?.name}</div>
-           <div><b>ข้อที่:</b> ${question.questionNo}</div>
-           <div><b>หัวข้อ:</b> ${question.label || "-"}</div>
-         </div>`
-        : "คุณกำลังลบข้อสอบออกจากวิชานี้",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "ยืนยัน",
-      cancelButtonText: "ยกเลิก",
-    }).then((result) => {
-      if (!result.isConfirmed) return;
-
-      dispatch(
-        deleteQuestionFromSubjectThunk({
-          subjectId,
-          questionId,
-        })
-      )
-        .unwrap()
-        .then(() => {
-          showSuccess("ลบข้อสอบสำเร็จ", "ได้ลบข้อจากวิชานี้เรียบร้อยแล้ว");
-          dispatch(fetchSubjectsThunk()); // ถ้าต้องการ sync question_no ใหม่จาก DB
-        })
-        .catch(() => {
-          Swal.fire("ลบข้อสอบไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
-        });
-    });
-  };
-
-  /* --------------------- ลบวิชา --------------------- */
-  const handleDeleteSubject = (subjectId: number) => {
-    const subject = subjects.find((s) => s.id === subjectId);
-
-    Swal.fire({
-      title: "คุณต้องการลบวิชานี้หรือไม่?",
-      html: subject
-        ? `<div class="text-start">
-            <div><b>รหัสวิชา:</b> ${subject.code}</div>
-            <div><b>ชื่อวิชา:</b> ${subject.name}</div>
+      title: "ลบหัวข้อนี้?",
+      html: q
+        ? `<div style="text-align:left">
+            <div><b>วิชา:</b> ${subj?.code} - ${subj?.name}</div>
+            <div><b>ข้อ:</b> ${q.questionNo}</div>
+            <div><b>หัวข้อ:</b> ${q.label || "-"}</div>
           </div>`
-        : "คุณกำลังลบข้อมูลสำคัญ",
+        : "คุณกำลังลบหัวข้อ",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "ยืนยัน",
       cancelButtonText: "ยกเลิก",
-    }).then((result) => {
-      if (!result.isConfirmed) return;
+      confirmButtonColor: "#d33",
+    }).then((r) => {
+      if (!r.isConfirmed) return;
 
-      dispatch(deleteSubjectThunk({ id: subjectId }))
+      dispatch(deleteQuestionFromSubjectThunk({ subjectId, questionId }))
         .unwrap()
         .then(() => {
-          showSuccess("ลบวิชาสำเร็จ", "คุณได้ลบวิชาออกจากระบบแล้ว");
+          showSuccess("ลบสำเร็จ", "ลบหัวข้อเรียบร้อย");
           dispatch(fetchSubjectsThunk());
         })
         .catch(() => {
-          Swal.fire("ลบวิชาไม่สำเร็จ", "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์", "error");
+          Swal.fire("ผิดพลาด", "ลบหัวข้อไม่สำเร็จ", "error");
         });
     });
   };
 
   return (
-    <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
+    <div className="container-fluid px-4 py-3 d-flex flex-column gap-3">
+      {/* HEADER */}
       <Header
         showCreateForm={showCreateForm}
         setShowCreateForm={setShowCreateForm}
         setNewCode={setNewCode}
         setNewName={setNewName}
         loading={loading}
-
-
       />
-      {/* <div className="card shadow-sm mx-0 mb-4">
-        <div className="card-header bg-white">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-            <div className="mb-2 mb-md-0">
-              <h4 className="mb-1">จัดการวิชาและข้อสอบ</h4>
-              <small className="text-muted">
-                เพิ่มวิชา แล้วกำหนดหัวข้อของแต่ละข้อในวิชานั้น
-              </small>
-            </div>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                setShowCreateForm((s) => !s);
-                if (!showCreateForm) {
-                  setNewCode("");
-                  setNewName("");
-                }
-              }}
-              disabled={loading}
-            >
-              + เพิ่มวิชา
-            </button>
 
+      {error && <div className="alert alert-danger mb-0">เกิดข้อผิดพลาด: {error}</div>}
+
+      {/* ===================== TABLE SUBJECTS ===================== */}
+      <div className="card shadow-sm">
+        <div className="card-header bg-white d-flex justify-content-between align-items-center">
+          <div>
+            <h5 className="mb-1">รายวิชา</h5>
+            <small className="text-muted">เลือกวิชาเพื่อดูหัวข้อ</small>
           </div>
+
+          <button className="btn btn-primary btn-lg" onClick={() => setShowCreateForm(true)} disabled={loading}>
+            + เพิ่มวิชา
+          </button>
         </div>
-        {loading && (
-          <div className="card-body py-2">
-            <span className="text-muted small">กำลังโหลด/บันทึกข้อมูล...</span>
-          </div>
-        )}
-        {error && (
-          <div className="card-body py-2">
-            <div className="alert alert-danger mb-0">
-              เกิดข้อผิดพลาด: {error}
-            </div>
-          </div>
-        )}
-      </div> */}
 
-      {/* ฟอร์มสร้างวิชาใหม่ */}
+        <div className="card-body p-3">
+                  <div className="table-responsive">
+          {loading ? (
+            <div className="d-flex justify-content-center align-items-center py-5">
+              <div className="text-muted small">กำลังโหลด...</div>
+            </div>
+          ) : (
+            <table className="table table-sm table-hover align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th className="text-nowrap" style={{ width: 120 }}>รหัส</th>
+                  <th>วิชา</th>
+                  <th className="text-center text-nowrap" style={{ width: 110 }}>จำนวนข้อ</th>
+                  <th className="text-center text-nowrap" style={{ width: 110 }}>คะแนนเต็ม</th>
+                  <th className="text-center text-nowrap" style={{ width: 220 }}>จัดการ</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {SortedSubject.map((sub) => (
+                  <tr key={sub.id}>
+                    <td className="fw-semibold text-nowrap">{sub.code}</td>
+
+                    <td style={{ minWidth: 150 }}>
+                      <div className="fw-semibold">{sub.name}</div>
+                      <small className="text-muted">วิชา {sub.code}</small>
+                    </td>
+
+                    <td className="text-center text-nowrap">{sub.questions.length}</td>
+                    <td className="text-center text-nowrap">{sub.full_score}</td>
+
+                    <td className="text-center text-nowrap">
+                      <div className="d-flex justify-content-center gap-2">
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => openViewSubjectModal(sub.id)}
+                          disabled={loading}
+                        >
+                          ดูหัวข้อ
+                        </button>
+
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleDeleteSubject(sub.id)}
+                          disabled={loading}
+                        >
+                          ลบ
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+
+                {subjects.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={5} className="text-center text-muted py-4">
+                      ยังไม่มีวิชาในระบบ
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+        </div>
+      </div>
+
+      {/* ===================== CREATE SUBJECT MODAL ===================== */}
       {showCreateForm && (
         <>
-          {/* Backdrop */}
-          <div
-            className="modal-backdrop show"
-            style={{ zIndex: 1050 }}
-            onClick={() => {
-              if (!loading) setShowCreateForm(false);
-            }}
-          />
-
-          {/* Modal */}
-          <div
-            className="modal show"
-            style={{ display: "block", zIndex: 1055 }}
-            role="dialog"
-            aria-modal="true"
-            onMouseDown={(e) => {
-              // คลิกนอกกล่องเพื่อปิด (optional)
-              if (e.target === e.currentTarget && !loading) setShowCreateForm(false);
-            }}
-          >
-            <div className="modal-dialog modal-lg modal-dialog-centered" role="document">
+          <div className="modal-backdrop show" style={{ zIndex: 1040 }} />
+          <div className="modal d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
+            <div className="modal-dialog modal-lg modal-dialog-centered">
               <div className="modal-content">
                 <div className="modal-header">
                   <h6 className="modal-title">สร้างวิชาใหม่</h6>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    aria-label="Close"
-                    disabled={loading}
-                    onClick={() => setShowCreateForm(false)}
-                  />
+                  <button className="btn-close" onClick={() => setShowCreateForm(false)} disabled={loading} />
                 </div>
 
                 <form onSubmit={handleCreateSubject}>
@@ -322,7 +315,6 @@ const SubjectPage: React.FC = () => {
                       <div className="col-12 col-md-4">
                         <label className="form-label mb-1">รหัสวิชา</label>
                         <input
-                          type="text"
                           className="form-control"
                           value={newCode}
                           onChange={(e) => setNewCode(e.target.value)}
@@ -335,7 +327,6 @@ const SubjectPage: React.FC = () => {
                       <div className="col-12 col-md-8">
                         <label className="form-label mb-1">ชื่อวิชา</label>
                         <input
-                          type="text"
                           className="form-control"
                           value={newName}
                           onChange={(e) => setNewName(e.target.value)}
@@ -346,145 +337,102 @@ const SubjectPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="modal-footer flex-column flex-sm-row gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
-                      onClick={() => setShowCreateForm(false)}
-                      disabled={loading}
-                    >
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-outline-secondary" onClick={() => setShowCreateForm(false)}>
                       ยกเลิก
                     </button>
-
                     <button
                       type="submit"
-                      className="btn btn-success w-100 w-sm-auto order-1 order-sm-2"
+                      className="btn btn-success"
                       disabled={loading || !newCode.trim() || !newName.trim()}
                     >
                       บันทึกวิชา
                     </button>
                   </div>
                 </form>
+
               </div>
             </div>
           </div>
         </>
       )}
 
-
-      {subjects.length === 0 && !showCreateForm && !loading && (
-        <div className="alert alert-info">
-          ยังไม่มีวิชาในระบบ กดปุ่ม <strong>“เพิ่มวิชา”</strong> ด้านขวาบนเพื่อเริ่มต้น
-        </div>
-      )}
-
-      {/* การ์ดวิชาแต่ละตัว */}
-      {subjects.map((sub) => (
-        <div className="card mb-4" key={sub.id}>
-          <div className="card-header">
-            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-3">
-              <div className="flex-grow-1">
-                <div className="d-flex align-items-center gap-2">
-                  <strong className="fs-6">วิชา {sub.name}</strong>
+      {/* ===================== VIEW SUBJECT MODAL ===================== */}
+      {viewModalOpen && viewSubject && (
+        <>
+          <div className="modal-backdrop show" style={{ zIndex: 1040 }} />
+          <div className="modal d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
+            <div className="modal-dialog modal-lg modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <div>
+                    <h6 className="mb-0">รายการหัวข้อวิชา</h6>
+                    <small className="text-muted">
+                      {viewSubject.code} — {viewSubject.name}
+                    </small>
+                  </div>
+                  <button className="btn-close" onClick={closeViewSubjectModal} disabled={loading} />
                 </div>
-                <div className="text-muted small">
-                  รหัสวิชา: <strong>{sub.code}</strong>
-                </div>
-                <div className="text-muted small">
-                  จำนวน {sub.questions.length} ข้อ | คะแนนเต็ม {sub.full_score} คะแนน
-                </div>
-              </div>
 
-              <div className="d-flex gap-2 flex-nowrap align-self-sm-start">
-                <button
-                  type="button"
-                  className="btn btn-outline-danger btn-sm text-nowrap"
-                  onClick={() => handleDeleteSubject(sub.id)}
-                  disabled={loading}
-                >
-                  ลบ
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-primary btn-sm text-nowrap"
-                  onClick={() => openAddQuestionModal(sub.id)}
-                  disabled={loading}
-                >
-                  + เพิ่มข้อ
-                </button>
+                <div className="modal-body">
+                  {viewSubject.questions.length === 0 ? (
+                    <div className="alert alert-info mb-0">ยังไม่มีหัวข้อ</div>
+                  ) : (
+                    <div className="table-responsive">
+                      <table className="table table-sm table-hover align-middle mb-0">
+                        <thead className="table-light">
+                          <tr>
+                            <th style={{ width: 80 }} className="text-center text-nowrap">ข้อ</th>
+                            <th>หัวข้อ</th>
+                            <th style={{ width: 110 }} className="text-center text-nowrap">คะแนนเต็ม</th>
+                            <th style={{ width: 110 }} className="text-center text-nowrap">จัดการ</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {viewSubject.questions.map((q) => (
+                            <tr key={q.id}>
+                              <td className="text-center text-nowrap">{q.questionNo}</td>
+                              <td style={{ minWidth: 150, maxWidth: 300, wordWrap: "break-word" }}>
+                                {q.label || <span className="text-muted">-</span>}
+                              </td>
+                              <td className="text-center text-nowrap">{q.maxScore}</td>
+                              <td className="text-center text-nowrap">
+                                <button
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleRemoveQuestion(viewSubject.id, q.id)}
+                                  disabled={loading}
+                                >
+                                  ลบ
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                <div className="modal-footer">
+                  <button className="btn btn-outline-secondary" onClick={closeViewSubjectModal} disabled={loading}>
+                    ปิด
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => openAddQuestionModal(viewSubject.id)}
+                    disabled={loading}
+                  >
+                    + สร้างหัวข้อ
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+        </>
+      )}
 
-          <div className="card-body p-0">
-            {sub.questions.length === 0 ? (
-              <div className="p-4 text-muted d-flex justify-content-start align-items-center">
-                {/* วิชา <strong>{sub.code} - {sub.name}</strong>{" "}
-                ยังไม่มีข้อสอบ กดปุ่ม <strong>“เพิ่มข้อ”</strong> ด้านขวาบนเพื่อเพิ่ม เช่น{" "}
-                <strong>ข้อ 1 กฎหมายรัฐธรรมนูญ</strong> */}
-                <strong> ยังไม่มีข้อสอบ</strong>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="table mb-0 align-middle">
-                  <thead className="table-light">
-                    <tr className="align-middle">
-                      <th style={{ width: 60, minWidth: 60 }} className="text-center text-nowrap">ข้อ</th>
-                      <th className="text-start">ชื่อหัวข้อ</th>
-                      <th style={{ width: 100, minWidth: 100 }} className="text-center text-nowrap">คะแนนเต็ม</th>
-                      <th style={{ width: 90, minWidth: 90 }} className="text-center text-nowrap">การจัดการ</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {sub.questions.map((q) => (
-                      <tr key={q.id} className="align-middle">
-                        <td
-                          className="text-center text-nowrap"
-                          style={{
-                            fontVariantNumeric: "tabular-nums",
-                            fontFeatureSettings: '"tnum" 1',
-                          }}
-                        >
-                          {q.questionNo}
-                        </td>
-
-                        <td>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm"
-                            value={q.label}
-                            onChange={(e) =>
-                              handleChangeQuestionLabel(sub.id, q.id, e.target.value)
-                            }
-                            disabled={true}
-                          />
-                        </td>
-
-                        <td className="text-center text-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
-                          {q.maxScore}
-                        </td>
-
-                        <td className="text-center text-nowrap">
-                          <button
-                            type="button"
-                            className="btn btn-outline-danger btn-sm"
-                            onClick={() => handleRemoveQuestion(sub.id, q.id)}
-                            disabled={loading}
-                          >
-                            ลบ
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      ))}
-
+      {/* ===================== ADD QUESTION MODAL ===================== */}
       <AddQuestionModal
         open={questionModalOpen}
         subjectCode={questionModalSubjectCode}
@@ -493,7 +441,6 @@ const SubjectPage: React.FC = () => {
         onClose={closeAddQuestionModal}
         onConfirm={handleConfirmAddQuestion}
       />
-
     </div>
   );
 };

@@ -25,6 +25,7 @@ export interface BagQuestionScoreRow {
 
 export interface BagBookletScore {
   bookletId: number;
+  random_num : number;
   examCode: string;
   questionCount: number;
   questions: BagQuestionScoreRow[];

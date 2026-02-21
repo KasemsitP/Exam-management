@@ -9,12 +9,23 @@ import "./App.css";
 import { clearAuth } from "@/store/slices/auth.slice";
 import Swal from "sweetalert2";
 
-//axios.defaults.baseURL = "http://localhost:8000";
-// axios.defaults.baseURL = "http://192.168.1.39:8000"; 
-axios.defaults.baseURL = "https://backend-exam-yy5g.onrender.com"; 
-axios.defaults.withCredentials = true; //  เพื่อให้ส่ง/รับ httpOnly cookie ได้
+// //axios.defaults.baseURL = "http://localhost:8000";
+// // axios.defaults.baseURL = "http://192.168.1.39:8000"; 
+// axios.defaults.baseURL = "https://backend-exam-yy5g.onrender.com"; 
+// axios.defaults.withCredentials = true; //  เพื่อให้ส่ง/รับ httpOnly cookie ได้
 
 
+if (import.meta.env.DEV) {
+  // ตอนรัน dev ในคอม (npm run dev) ให้ยิงไปที่ Backend พอร์ต 8000
+  // (ถ้าจะเทสต์มือถือในวง LAN ก็เปลี่ยนเป็น IP แบบ http://192.168.1.X:8000 ตรงนี้ครับ)
+  axios.defaults.baseURL = "http://localhost:8000"; 
+} else {
+  // ตอนรัน production (ที่ Build ไปใส่ Backend แล้ว) ให้เว้นว่างไว้ 
+  // มันจะดึง Domain ปัจจุบันมาต่อหน้า /api ให้อัตโนมัติ
+  axios.defaults.baseURL = ""; 
+}
+
+axios.defaults.withCredentials = true;
 axios.interceptors.response.use(
   (res) => res,
   (err) => {

@@ -48,7 +48,7 @@ export default function AccountsTable({
                 <th className="px-3 py-3">ชื่อ-นามสกุล</th>
                 <th className="px-3 py-3">สถานะ</th>
                 <th className="text-center px-3 py-3">Active</th>
-                <th className="text-end px-3 py-3">จัดการ</th>
+                <th className="text-end px-3 py-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -69,46 +69,50 @@ export default function AccountsTable({
                     )}
                   </td>
                   <td className="text-end text-nowrap px-3 py-2">
-                    <div className="d-flex justify-content-end gap-1 flex-wrap">
-                      {/* ปุ่มแก้ไข */}
-                      <button
-                        className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
-                        onClick={() => onEdit(acc)}
-                        title="แก้ไข"
-                      >
-                        <Edit size={14} /> <span className="d-none d-lg-inline">แก้ไข</span>
-                      </button>
+                  <div className="d-flex flex-wrap gap-1 justify-content-center justify-content-lg-end">
+  {/* ปุ่มแก้ไข */}
+  <button
+    className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"
+    onClick={() => onEdit(acc)}
+    title="แก้ไข"
+  >
+    <Edit size={14} />
+    <span>แก้ไข</span>
+  </button>
 
-                      {/* ถ้า active = true → แสดงปุ่ม Revoke */}
-                      {acc.active ? (
-                        <button
-                          className="btn btn-outline-dark btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
-                          onClick={() => onRevoke(acc)}
-                          title="ถอนสิทธิ์"
-                        >
-                          <X size={14} /> <span className="d-none d-lg-inline">ถอนสิทธิ์</span>
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
-                          onClick={() => onUnrevoke(acc)}
-                          title="คืนสิทธิ์"
-                        >
-                          <CheckCircle2 size={14} /> <span className="d-none d-lg-inline">คืนสิทธิ์</span>
-                        </button>
-                      )}
+  {/* ถ้า active = true → แสดงปุ่ม Revoke */}
+  {acc.active ? (
+    <button
+      className="btn btn-outline-dark btn-sm d-inline-flex align-items-center gap-1"
+      onClick={() => onRevoke(acc)}
+      title="ถอนสิทธิ์"
+    >
+      <X size={14} />
+      <span>ถอนสิทธิ์</span>
+    </button>
+  ) : (
+    <button
+      className="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1"
+      onClick={() => onUnrevoke(acc)}
+      title="คืนสิทธิ์"
+    >
+      <CheckCircle2 size={14} />
+      <span>คืนสิทธิ์</span>
+    </button>
+  )}
 
-                      {/* ปุ่มลบ (เฉพาะคนมี permission) */}
-                      <ShowIfCan permission="manage_accounts">
-                        <button
-                          className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 text-nowrap"
-                          onClick={() => onDelete(acc)}
-                          title="ลบบัญชี"
-                        >
-                          <Trash2 size={14} /> <span className="d-none d-lg-inline">ลบ</span>
-                        </button>
-                      </ShowIfCan>
-                    </div>
+  {/* ปุ่มลบ (เฉพาะคนมี permission) */}
+  <ShowIfCan permission="manage_accounts">
+    <button
+      className="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1"
+      onClick={() => onDelete(acc)}
+      title="ลบบัญชี"
+    >
+      <Trash2 size={14} />
+      <span>ลบ</span>
+    </button>
+  </ShowIfCan>
+</div>
                   </td>
                 </tr>
               ))}

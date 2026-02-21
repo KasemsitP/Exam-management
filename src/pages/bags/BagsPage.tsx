@@ -199,6 +199,7 @@ export default function BagsPage() {
       bagNo
     )(state);
   });
+  console.log("Booklets in bag:", bookletsInBag);
 
   const status = composeBag ? (composeBag as any).status : undefined;
   const isSealed = status === "ready" || status === "SEALED";
@@ -301,86 +302,109 @@ export default function BagsPage() {
 
 
 
-  const handleFinalizeAndLink = async () => {
-    console.log("CLICK FINALIZE");
+const handleFinalizeAndLink = async () => {
+  if (!activeCampaign) return;
 
-    if (!activeCampaign) return;
+    const numberofBag = qrPayloads.length;
+if (numberofBag < 30) {
+  const result = await Swal.fire({
+    icon: "warning",
+    title: "จำนวนสมุดข้อสอบน้อยกว่า 30 เล่ม",
+    text: "คุณแน่ใจหรือไม่ว่าจะสร้างถุงข้อสอบนี้?",
+    confirmButtonText: "ตกลง",
+    cancelButtonText: "ยกเลิก",
+    showCancelButton: true,
+  });
 
-    try {
-      console.log("BEFORE DISPATCH");
+  if (!result.isConfirmed) {
+    return; 
+  }
+}
+  try {
+    // ==============================
+    // 1️⃣ CHECK SUBJECTS
+    // ==============================
+    const { data } = await axios.post("/api/bags/check-subjects", {
+      campaignId: Number(activeCampaign.id),
+      payload: qrPayloads,
+      datetime: DatePayloads,
+    });
 
-      const result_subject = await axios.post("/api/bags/check-subjects", {
-        campaignId: Number(activeCampaign.id),
-        payload: qrPayloads,
-        datetime: DatePayloads
-      })
-      console.log("CHECK SUBJECT RESULT:", result_subject.data);
-      const data = result_subject.data;
-
-      if (result_subject.data.success) {
-        const result = await Swal.fire({
-          icon: "warning",
-          title: "ยืนยันการสร้างถุงข้อสอบ",
-          html: `
-    สร้างถุงข้อสอบวิชา <b>${data.subject_name.name}</b><br/>
-    ถุงเลขที่ <b>${data.bagNo}</b>
-    จำนวน <b>${qrPayloads.length}</b> เล่ม
-  `,
-          showCancelButton: true,
-          confirmButtonText: "ยืนยัน",
-          cancelButtonText: "ยกเลิก",
-        });
-        if (!result.isConfirmed) {
-          return;
-        }
-      }
-      else {
-        await Swal.fire({
-          icon: "error",
-          title: "มีบางเล่มที่มีวิชาไม่ตรงกับรอบสอบ",
-          text: "กรุณาตรวจสอบ QR code ที่สแกนอีกครั้ง",
-        });
-        return;
-      }
-
-
-
-      const result = await dispatch(
-        CreateBagAndAddQrPayload({
-          campaignId: Number(activeCampaign.id),
-          payload: qrPayloads,
-          datetime: DatePayloads
-        })
-      ).unwrap();
-
-      console.log("AFTER DISPATCH", result);
-
-      await Swal.fire({
-        icon: "success",
-        title: "บันทึกข้อมูลสำเร็จ",
-        text: `สร้างถุงเลขที่ ${result.bagNo} จำนวน ${qrPayloads.length} เล่ม กรุณาปิดถุงเพื่อเตรียมนำส่ง `,
-      });
-
-      console.log("AFTER SWAL");
-
-
-      await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
-
-      setIsScannerModalOpen(false);
-    } catch (error) {
-      console.error("CATCH ERROR:", error);
-
+    if (!data.success) {
       await Swal.fire({
         icon: "error",
-        title: "ผิดพลาด",
-        text: String(error),
+        title: "มีบางเล่มที่มีวิชาไม่ตรงกับรอบสอบ",
+        text: "กรุณาตรวจสอบ QR code ที่สแกนอีกครั้ง",
       });
+      return;
     }
-  };
 
+    // ==============================
+    // 2️⃣ CONFIRM
+    // ==============================
+    const confirm = await Swal.fire({
+      icon: "warning",
+      title: "ยืนยันการสร้างถุงข้อสอบ",
+      html: `
+        สร้างถุงข้อสอบวิชา <b>${data.subject_name.name}</b><br/>
+        ถุงเลขที่ <b>${data.bagNo}</b><br/>
+        จำนวน <b>${qrPayloads.length}</b> เล่ม
+      `,
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    // ==============================
+    // 3️⃣ CREATE BAG (Redux Thunk)
+    // ==============================
+    const result = await dispatch(
+      CreateBagAndAddQrPayload({
+        campaignId: Number(activeCampaign.id),
+        payload: qrPayloads,
+        datetime: DatePayloads,
+      })
+    ).unwrap();
+
+    await Swal.fire({
+      icon: "success",
+      title: "บันทึกข้อมูลสำเร็จ",
+      text: `สร้างถุงเลขที่ ${result.bagNo} จำนวน ${qrPayloads.length} เล่ม กรุณาปิดถุงเพื่อเตรียมนำส่ง`,
+    });
+
+    ClearAll();
+    await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
+    setIsScannerModalOpen(false);
+
+  } catch (error: unknown) {
+    console.error("CATCH ERROR:", error);
+
+    let message = "เกิดข้อผิดพลาดบางอย่าง";
+
+    // 👇 รองรับทั้ง axios error และ rejectWithValue
+    if (typeof error === "string") {
+      message = error;
+    } else if (axios.isAxiosError(error)) {
+      message =
+        error.response?.data?.message ||
+        error.message ||
+        message;
+    } else if (error instanceof Error) {
+      message = error.message;
+    }
+
+    await Swal.fire({
+      icon: "error",
+      title: "ผิดพลาด",
+      text: message,
+    });
+  }
+};
 
   const handleRemoveCode = (code: string) => {
-    if ( !activeCampaign) return;
+    if (!activeCampaign) return;
     const n = normalizePayload(code);
     dispatch(
       bagScanRemoved({
@@ -394,7 +418,7 @@ export default function BagsPage() {
 
   const handleClearCodes = async () => {
     console.log("Clearing codes...");
-    if ( !activeCampaign) return;
+    if (!activeCampaign) return;
 
     const result = await Swal.fire({
       icon: "warning",
@@ -419,6 +443,15 @@ export default function BagsPage() {
       timer: 1200,
       showConfirmButton: false,
     });
+  };
+
+  const ClearAll = async () => {
+    console.log("Clearing codes...");
+    if (!activeCampaign) return;
+    setQrPayloads([]);
+    setDatePaylaods([]);
+    scannedSetRef.current.clear();
+    recentScanSetRef.current.clear();
   };
 
   const handleDeleteBag = async (bagId: string) => {
@@ -492,7 +525,7 @@ export default function BagsPage() {
       <ModalBackdrop open={IsScannerModalOpen} />
       <BagScannerModal
         open={IsScannerModalOpen}
-        onClose={() => { setIsScannerModalOpen(false); setQrPayloads([]); setDatePaylaods([]); }}
+        onClose={() => { setIsScannerModalOpen(false); ClearAll();}}
         canScan={canScan}
         isSealed={isSealed}
         scannerEnabled={scannerEnabled}

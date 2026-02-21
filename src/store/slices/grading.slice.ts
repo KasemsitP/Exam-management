@@ -40,6 +40,7 @@ const initialState: GradingState = {
   records: [],
 };
 export interface GradingRecord {
+  random_num: number;
   slotId: number;
   score: number;
   enteredAt: string;
@@ -106,6 +107,7 @@ export const fetchRecordThunk = createAsyncThunk<
           minute: "2-digit",
           second: "2-digit",
         }),
+        random_num: r.random_num,
       }));
 
       return records;

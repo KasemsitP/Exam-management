@@ -6,7 +6,7 @@ import { Loader2, QrCode } from "lucide-react";
 import { Scanner, boundingBox, IDetectedBarcode } from "@yudiel/react-qr-scanner";
 
 import { useAppSelector } from "@/store/hook";
-import { selectActiveCampaign, selectIsSystemLocked , selectQrActiveCampaign} from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectIsSystemLocked, selectQrActiveCampaign } from "@/store/slices/examData.slice";
 import { DeleteCamp } from "@/utils/camp";
 import type { DisputedQuestionDto } from "./types";
 
@@ -22,10 +22,12 @@ export default function AdminResetScoresPage() {
   const [rows, setRows] = useState<DisputedQuestionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [resettingSlotId, setResettingSlotId] = useState<number | null>(null);
-  
+
   // Scanner State
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedBookletId, setSelectedBookletId] = useState<number | null>(null);
+
+
 
   const campaignNumericId = activeCampaign?.id
     ? Number(DeleteCamp(String(activeCampaign.id)))
@@ -38,7 +40,8 @@ export default function AdminResetScoresPage() {
       const sorted = data.sort((a, b) => {
         const bagDiff = Number(a.bagNo) - Number(b.bagNo);
         if (bagDiff !== 0) return bagDiff;
-        return Number(a.bookletId) - Number(b.bookletId);
+
+        return Number(a.random_num) - Number(b.random_num);
       });
       setRows(sorted);
     } catch (err: any) {
@@ -127,7 +130,7 @@ export default function AdminResetScoresPage() {
                 <thead className="table-light">
                   <tr>
                     <th>ถุง</th>
-                    <th>เล่มที่</th>
+                    <th>รหัสสอบ</th>
                     <th>วิชา</th>
                     <th>ข้อ</th>
                     <th>หัวข้อ</th>
@@ -136,16 +139,15 @@ export default function AdminResetScoresPage() {
                     <th>ผู้ตรวจ 2</th>
                     <th>คะแนน 2</th>
                     <th>ผลต่าง</th>
-                    <th>บันทึกล่าสุด</th> {/* ✅ เพิ่มคอลัมน์ */}
-                    <th>จัดการ</th>
-                    <th>เช็คเล่มถุง</th>
+                    <th className="text-center">จัดการ</th>
+                    <th className="text-center">เช็คเล่มถุง</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row) => (
                     <tr key={`${row.bookletId}-${row.subjectId}-${row.questionNo}`}>
                       <td>{row.bagNo ?? "-"}</td>
-                      <td>{row.bookletId ?? "-"}</td>
+                      <td>{row.random_num ?? "-"}</td>
                       <td>
                         <div>{row.subjectCode}</div>
                         <small className="text-muted">{row.subjectName}</small>
@@ -157,34 +159,19 @@ export default function AdminResetScoresPage() {
                       <td>{row.graderName2}</td>
                       <td>{row.score2}</td>
                       <td className={row.diff >= 4 ? "text-danger fw-bold" : ""}>{row.diff}</td>
-                      
-                      {/* ✅ แสดงเวลาที่บันทึก */}
-                      <td>
-                        <small className="text-muted d-flex align-items-center gap-1">
-                          {row.lastEnteredAt ? (
-                            <>
-                              {new Date(row.lastEnteredAt).toLocaleString("th-TH", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit"
-                              })}
-                            </>
-                          ) : "-"}
-                        </small>
-                      </td>
 
-                      <td>
+                      {/* ✅ แสดงเวลาที่บันทึก */}
+
+                      <td className="text-center">
                         <button
-                          className="btn btn-sm btn-danger"
+                          className="btn btn-sm btn-danger text-center"
                           disabled={resettingSlotId === row.slotId1}
                           onClick={() => handleReset(row)}
                         >
                           {resettingSlotId === row.slotId1 ? "..." : "รีเซ็ตคะแนน"}
                         </button>
                       </td>
-                      <td>
+                      <td className="text-center">
                         <button
                           className="btn btn-sm btn-primary"
                           onClick={() => handleOpenScanner(row.bookletId)}

@@ -317,15 +317,6 @@ export default function HomePage() {
               <div className="fw-semibold">
                 {activeCampaign?.name || "ยังไม่ได้เลือกแคมเปญ"}
               </div>
-
-              {!activeCampaign?.name && role !== "grader" && (
-                <button
-                  className="btn btn-sm btn-outline-secondary mt-2"
-                  onClick={() => navigate("/campaignsession")}
-                >
-                  เลือกแคมเปญ
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -345,13 +336,13 @@ export default function HomePage() {
               </div>
 
               <div className="table-responsive">
-                <table className="table mb-0 align-middle">
+                <table className="table mb-0 align-middle text-nowrap">
                   <thead className="table-light">
                     <tr className="align-middle">
                       <th style={{ width: 70 }} className="text-center">ลำดับ</th>
                       <th style={{ width: 46 }}></th>
                       <th>รายการ</th>
-                      <th className="d-none d-md-table-cell">รายละเอียด</th>
+                      <th className=" d-md-table-cell">รายละเอียด</th>
                     </tr>
                   </thead>
 
@@ -370,7 +361,7 @@ export default function HomePage() {
 
                           <td className="fw-semibold">{s.title}</td>
 
-                          <td className="text-muted small d-none d-md-table-cell">
+                          <td className="text-muted small  d-md-table-cell">
                             {s.desc}
                           </td>
                           {/* 
