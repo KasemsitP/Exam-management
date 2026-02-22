@@ -53,7 +53,7 @@ export function AppSidebar({
     <>
       <style>{styleScrollbar}</style>
 
-      <div className="d-flex flex-column h-100 sidebar-shell" style={{ background: SB.bg }}>
+      <div className="d-flex flex-column h-100 sidebar-shell " style={{ background: SB.bg }}>
         {/* Logo / Title */}
         <div
           className="px-4 py-4 d-flex align-items-center position-relative"
@@ -62,7 +62,7 @@ export function AppSidebar({
             position: "sticky",
             top: 0,
             zIndex: 10,
-            borderBottom: `1px solid ${SB.border}`,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
             overflow: "hidden",
           }}
         >
@@ -100,8 +100,12 @@ export function AppSidebar({
               <img
                 src={Logo}
                 alt="Logo"
-                style={{ width: 96, height: "auto", position: "relative", zIndex: 2, cursor: "pointer" }}
-                onClick={() => navigate("/home")}
+                style={{
+                  width: 96,
+                  height: "auto",
+                  cursor: "pointer",
+                  marginTop: 8
+                }}
               />
               <h2
                 className="h6 mb-0 fw-bold mt-2 font-monospace"
@@ -114,9 +118,10 @@ export function AppSidebar({
               <div
                 style={{
                   marginTop: 10,
-                  height: 1,
+                  height: 2,
                   width: "70%",
-                  background: `linear-gradient(90deg, transparent, ${SB.border}, transparent)`,
+                  background: 'transparent',
+                  boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)',
                   position: "relative",
                   zIndex: 2,
                 }}
@@ -195,7 +200,14 @@ export function AppSidebar({
                 </NavLink>
               ))}
 
-            <div className="my-2" style={{ borderTop: `1px solid ${SB.border}` }} />
+            <div
+              className="my-2 mx-3"
+              style={{
+                height: 2,
+                background: 'transparent',
+                boxShadow: '0 2px 4px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)'
+              }}
+            />
 
             <p
               className="px-3 mb-2 small text-uppercase fw-bold"
@@ -268,7 +280,12 @@ export function AppSidebar({
         </div>
 
         {/* User footer */}
-        <div className="p-4" style={{ borderTop: `1px solid ${SB.border}` }}>
+        <div
+          className="p-4"
+          style={{
+            boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.12), 0 -2px 6px rgba(0, 0, 0, 0.08)'
+          }}
+        >
           <div className="d-flex align-items-center gap-3">
             <div
               className="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"

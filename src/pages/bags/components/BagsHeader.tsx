@@ -27,7 +27,7 @@ export default function BagsHeader({
 }: BagsHeaderProps) {
     const locked = useAppSelector(selectIsSystemLocked);
   return (
-    <div className="card shadow-sm">
+    <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
       <div className="card-header bg-white">
         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
           <div>

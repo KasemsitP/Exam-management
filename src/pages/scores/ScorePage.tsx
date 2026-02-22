@@ -15,6 +15,7 @@ import {
 } from "@/store/slices/examData.slice";
 import axios from "axios";
 import { fetchBagsForCampaignThunk } from "@/store/slices/bags.slice";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 import type {
   BagScoreBagSummary,
@@ -41,6 +42,7 @@ export default function BagScoresPage() {
   const [bags, setBags] = useState<BagScoreBagSummary[]>([]);
   const [loadingBags, setLoadingBags] = useState(false);
   const [errorBags, setErrorBags] = useState<string | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const [selectedSessionId, setSelectedSessionId] = useState<string>("all");
   const [selectedBagId, setSelectedBagId] = useState<number | null>(null);
@@ -170,11 +172,15 @@ export default function BagScoresPage() {
       setBags([]);
     } finally {
       setLoadingBags(false);
+      setIsInitialLoading(false);
     }
   };
 
   useEffect(() => {
-    if (!activeCampaign) return;
+    if (!activeCampaign) {
+      setIsInitialLoading(false);
+      return;
+    }
     loadBagsForCampaign((activeCampaign.id));
   }, [activeCampaign]);
 
@@ -557,14 +563,20 @@ export default function BagScoresPage() {
   // -----------------------------
   // Render
   // -----------------------------
+  
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
+
   return (
     <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
 
-      <div className="card shadow-sm mb-3">
+      <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
         <div className="card-header bg-white">
           <div className="d-flex flex-column flex-md-row align-items-md-start gap-2">
             <div className="flex-shrink-0">
-              <h6 className="mb-1 text-nowrap">เอกสารสรุปคะแนน</h6>
+              <h5 className="mb-1 text-nowrap">เอกสารสรุปคะแนน</h5>
               <small className="text-muted">
                 เอกสารสรุปคะแนนสำหรับผู้เข้าสอบและผู้ตรวจ (กรณีที่ยังไม่ถอดรหัสคะแนนจะเป็นเลขสุ่มแทน)
               </small>
@@ -638,7 +650,7 @@ export default function BagScoresPage() {
           <div className="row g-2 g-md-3">
             {/* Card 1: สถานะการสร้างรอบสอบ */}
             <div className="col-12">
-              <div className="card shadow-none border">
+              <div className="card" style={{ border: 0, boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)" }}>
                 <div className="card-body p-2 p-sm-3">
                   <div className="text-uppercase small text-muted mb-1">
                     สถานะการถอดรหัส
@@ -661,7 +673,7 @@ export default function BagScoresPage() {
         </div>
       </div>
       {/* BAR ด้านบน: filter + เปลี่ยนถุง */}
-      <div className="card border-0 shadow-sm mb-3">
+      <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
         <div className="card-body p-2 p-sm-3">
           <div className="d-flex flex-column flex-md-row gap-2 gap-md-3">
 
@@ -758,7 +770,7 @@ export default function BagScoresPage() {
 
       {/* เนื้อหาหลัก (เดิม) */}
       {loadingBags && (
-        <div className="card border-0 shadow-sm">
+        <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           <div className="card-body text-center py-5">
             <Loader2 className="spinner-border mb-2" />
             <div className="text-muted small">กำลังโหลดข้อมูลถุง...</div>
@@ -767,11 +779,11 @@ export default function BagScoresPage() {
       )}
 
       {errorBags && (
-        <div className="alert alert-danger shadow-sm">{errorBags}</div>
+        <div className="alert alert-danger" style={{ border: 0, boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)" }}>{errorBags}</div>
       )}
 
       {!loadingBags && !errorBags && filteredBags.length === 0 && (
-        <div className="card border-0 shadow-sm">
+        <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           <div className="card-body text-center py-5">
             <FileText className="text-muted mb-2" size={32} />
             <div className="text-muted">ไม่พบถุงข้อสอบในเงื่อนไขนี้</div>
@@ -780,7 +792,7 @@ export default function BagScoresPage() {
       )}
 
       {!loadingBags && selectedBag && (
-        <div className="card border-0 shadow-sm">
+        <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           <div className="card-header bg-white border-0 border-bottom">
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div>
@@ -799,7 +811,6 @@ export default function BagScoresPage() {
           <div className="card-body p-0">
             {loadingScores && (
               <div className="text-center py-5">
-                <Loader2 className="spinner-border mb-2" />
                 <div className="text-muted small">กำลังโหลดคะแนน...</div>
               </div>
             )}

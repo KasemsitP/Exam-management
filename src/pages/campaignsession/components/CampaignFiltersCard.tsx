@@ -22,11 +22,11 @@ export function CampaignFiltersCard({
   onCreateCampaign,
 }: CampaignFiltersCardProps) {
   return (
-    <div className="card shadow-sm mb-4" style={{ borderTop: "4px solid #3B82F6" }}>
+    <div className="card mb-4" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
       <div className="card-header bg-white">
         <div className="d-flex flex-column flex-lg-row gap-2 align-items-start align-items-lg-center justify-content-lg-between">
           <div>
-            <h5 className="card-title mb-1 fs-6">จัดการรอบสอบ</h5>
+            <h5 className=" mb-1 ">จัดการรอบสอบ</h5>
             <p className="card-text text-muted mb-0 small">สร้างรอบสอบและวันที่สอบ</p>
           </div>
         </div>

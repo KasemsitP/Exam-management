@@ -36,7 +36,7 @@ export default function GraderSubjectList({
           <div className="modal-content">
             <div className="modal-header">
               <h6 className="modal-title">
-                รายวิชาที่ผู้ตรวจ {account?.username ?? "-"} ได้รับมอบหมาย
+                รายวิชาที่ผู้ตรวจ {account?.full_name ?? "-"} ได้รับมอบหมาย
               </h6>
               <button type="button" className="btn-close" onClick={onClose} />
             </div>

@@ -220,7 +220,7 @@ const SubjectPage: React.FC = () => {
       {error && <div className="alert alert-danger mb-0">เกิดข้อผิดพลาด: {error}</div>}
 
       {/* ===================== TABLE SUBJECTS ===================== */}
-      <div className="card shadow-sm" style={{ borderLeft: "3px solid #3B82F6" }}>
+      <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
         <div className="card-header bg-white d-flex justify-content-between align-items-center">
           <div>
             <h5 className="mb-1">รายวิชา</h5>
@@ -368,7 +368,7 @@ const SubjectPage: React.FC = () => {
           <div className="modal-backdrop show" style={{ zIndex: 1040 }} />
           <div className="modal d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
             <div className="modal-dialog modal-lg modal-dialog-centered">
-              <div className="modal-content" style={{ borderTop: "4px solid #22C55E" }}>
+              <div className="modal-content" style={{ border: 0, boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.10)" }}>
                 <div className="modal-header">
                   <h6 className="modal-title">สร้างวิชาใหม่</h6>
                   <button className="btn-close" onClick={() => setShowCreateForm(false)} disabled={loading} />
@@ -428,7 +428,7 @@ const SubjectPage: React.FC = () => {
           <div className="modal-backdrop show" style={{ zIndex: 1040 }} />
           <div className="modal d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
             <div className="modal-dialog modal-lg modal-dialog-centered">
-              <div className="modal-content" style={{ borderTop: "4px solid #8B5CF6" }}>
+              <div className="modal-content" style={{ border: 0, boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.10)" }}>
                 <div className="modal-header">
                   <div>
                     <h6 className="mb-0">รายการหัวข้อวิชา</h6>

@@ -63,7 +63,7 @@ export default function ComposeBagModal({
             <div className="row g-3">
               {/* Left: List */}
               <div className="col-lg-7 order-2 order-lg-1">
-                <div className="card border-0 shadow-sm h-100">
+                <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
                   <div className="card-header bg-white d-flex justify-content-between align-items-center">
                     <h6 className="mb-0">
                       รายการที่สแกนแล้ว ({scannedPayloads.length} ชุด)
@@ -121,7 +121,7 @@ export default function ComposeBagModal({
 
               {/* Right: Scanner */}
               <div className="col-lg-5 order-1 order-lg-2">
-                <div className="card border-0 shadow-sm h-100">
+                <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
                   <div className="card-header bg-white">
                     <h6 className="mb-0">สแกนสมุดคำตอบจากคิวอาร์โค้ด</h6>
                   </div>

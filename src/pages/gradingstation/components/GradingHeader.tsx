@@ -16,7 +16,7 @@ export default function GradingHeader({
   gradersStatus,
 }: GradingHeaderProps) {
   return (
-    <div className="card shadow-sm mb-3">
+    <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
       <div className="card-body">
         <h1 className="h4 mb-2 d-flex align-items-center gap-2">
           {/* <Scan size={18} className="text-primary" /> */}

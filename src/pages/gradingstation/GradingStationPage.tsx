@@ -1,6 +1,7 @@
 // GradingStationPage.tsx
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import { useGradingStation } from "./hooks/useGradingStation";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 import GradingHeader from "./components/GradingHeader";
 import NoProfileCard from "./components/NoProfileCard";
@@ -17,6 +18,7 @@ export default function GradingStationPage() {
     gradersStatus,
     activeAssignment,
     isLoading,
+    isInitialLoading,
     gradersAssignment,
     // scanner state
     scanData,
@@ -54,6 +56,11 @@ export default function GradingStationPage() {
     bagNo,
     QRActive
   } = useGradingStation();
+
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
 
   return (
     <ShowIfCan permission="grade_exams">

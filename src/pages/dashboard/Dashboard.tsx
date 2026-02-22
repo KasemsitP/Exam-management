@@ -22,6 +22,7 @@ import { selectDefaultBagCapacity, selectBagsForCampaign, fetchBagsForCampaignTh
 import { selectCurrentUser } from "@/store/slices/auth.slice";
 import { useDispatch } from "react-redux";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 
 /* -----------------------------------------
@@ -277,6 +278,7 @@ export default function Dashboard() {
   const [scoreChartData, setScoreChartData] = useState<
     { range: string; count: number }[]
   >([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
 
   useEffect(() => {
@@ -284,10 +286,14 @@ export default function Dashboard() {
     console.log(bags)
   }, [])
   useEffect(() => {
-    if (!activeCampaign?.id) return;
+    if (!activeCampaign?.id) {
+      setIsInitialLoading(false);
+      return;
+    }
 
     let interval: NodeJS.Timeout;
     let isFetching = false;
+    let isFirstLoad = true;
 
 
 
@@ -299,19 +305,21 @@ export default function Dashboard() {
         setLoadingDashboard(true);
         setDashboardError(null);
 
-        dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
-
-        const res = await axios.get(
-          `/api/dashboard/campaign/${activeCampaign.id}`
-        );
-
-        setDashboardData(res.data);
+        await Promise.all([
+          dispatch(fetchBagsForCampaignThunk(activeCampaign.id)).unwrap(),
+          axios.get(`/api/dashboard/campaign/${activeCampaign.id}`)
+            .then(res => setDashboardData(res.data))
+        ]);
       } catch (err) {
         setDashboardError("โหลดข้อมูลแดชบอร์ดไม่สำเร็จ");
         setDashboardData(null);
       } finally {
         isFetching = false;
         setLoadingDashboard(false);
+        if (isFirstLoad) {
+          setIsInitialLoading(false);
+          isFirstLoad = false;
+        }
       }
     };
 
@@ -325,7 +333,7 @@ export default function Dashboard() {
 
     // cleanup ตอน unmount
     return () => clearInterval(interval);
-  }, [activeCampaign?.id]);
+  }, [activeCampaign?.id, dispatch]);
   const USE_MOCK_SCORE = false; // <-- เปลี่ยนเป็น false ตอนอยากกลับไปใช้ของจริง
 
   const calculateUsers = dashboardData?.seatAssignmentStatus?.reduce((sum, s) => sum + s.count_user, 0) ?? 0;
@@ -630,26 +638,49 @@ export default function Dashboard() {
 
   /* ---------- Render ---------- */
 
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
+
   return (
     <ShowIfCan permission="dashboard" fallback={<div className="p-4 alert alert-warning">คุณไม่มีสิทธิ์เข้าถึงแดชบอร์ดนี้</div>}>
       <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
         {/* Header */}
-        <div className="card border-0 shadow-sm" style={{ background: surface, borderBottom: "4px solid #3B82F6" }}>
-          <div className="card-body p-3 p-md-4">
-            <div className="d-flex align-items-start gap-2 gap-md-3">
-              <div className="flex-grow-1">
-                <div className="text-uppercase small fw-semibold mb-1" style={{ color: muted }}>
-                  Dashboard
+        <div style={{ flex: "1 1 100%", minWidth: 160 }}>
+          <div
+            className="card shadow-sm h-100"
+            style={{
+              borderTop: "4px solid #494c52",
+              backgroundColor: "#ffffff",
+              boxShadow: "0 4px 12px rgba(73,76,82,0.12)",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-4px)";
+              e.currentTarget.style.boxShadow =
+                "0 8px 24px rgba(59,130,246,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "";
+            }}
+          >
+            <div className="card-body p-4">
+              <div className="d-flex justify-content-between align-items-start mb-2">
+                <div className="fw-semibold text-uppercase small text-muted">
+                  แดชบอร์ดสรุปภาพรวม
                 </div>
-                <h2 className="h5 h-md-4 mb-1 text-dark">
-                  {activeCampaign ? `${activeCampaign.name}` : "ยังไม่ได้เลือกแคมเปญ"}
-                </h2>
               </div>
+
+              <h2 className="h4 fw-bold mb-0 text-dark">
+                {activeCampaign
+                  ? activeCampaign.name
+                  : "ยังไม่ได้เลือกแคมเปญ"}
+              </h2>
             </div>
           </div>
         </div>
-
-
         <>
           {dashboardError && (
             <div className="alert alert-danger shadow-sm border-0">{dashboardError}</div>
@@ -690,17 +721,13 @@ export default function Dashboard() {
 
                   {subjectList.length > 0 && (
                     <ul className="list-unstyled mb-0 text-dark small" style={{ fontSize: "0.85rem" }}>
-                      {subjectList.slice(0, 2).map((subj) => (
-                        <li key={subj.subjectId} className="fw-bold text-truncate">
+                      {subjectList.map((subj) => (
+                        <li key={subj.subjectId} className="fw-bold text-truncate  ">
                           {subj.name}
                         </li>
                       ))}
 
-                      {subjectList.length > 2 && (
-                        <li className="fst-italic text-muted">
-                          + อีก {subjectList.length - 2} วิชา
-                        </li>
-                      )}
+
                     </ul>
                   )}
                 </div>
@@ -937,7 +964,7 @@ export default function Dashboard() {
 
                 <div
                   className="card-body p-2 p-sm-3"
-                  style={{ maxHeight: 360, overflowY: "auto" }}
+                  style={{ maxHeight: "calc(100vh - 400px)", overflowY: "auto" }}
                 >
                   {subjectQuestionList.length === 0 && (
                     <div className="text-muted small">
@@ -949,45 +976,43 @@ export default function Dashboard() {
                     return (
                       <div
                         key={subj.subjectId}
-                        className="mb-3 pb-2 border-bottom"
+                        className="mb-2 mb-sm-3 pb-2 pb-sm-3 border-bottom"
                         style={{ borderColor: "#E2E8F0" }}
                       >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div>
-                            <div className="fw-semibold" style={{ color: "#0F172A" }}>
-                              {subj.name}
-                            </div>
-                            <small>
-                              รหัสวิชา: {subj.code}
-                            </small>
-
-                            {/* จำนวนหัวข้อ + คะแนนเต็มรวม */}
-                            <div className="small" style={{ color: muted }}>
-                              {subj.questionCount} หัวข้อ | คะแนนเต็มรวม{" "}
-                              {subj.totalMaxScore}
-                            </div>
-
-                            {/* ⬇⬇ แสดงรอบสอบที่วิชานี้เปิดสอบ ⬇⬇ */}
-                            {subj.sessionCodes && subj.sessionCodes.length > 0 && (
-                              <div className="small" style={{ color: muted }}>
-                                ลำดับวันสอบ:{" "}
-                                {subj.sessionCodes.join(" • ")}
-                                {/* เช่น "วันที่ 1 • วันที่ 2" */}
-                              </div>
-                            )}
+                        {/* Subject Header */}
+                        <div className="mb-2">
+                          <div className="fw-semibold text-dark" style={{ color: "#0F172A", fontSize: "0.95rem" }}>
+                            {subj.name}
                           </div>
+                          <div className="d-flex flex-column flex-sm-row gap-1 gap-sm-2 flex-wrap mt-1">
+                            <small className="text-muted">รหัสวิชา: {subj.code}</small>
+                            <small className="d-none d-sm-inline" style={{ color: "#CBD5E1" }}>•</small>
+                            <small className="text-muted">{subj.questionCount} หัวข้อ</small>
+                            <small className="d-none d-sm-inline" style={{ color: "#CBD5E1" }}>•</small>
+                            <small className="text-muted">คะแนนเต็ม: <span className="fw-semibold text-dark">{subj.totalMaxScore}</span></small>
+                          </div>
+
+                          {/* แสดงรอบสอบที่วิชานี้เปิดสอบ */}
+                          {subj.sessionCodes && subj.sessionCodes.length > 0 && (
+                            <div className="mt-1">
+                              <small style={{ color: muted }}>
+                                ลำดับวันสอบ: <span className="fw-semibold text-dark">{subj.sessionCodes.join(" • ")}</span>
+                              </small>
+                            </div>
+                          )}
                         </div>
 
-                        <ul className="small mt-2 mb-0" style={{ color: "#475569" }}>
+                        {/* Questions List */}
+                        <ul className="list-unstyled mb-0 ms-1 ms-sm-2" style={{ color: "#475569" }}>
                           {subj.questions.map((q) => (
                             <li
                               key={q.id}
-                              className="d-flex justify-content-between align-items-center mb-1"
+                              className="d-flex justify-content-between align-items-end gap-1 gap-sm-2 mb-1 small"
                             >
-                              <span>
+                              <span className="flex-grow-1 text-break">
                                 ข้อ {q.questionNo}: {q.label}
                               </span>
-                              <span className="text-muted">
+                              <span className="badge bg-light text-dark border border-secondary flex-shrink-0 fw-semibold" style={{ fontSize: "0.8rem" }}>
                                 {Number(q.maxScore).toLocaleString()} คะแนน
                               </span>
                             </li>

@@ -254,7 +254,8 @@ export default function HomePage() {
   const navigate = useNavigate();
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const currentUser = useAppSelector(selectCurrentUser);
-
+  const roles = currentUser?.roles ?? [];
+  
   const role = useMemo(() => pickRole((currentUser as any)?.roles), [currentUser]);
   const guide = GUIDE[role];
 
@@ -285,11 +286,18 @@ export default function HomePage() {
       style={{ background: "#f6f7fb", minHeight: "calc(100vh - 56px)" }}
     >
       {/* Header (เรียบๆ เหมือนรูป) */}
-      <div className="card shadow-sm mb-4" style={{ borderTop: "4px solid #3B82F6" }}>
+      <div 
+        className="card mb-4"
+        style={{
+          border: 0,
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)",
+          background: "linear-gradient(135deg, #ffffff 0%, #fafafa 100%)"
+        }}
+      >
         <div className="card-body">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
             <div>
-              <h4 className=" mb-1">หน้าเริ่มต้น</h4>
+              <h5 className=" mb-1">หน้าแรก</h5>
               <div className="text-muted small">
                 {guide.title}
               </div>
@@ -298,10 +306,27 @@ export default function HomePage() {
         </div>
       </div>
 
+       {/* style={{ borderLeft: "4px solid #22C55E", borderTop: "3px solid #22C55E", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(34,197,94,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }} */}
+
       {/* Status row (เรียบๆ) */}
       <div className="row g-3 mb-4">
-        <div className="col-lg-6">
-          <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #22C55E", borderTop: "3px solid #22C55E", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(34,197,94,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
+        <div className="col-lg-6"> 
+          <div 
+            className="card h-100"
+            style={{
+              border: 0,
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08)",
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.15), 0 3px 8px rgba(0, 0, 0, 0.10)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08)";
+            }}
+          >
             <div className="card-body">
               <div className="text-muted small mb-1">ผู้ใช้</div>
               <div className="fw-semibold">{userName}</div>
@@ -311,7 +336,22 @@ export default function HomePage() {
         </div>
 
         <div className="col-lg-6">
-          <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #8B5CF6", borderTop: "3px solid #8B5CF6", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(139,92,246,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
+          <div 
+            className="card h-100"
+            style={{
+              border: 0,
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08)",
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.15), 0 3px 8px rgba(0, 0, 0, 0.10)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08)";
+            }}
+          >
             <div className="card-body">
               <div className="text-muted small mb-1">รอบสอบที่กำลังใช้งาน</div>
               <div className="fw-semibold">
@@ -326,8 +366,19 @@ export default function HomePage() {
       <div className="row g-3">
         {/* Steps -> ทำเป็นตารางแบบหน้าอื่น */}
         <div className="col-lg-12">
-          <div className="card shadow-sm" style={{ borderLeft: "3px solid #F59E0B" }}>
-            <div className="card-body">
+          <div 
+            className="card"
+            style={{
+              border: 0,
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)"
+            }}
+          >
+            <div 
+              className="card-body"
+              style={{
+                background: "linear-gradient(180deg, #fafafa 0%, #ffffff 100%)"
+              }}
+            >
               <div className="d-flex align-items-baseline justify-content-between mb-3">
                 <div>
                   <div className="fw-bold">ลำดับการใช้งานระบบ</div>
@@ -337,7 +388,12 @@ export default function HomePage() {
 
               <div className="table-responsive">
                 <table className="table mb-0 align-middle text-nowrap">
-                  <thead className="table-light">
+                  <thead
+                    style={{
+                      backgroundColor: "#f5f5f5",
+                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.08)"
+                    }}
+                  >
                     <tr className="align-middle">
                       <th style={{ width: 70 }} className="text-center">ลำดับ</th>
                       <th style={{ width: 46 }}></th>
@@ -350,7 +406,23 @@ export default function HomePage() {
                     {guide.steps.map((s, idx) => {
                       const clickable = Boolean(s.path);
                       return (
-                        <tr key={idx} style={{ opacity: clickable ? 1 : 0.65 }}>
+                        <tr 
+                          key={idx} 
+                          style={{ 
+                            opacity: clickable ? 1 : 0.65,
+                            cursor: clickable ? 'pointer' : 'default',
+                            transition: 'background-color 0.2s ease'
+                          }}
+                          onClick={() => clickable && s.path && navigate(s.path)}
+                          onMouseEnter={(e) => {
+                            if (clickable) {
+                              e.currentTarget.style.backgroundColor = "#f9f9f9";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
                           <td className="text-center">{idx + 1}</td>
 
                           <td>
@@ -386,10 +458,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="mt-1">
-        <small className="text-muted">© 2026 Quiz Management System</small>
-      </div>
+
     </div>
   );
 }

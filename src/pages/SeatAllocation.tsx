@@ -16,6 +16,7 @@ import Swal from "sweetalert2";
 import { ExamRoom, deleteRoomThunk, saveRoomThunk } from "@/store/slices/examRooms.slice";
 import { Search, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useForm } from 'react-hook-form';
+import { OverlayLoader } from "@/components/ui/Loading";
 
 type SeatCell = {
   seatNo: number;
@@ -79,6 +80,7 @@ export default function SeatAllocationPage() {
   const [totaluserAssigned, setTotalUsersAssigned] = useState<number>(0);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<RoomFormValues | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
 
 
@@ -176,13 +178,28 @@ export default function SeatAllocationPage() {
   }, [dialogOpen, editingRoom, campaign?.id]);
 
   useEffect(() => {
-    if (!campaign?.id) return;
+    if (!campaign?.id) {
+      setIsInitialLoading(false);
+      return;
+    }
     const cid = Number(campaign.id);
 
-    dispatch(fetchRoomsByCampaignThunk(cid));
-    loadAssignedCounts(cid);
-    fetchUserAssigned(cid);
-    fetchRoom(cid)
+    const loadInitialData = async () => {
+      try {
+        await Promise.all([
+          dispatch(fetchRoomsByCampaignThunk(cid)).unwrap(),
+          loadAssignedCounts(cid),
+          fetchUserAssigned(cid),
+          fetchRoom(cid)
+        ]);
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    loadInitialData();
   }, [campaign?.id, dispatch]);
   useEffect(() => {
     setModalPage(1);
@@ -678,11 +695,16 @@ export default function SeatAllocationPage() {
     setModalPage(1);
   };
 
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
+
   return (
     <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
       <div className="d-flex flex-column gap-4">
         {/* ===== Header ===== */}
-        <div className="card shadow-sm">
+        <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           {/* Card Header */}
           <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-2 gap-lg-3">
             <div>
@@ -778,7 +800,7 @@ export default function SeatAllocationPage() {
 
 
         {/* ===== Rooms grid ===== */}
-        <div className="card shadow-sm">
+        <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           <div className="card-header bg-white">
             <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
               <div>

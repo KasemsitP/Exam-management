@@ -39,6 +39,7 @@ import ComposeBagModal from "./components/ComposeBagModal";
 import BagScannerModal from "./components/BagScannerModal";
 import type { CreateBagForm } from "./bags.types";
 import axios from "axios";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 // ปรับ payload ให้เทียบเท่ากันเสมอ
 const normalizePayload = (s: string) => s.trim();
@@ -74,6 +75,7 @@ export default function BagsPage() {
   const [IsScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [qrPayloads, setQrPayloads] = useState<string[]>([]);
   const [DatePayloads, setDatePaylaods] = useState<Date[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
 
   const deviceId: string | undefined = undefined;
@@ -107,9 +109,22 @@ export default function BagsPage() {
 
   // fetch bags
   useEffect(() => {
-    if (activeCampaign) {
-      dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
+    if (!activeCampaign) {
+      setIsInitialLoading(false);
+      return;
     }
+
+    const loadInitialData = async () => {
+      try {
+        await dispatch(fetchBagsForCampaignThunk(activeCampaign.id)).unwrap();
+      } catch (error) {
+        console.error('Failed to load bags:', error);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    loadInitialData();
   }, [dispatch, activeCampaign]);
 
   const composeBag = useAppSelector((state) =>
@@ -510,6 +525,12 @@ if (numberofBag < 30) {
   // ==============================
   // Render
   // ==============================
+  
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
+
   return (
     <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
       <BagsHeader

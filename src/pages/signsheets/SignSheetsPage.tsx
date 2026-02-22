@@ -19,6 +19,7 @@ import {
   selectActiveCampaign,
   selectActiveCampaignSessions,
 } from "@/store/slices/examData.slice";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 /* -------------------------------------------------------------------------- */
 /*  Helper: debounce                                                          */
@@ -148,6 +149,7 @@ export default function SignSheetsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // สำหรับขยาย QR
   const [enlargedQr, setEnlargedQr] = useState<string | null>(null);
@@ -199,13 +201,19 @@ export default function SignSheetsPage() {
   /* -------------------------- Fetch table data ---------------------------- */
 
   const fetchData = useCallback(async () => {
-    if (!activeCampaign?.id || !selectedSessionId) return;
+    if (!activeCampaign?.id || !selectedSessionId) {
+      setIsInitialLoading(false);
+      return;
+    }
 
     const numericSessionId = parseInt(
       String(selectedSessionId).replace("sess-", ""),
       10
     );
-    if (Number.isNaN(numericSessionId)) return;
+    if (Number.isNaN(numericSessionId)) {
+      setIsInitialLoading(false);
+      return;
+    }
 
     // เริ่มโหลด แต่ *ไม่* ล้าง rows เพื่อไม่ให้ table แฟลชหาย
     setIsLoading(true);
@@ -233,6 +241,7 @@ export default function SignSheetsPage() {
       });
     } finally {
       setIsLoading(false);
+      setIsInitialLoading(false);
     }
   }, [activeCampaign?.id, selectedSessionId, page, debouncedSearch]);
 
@@ -452,19 +461,24 @@ export default function SignSheetsPage() {
 
   /* ------------------------------------------------------------------------ */
 
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
+
   return (
     <ShowIfCan permission="view_sessions">
       <div className="container-fluid px-3 px-sm-4 py-4">
         {/* =========================
           Card A: Header + Exam Info
          ========================= */}
-        <div className="card shadow-sm mb-4">
+        <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           {/* Header */}
           <div className="card-header bg-white">
             {/* Row 1: Title + Buttons */}
             <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
               <div className="flex-shrink-0">
-                <h6 className="mb-0 text-nowrap">รายชื่อผู้เข้าสอบและ QR</h6>
+                <h5 className="mb-1 text-nowrap">รายชื่อผู้เข้าสอบและ QR</h5>
               </div>
 
               {/* Buttons on right */}
@@ -535,11 +549,11 @@ export default function SignSheetsPage() {
           </div>
 
           {/* Body */}
-          <div className="card-body p-2 p-sm-3">
+          <div className="card-body p-2 p-sm-3 ">
             <div className="row g-2 g-md-3">
               {/* ===== Exam info (การ์ดย่อยแบบเรียบ เข้าธีม) ===== */}
               <div className="col-12">
-                <div className="card shadow-none border">
+                <div className="card " style={{ border: 0, boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)" }}>
                   <div className="card-body p-2 p-sm-3">
                     <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mb-3">
                       <div>
@@ -637,7 +651,7 @@ export default function SignSheetsPage() {
         {/* =========================
           Card B: Table (no A4 split)
          ========================= */}
-        <div className="card shadow-sm">
+        <div className="card mt-3" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           <div className="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">
             <div>
               <div className="fw-semibold small text-nowrap">{course}</div>

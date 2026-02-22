@@ -34,7 +34,7 @@ export default function AccountsToolbar({
 
 
   return (
-      <div className="card shadow-sm">
+      <div className="card" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
         <div className="card-body d-flex flex-column flex-md-row gap-3 align-items-md-end justify-content-between">
           <div className="w-100 d-flex flex-column flex-lg-row gap-3">
             {/* Search */}

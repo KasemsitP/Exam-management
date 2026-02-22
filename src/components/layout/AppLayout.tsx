@@ -17,6 +17,7 @@ import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { CampaignPickerModal } from "./CampaignPickerModal";
 import { showSuccess } from "../ui/successAlert";
+import { OverlayLoader } from "@/components/ui/Loading";
 import type { Role } from "@/store/slices/auth.slice";
 import { buildThemeByRole, pickRoleKey } from "@/components/layout/theme"
 import { Suspense } from "react";
@@ -81,6 +82,7 @@ export function AppLayout() {
   const [modalOpen, setModalOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [onClickMobileSidebar, setOnClickMobileSidebar] = useState("");
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // role pick (priority)
   const roleKey = useMemo<Role | "DEFAULT">(() => {
@@ -100,6 +102,13 @@ export function AppLayout() {
       dispatch(fetchInitialExamData());
     }
   }, [dispatch, examDataStatus]);
+
+  // Track initial loading status
+  useEffect(() => {
+    if (examDataStatus === "succeeded" || examDataStatus === "failed") {
+      setIsInitialLoading(false);
+    }
+  }, [examDataStatus]);
 
   const allowedNavItems = useMemo(
     () => NAV_ITEMS.filter((item) => canAny(roles, item.permissions ?? [])),
@@ -123,6 +132,11 @@ export function AppLayout() {
     dispatch(campaignSelected(String(campaignId)));
     setModalOpen(false);
   };
+
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
 
   return (
     <div className="d-flex min-vh-100 font-sans app-compact" style={{ background: theme.mainBg }}>

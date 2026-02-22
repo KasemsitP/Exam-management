@@ -54,7 +54,7 @@ export default function AccountCreateModal({
         aria-modal={open}
       >
         <div className="modal-dialog modal-dialog-centered modal-lg">
-          <div className="modal-content">
+          <div className="modal-content" style={{ border: 0, boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.10)" }}>
             <div className="modal-header">
               <h6 className="modal-title">สร้างผู้ใช้ใหม่</h6>
               <button type="button" className="btn-close" onClick={onClose} />

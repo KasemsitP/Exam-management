@@ -33,11 +33,6 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    if (status === "error" && error) {
-      showError("ล็อคอินไม่สำเร็จ", "ชื่อผู้ใช้หรือรหัสผ่านผิด");
-    }
-  }, [status, error]);
 
   const onSubmit = async (values: LoginFormValues) => {
     if (status === "loading") return;
@@ -47,6 +42,13 @@ export default function Login() {
     if (login.fulfilled.match(resultAction)) {
       showLoginSuccessAlert(resultAction.payload.name);
       navigate("/home", { replace: true });
+    }
+
+    if (login.rejected.match(resultAction)) {
+      const errorMessage =
+        resultAction.payload || "ชื่อผู้ใช้หรือรหัสผ่านผิด";
+
+      showError("ล็อคอินไม่สำเร็จ", errorMessage);
     }
   };
 

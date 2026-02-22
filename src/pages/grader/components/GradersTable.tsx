@@ -36,7 +36,7 @@ export default function AccountsTable({
   const filteredAccounts = accounts;
 
   return (
-    <div className="card shadow-sm">
+    <div className="card" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
       <div className="card-body p-0">
         <div className="table-responsive">
           <table className="table table-hover align-middle mb-0 table-striped text-nowrap">
@@ -71,6 +71,16 @@ export default function AccountsTable({
                   </td>
                   <td className="text-end">
                     <div className="d-flex flex-wrap gap-1 justify-content-center justify-content-lg-end">
+
+                      <button
+                        className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
+                        onClick={() => onViewSubjects(acc)}
+                        title="ดูวิชารายวิชา"
+                      >
+                        <Edit size={14} />
+                        <span>ดูรายวิชา</span>
+                      </button>
+
                       {/* ปุ่มแก้ไข */}
                       <button
                         className="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1"

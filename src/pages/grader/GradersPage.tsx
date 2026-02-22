@@ -33,6 +33,7 @@ import { createGraderAssignmentsThunk } from "@/store/slices/graders.slice";
 import { showSuccess } from "@/components/ui/successAlert"
 import { showError } from "@/components/ui/ErrorAlert";
 import { confirmAction } from "@/components/ui/comfirmaction";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 import type {
   Account,
@@ -67,6 +68,7 @@ export default function AccountsPage() {
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [subjectListAccount, setSubjectListAccount] = useState<Account | null>(null);
   const [subjectAssignments, setSubjectAssignments] = useState<SimpleAssignment[]>([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const camp = useAppSelector(selectActiveCampaign);
   const sessInCamp = useAppSelector(
@@ -115,8 +117,20 @@ export default function AccountsPage() {
 
 
   useEffect(() => {
-    dispatch(fetchAccountsThunk());
-    dispatch(fetchRolesThunk());
+    const loadInitialData = async () => {
+      try {
+        await Promise.all([
+          dispatch(fetchAccountsThunk()).unwrap(),
+          dispatch(fetchRolesThunk()).unwrap()
+        ]);
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    loadInitialData();
   }, [dispatch]);
 
   useEffect(() => {
@@ -124,7 +138,16 @@ export default function AccountsPage() {
     if (!campaignId) {
       return;
     }
-    dispatch(fetchAccountsGradersThunk(campaignId));
+    
+    const loadGraderData = async () => {
+      try {
+        await dispatch(fetchAccountsGradersThunk(campaignId)).unwrap();
+      } catch (error) {
+        console.error('Failed to load grader accounts:', error);
+      }
+    };
+
+    loadGraderData();
   }, [dispatch, camp]);
 
 
@@ -377,6 +400,10 @@ export default function AccountsPage() {
     }
   };
 
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
 
   return (
  

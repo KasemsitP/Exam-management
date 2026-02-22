@@ -5,6 +5,7 @@ import { selectIsSystemLocked, selectActiveCampaign, fetchInitialExamData } from
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import axios from "axios";
 import Swal from "sweetalert2";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 export default function SettingsPage() {
   const dispatch = useAppDispatch();
@@ -13,13 +14,27 @@ export default function SettingsPage() {
 
   // ใช้ป้องกันการกดปุ่มซ้ำตอนกำลังโหลด API หรือรอ Dialog
   const [loading, setLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const [isCampActive, setIsCampActive] = useState<boolean>(false);
   const [isQrActive, setIsQrActive] = useState<boolean>(false);
   useEffect(() => {
-    if (activeCampaign?.id) {
-      loadsStatus();
-    }
+    const loadInitialData = async () => {
+      if (!activeCampaign?.id) {
+        setIsInitialLoading(false);
+        return;
+      }
+      
+      try {
+        await loadsStatus();
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    loadInitialData();
   }, [activeCampaign?.id]);
 
   const loadsStatus = async () => {
@@ -157,11 +172,16 @@ export default function SettingsPage() {
     }
   };
 
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
+
   return (
     <fieldset disabled={locked || loading} style={{ opacity: locked || loading ? 0.7 : 1 }}>
       <ShowIfCan anyOf={["manage_graders"]}>
         <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
-          <div className="card shadow-sm border-0">
+          <div className="card" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
             <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
               <div>
                 <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
@@ -177,7 +197,7 @@ export default function SettingsPage() {
 
                 {/* Card 1: สถานะรอบสอบ */}
                 <div className="col-12 col-md-6">
-                  <div className="card shadow-none border h-100">
+                  <div className="card border h-100" style={{ boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)' }}>
                     <div className="card-body p-2 p-sm-3">
                       <div className="small text-muted mb-2 mb-sm-3">สถานะรอบสอบ</div>
 
@@ -209,7 +229,7 @@ export default function SettingsPage() {
 
                 {/* Card 2: สถานะคิวอาร์โค้ด */}
                 <div className="col-12 col-md-6">
-                  <div className="card shadow-none border h-100">
+                  <div className="card border h-100" style={{ boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)' }}>
                     <div className="card-body p-2 p-sm-3">
                       <div className="small text-muted mb-2 mb-sm-3">
                         สถานะคิวอาร์โค้ด

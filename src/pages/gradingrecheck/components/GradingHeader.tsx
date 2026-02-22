@@ -48,8 +48,8 @@ export default function GradingHeader({
           <div className="small text-warning d-flex align-items-center gap-1">
             <AlertCircle size={14} />
             {gradersStatus === "loading"
-              ? "กำลังโหลดข้อมูลผู้ตรวจและงานที่ได้รับมอบหมาย..."
-              : "ไม่พบงานที่ได้รับมอบหมายสำหรับบัญชีนี้ในแคมเปญนี้"}
+              ? "กำลังโหลดข้อมูลผู้ตรวจและวิชาที่ได้รับมอบหมาย..."
+              : "ไม่พบวิชาที่ได้รับมอบหมายสำหรับบัญชีนี้ในรอบสอบนี้"}
           </div>
         )}
       </div>

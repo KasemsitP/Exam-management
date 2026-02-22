@@ -42,7 +42,7 @@ export default function ImportCsvPage() {
      <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
         <ImportHeader />
 
-        <div className="card shadow-sm mb-4">
+        <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           <div className="card-body">
             <ImportControls
               activeCampaign={activeCampaign}

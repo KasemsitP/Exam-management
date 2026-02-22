@@ -1,6 +1,7 @@
 // KeyManagementPage.tsx
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 import { useKeyManagement } from "./hooks/useKeyManagement";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 import KeyHeader from "./components/KeyHeader";
 import KeyCreateCard from "./components/KeyCreateCard";
@@ -28,6 +29,7 @@ export default function KeyManagementPage() {
     selectedSessionId,
     headerSummary,
     isLoading,
+    isInitialLoading,
     canGenerate,
     isEncryptionLoading,
     canEncrypt,
@@ -43,6 +45,11 @@ export default function KeyManagementPage() {
     handleRunBulkEncryption,
 
   } = useKeyManagement();
+
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
 
   return (
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>

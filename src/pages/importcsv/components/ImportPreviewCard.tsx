@@ -24,7 +24,7 @@ export default function ImportPreviewCard({
   onConfirm,
 }: ImportPreviewCardProps) {
   return (
-    <div className="card shadow-sm">
+    <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
       <div className="card-body">
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 text-muted small mb-2">
           <div className="d-flex flex-wrap align-items-center gap-3">

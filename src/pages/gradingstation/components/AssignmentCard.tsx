@@ -6,7 +6,7 @@ interface GradingAssignmentRecord {
 
 export default function RecentScoresCard({ recent }: GradingAssignmentRecord) {
   return (
-    <div className="card shadow-sm">
+    <div className="card" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
       <div className="card-header bg-white d-flex align-items-center gap-2">
         <h6 className="mb-0">รายวิชาที่สามารถตรวจได้</h6>
       </div>

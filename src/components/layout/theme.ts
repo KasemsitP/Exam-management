@@ -86,6 +86,8 @@ export const ROLE_COLORS: Record<Role | "DEFAULT", { color: string; accent: stri
   admin: {
     color: "#9F1239",   // crimson red
     accent: "#7F1D1D",
+
+
   },
 
   // 🟡 Manager — Golden Amber (ไม่ชน staff)

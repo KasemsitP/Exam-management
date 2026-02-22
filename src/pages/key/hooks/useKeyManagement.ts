@@ -73,7 +73,8 @@ export const useKeyManagement = () => {
   const [firstKeyId, setFirstKeyId] = useState<number | null>(null);
   const [secondKeyId, setSecondKeyId] = useState<number | null>(null);
   const [manager1, setmanager1] = useState<string>("");
-  const [manager2, setmanager2] = useState<string>("")
+  const [manager2, setmanager2] = useState<string>("");
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
 
   // console.log("KeyCreateCard props:", {
@@ -143,19 +144,32 @@ export const useKeyManagement = () => {
 
 
   useEffect(() => {
-    if (!numericCampaignId || !userAccountId) return;
+    if (!numericCampaignId || !userAccountId) {
+      setIsInitialLoading(false);
+      return;
+    }
 
-    dispatch(fetchDashboardStatus(numericCampaignId));
+    const loadInitialData = async () => {
+      try {
+        await Promise.all([
+          dispatch(fetchDashboardStatus(numericCampaignId)).unwrap(),
+          dispatch(fetchKeysForCampaign(numericCampaignId))
+            .unwrap()
+            .then(syncLocalFromKeys)
+            .catch((err) => {
+              console.log("fetchKeysForCampaign failed:", err);
+              syncLocalFromKeys([]);
+            }),
+          dispatch(checkEncryptionPrerequisites(numericCampaignId)).unwrap()
+        ]);
+      } catch (error) {
+        console.error("Failed to load initial data:", error);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
 
-    dispatch(fetchKeysForCampaign(numericCampaignId))
-      .unwrap()
-      .then(syncLocalFromKeys)
-      .catch((err) => {
-        console.log("fetchKeysForCampaign failed:", err);
-        syncLocalFromKeys([]);
-      });
-
-    dispatch(checkEncryptionPrerequisites(numericCampaignId));
+    loadInitialData();
 
     return () => {
       dispatch(clearActiveKeys());
@@ -426,6 +440,7 @@ export const useKeyManagement = () => {
     // derived
     numericCampaignId,
     isLoading,
+    isInitialLoading,
     canGenerate,
     isEncryptionLoading,
     canEncrypt,

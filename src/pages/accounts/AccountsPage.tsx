@@ -32,6 +32,7 @@ import type {
 } from "./types";
 import Swal from "sweetalert2";
 import { confirmAction } from "@/components/ui/comfirmaction";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 export default function AccountsPage() {
   const dispatch = useAppDispatch();
@@ -40,6 +41,9 @@ export default function AccountsPage() {
   const { status: accountStatus } = useAppSelector(selectAccountsSlice);
   const accounts = useAppSelector(selectAllAccounts);
   const roles = useAppSelector(selectAllRoles) as Role[];
+  
+  // Track initial loading state
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Filters
   const [searchText, setSearchText] = useState("");
@@ -52,8 +56,20 @@ export default function AccountsPage() {
 
   // initial fetch
   useEffect(() => {
-    dispatch(fetchAccountsThunk());
-    dispatch(fetchRolesThunk());
+    const loadData = async () => {
+      try {
+        await Promise.all([
+          dispatch(fetchAccountsThunk()).unwrap(),
+          dispatch(fetchRolesThunk()).unwrap()
+        ]);
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+    
+    loadData();
   }, [dispatch]);
 
   // derived: filtered accounts
@@ -217,6 +233,11 @@ export default function AccountsPage() {
       });
     }
   };
+
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="กำลังโหลดข้อมูล..." />;
+  }
 
   return (
    <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">

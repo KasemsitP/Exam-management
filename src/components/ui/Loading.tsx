@@ -82,7 +82,7 @@ export const OverlayLoader: React.FC<OverlayLoaderProps> = ({
       role="alert"
     >
       <div className="d-flex flex-column align-items-center gap-3">
-        <span className={spinner === "border" ? "spinner-border" : "spinner-grow"} role="status" />
+        {/* <span className={spinner === "border" ? "spinner-border" : "spinner-grow"} role="status" /> */}
         <span className="text-light fw-semibold">{label}</span>
       </div>
     </div>,

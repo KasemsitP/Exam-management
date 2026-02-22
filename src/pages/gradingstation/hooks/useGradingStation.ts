@@ -76,6 +76,7 @@ export const useGradingStation = () => {
 
   const isLoading = useAppSelector(selectIsGradingLoading);
   const gradingError = useAppSelector(selectGradingError);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // --- 2. Fetch graders once ---
   useEffect(() => {
@@ -87,6 +88,13 @@ export const useGradingStation = () => {
       );
     }
   }, [activeCampaign, gradersStatus, dispatch]);
+
+  // Track initial loading status
+  useEffect(() => {
+    if (gradersStatus === "succeeded" || gradersStatus === "failed") {
+      setIsInitialLoading(false);
+    }
+  }, [gradersStatus]);
 
   // --- 3. Grader profile & assignments ---
   const graderProfile = useMemo<CrmGrader | null>(() => {
@@ -469,6 +477,7 @@ html: `
     gradersStatus,
     activeAssignment,
     isLoading,
+    isInitialLoading,
     gradersAssignment,
     scanData,
     score,

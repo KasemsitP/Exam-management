@@ -32,7 +32,7 @@ const ScanResult = React.memo(({
 }) => {
   if (status === "loading") {
     return (
-      <div className="card shadow-sm border-0 h-100">
+      <div className="card h-100" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
         <div className="card-body d-flex flex-column align-items-center justify-content-center py-5">
           <Loader2 size={48} className="spin-animation text-primary mb-3" />
           <div className="fw-semibold">กำลังตรวจสอบข้อมูล...</div>
@@ -43,7 +43,7 @@ const ScanResult = React.memo(({
 
   if (status === "failed" || error) {
     return (
-      <div className="card border-0 shadow-sm h-100">
+      <div className="card h-100" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
         <div className="card-body d-flex flex-column align-items-center justify-content-center py-5">
           <XCircle size={56} className="mb-3 text-danger" />
           <h5 className="mb-2">สแกนล้มเหลว</h5>
@@ -57,7 +57,7 @@ const ScanResult = React.memo(({
 
   if (status === "succeeded" && user) {
     return (
-      <div className="card border-0 shadow-sm h-100">
+      <div className="card h-100" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
         <div className="card-body py-4">
           <div className="d-flex align-items-center gap-2 text-success mb-4 justify-content-center">
             <CheckCircle2 size={24} /> <h5 className="mb-0">ยืนยันตัวตนสำเร็จ</h5>
@@ -101,7 +101,7 @@ const ScanResult = React.memo(({
   }
 
   return (
-    <div className="card border-0 shadow-sm h-100">
+    <div className="card h-100" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
       <div className="card-body d-flex flex-column align-items-center justify-content-center py-5 text-muted">
         <ScanLine size={48} className="mb-3 opacity-50" />
         <h6 className="fw-normal">รอรับผลสแกน</h6>
@@ -148,7 +148,7 @@ export default function ProctorScanPage() {
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
       <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
         {/* Header */}
-        <div className="card shadow-sm mb-4">
+        <div className="card mb-4" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
           <div className="card-header bg-white">
             <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
               {/* Title */}
@@ -220,7 +220,7 @@ export default function ProctorScanPage() {
         <div className="row g-4">
           {/* Left: Scanner */}
           <div className="col-12 col-lg-7">
-            <div className="card shadow-sm border-0 h-100">
+            <div className="card h-100" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
               <div className="card-header bg-white d-flex align-items-center justify-content-between">
                 <div className="d-flex align-items-center gap-2">
                   <span className="fw-semibold">กล้องสแกน QR</span>

@@ -9,6 +9,7 @@ import { useAppSelector } from "@/store/hook";
 import { selectActiveCampaign, selectIsSystemLocked, selectQrActiveCampaign } from "@/store/slices/examData.slice";
 import { DeleteCamp } from "@/utils/camp";
 import type { DisputedQuestionDto } from "./types";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 import ScannerModal from "./components/VerificationScannerModal";
 
@@ -22,6 +23,7 @@ export default function AdminResetScoresPage() {
   const [rows, setRows] = useState<DisputedQuestionDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [resettingSlotId, setResettingSlotId] = useState<number | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // Scanner State
   const [modalOpen, setModalOpen] = useState(false);
@@ -53,8 +55,14 @@ export default function AdminResetScoresPage() {
   useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await reloadRows();
-      setLoading(false);
+      try {
+        await reloadRows();
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+      } finally {
+        setLoading(false);
+        setIsInitialLoading(false);
+      }
     };
     init();
   }, [reloadRows]);
@@ -99,11 +107,16 @@ export default function AdminResetScoresPage() {
     setModalOpen(true);
   };
 
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
+
   return (
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
       <div className="d-flex flex-column gap-4">
         <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
-          <div className="card shadow-sm mb-3">
+          <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
             <div className="card-header bg-white">
               <div className="d-flex justify-content-between align-items-center">
                 <div>
@@ -125,64 +138,68 @@ export default function AdminResetScoresPage() {
           ) : rows.length === 0 ? (
             <p className="text-center p-4 text-muted">ยังไม่มีข้อที่คะแนนต่างกันเกินเกณฑ์</p>
           ) : (
-            <div className="table-responsive">
-              <table className="table table-sm table-hover align-middle text-nowrap">
-                <thead className="table-light">
-                  <tr>
-                    <th>ถุง</th>
-                    <th>รหัสสอบ</th>
-                    <th>วิชา</th>
-                    <th>ข้อ</th>
-                    <th>หัวข้อ</th>
-                    <th>ผู้ตรวจ 1</th>
-                    <th>คะแนน 1</th>
-                    <th>ผู้ตรวจ 2</th>
-                    <th>คะแนน 2</th>
-                    <th>ผลต่าง</th>
-                    <th className="text-center">จัดการ</th>
-                    <th className="text-center">เช็คเล่มถุง</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={`${row.bookletId}-${row.subjectId}-${row.questionNo}`}>
-                      <td>{row.bagNo ?? "-"}</td>
-                      <td>{row.random_num ?? "-"}</td>
-                      <td>
-                        <div>{row.subjectCode}</div>
-                        <small className="text-muted">{row.subjectName}</small>
-                      </td>
-                      <td>{row.questionNo}</td>
-                      <td>{row.questionLabel ?? "-"}</td>
-                      <td>{row.graderName1}</td>
-                      <td>{row.score1}</td>
-                      <td>{row.graderName2}</td>
-                      <td>{row.score2}</td>
-                      <td className={row.diff >= 4 ? "text-danger fw-bold" : ""}>{row.diff}</td>
+            <div className="card" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
+              <div className="card-body p-0">
+                <div className="table-responsive">
+                  <table className="table table-sm table-hover align-middle text-nowrap mb-0">
+                    <thead className="table-light">
+                      <tr>
+                        <th className="text-center">เลขถุง</th>
+                        <th className="text-center">รหัสสอบ</th>
+                        <th className="text-center">วิชา</th>
+                        <th className="text-center">ข้อ</th>
+                        <th className="text-center">หัวข้อ</th>
+                        <th className="text-center">ผู้ตรวจ 1</th>
+                        <th className="text-center">คะแนน 1</th>
+                        <th className="text-center">ผู้ตรวจ 2</th>
+                        <th className="text-center">คะแนน 2</th>
+                        <th className="text-center">ผลต่าง</th>
+                        <th className="text-center">จัดการ</th>
+                        <th className="text-center">เช็คเล่มถุง</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr key={`${row.bookletId}-${row.subjectId}-${row.questionNo}`}>
+                          <td className="text-center">{row.bagNo ?? "-"}</td>
+                          <td className="text-center">{row.random_num ?? "-"}</td>
+                          <td className="text-center">
+                            <div>{row.subjectName}</div>
+                            <small className="text-muted">รหัสวิชา: {row.subjectCode}</small>
+                          </td>
+                          <td className="text-center">{row.questionNo}</td>
+                          <td className="text-center">{row.questionLabel ?? "-"}</td>
+                          <td className="text-center">{row.graderName1}</td>
+                          <td className="text-center">{row.score1}</td>
+                          <td className="text-center">{row.graderName2}</td>
+                          <td className="text-center">{row.score2}</td>
+                          <td className={row.diff >= 4 ? "text-danger fw-bold text-center" : "text-center"}>{row.diff}</td>
 
-                      {/* ✅ แสดงเวลาที่บันทึก */}
+                          {/* ✅ แสดงเวลาที่บันทึก */}
 
-                      <td className="text-center">
-                        <button
-                          className="btn btn-sm btn-danger text-center"
-                          disabled={resettingSlotId === row.slotId1}
-                          onClick={() => handleReset(row)}
-                        >
-                          {resettingSlotId === row.slotId1 ? "..." : "รีเซ็ตคะแนน"}
-                        </button>
-                      </td>
-                      <td className="text-center">
-                        <button
-                          className="btn btn-sm btn-primary"
-                          onClick={() => handleOpenScanner(row.bookletId)}
-                        >
-                          ตรวจสอบเล่ม
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          <td className="text-center">
+                            <button
+                              className="btn btn-sm btn-danger text-center"
+                              disabled={resettingSlotId === row.slotId1}
+                              onClick={() => handleReset(row)}
+                            >
+                              {resettingSlotId === row.slotId1 ? "..." : "รีเซ็ตคะแนน"}
+                            </button>
+                          </td>
+                          <td className="text-center">
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={() => handleOpenScanner(row.bookletId)}
+                            >
+                              ตรวจสอบเล่ม
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </div>

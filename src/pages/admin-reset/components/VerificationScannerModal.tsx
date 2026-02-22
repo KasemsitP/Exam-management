@@ -75,7 +75,7 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
           <button type="button" className="btn-close" onClick={onClose} />
         </div>
         <div className="modal-body">
-          <div className="card border-0 shadow-sm">
+          <div className="card" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
             <div className="card-header bg-white">
               <h6 className="mb-0">สแกนสมุดคำตอบจากคิวอาร์โค้ด</h6>
             </div>

@@ -20,6 +20,7 @@ import axios from "axios";
 import { useAppSelector } from "@/store/hook";
 import { selectActiveCampaign, selectActiveCampaignSessions } from "@/store/slices/examData.slice";
 import { selectSession } from "@/store/slices/dashboard.slice";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 /** =========================
  * Types
@@ -167,6 +168,7 @@ export default function SubjectRankingExportPage() {
   const [exporting, setExporting] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
 
 
@@ -174,7 +176,10 @@ export default function SubjectRankingExportPage() {
    * Load rows & Auto Select All
    * ========================= */
   useEffect(() => {
-    if (!campaignId) return;
+    if (!campaignId) {
+      setIsInitialLoading(false);
+      return;
+    }
 
     const load = async () => {
       setLoadingRows(true);
@@ -204,6 +209,7 @@ export default function SubjectRankingExportPage() {
         });
       } finally {
         setLoadingRows(false);
+        setIsInitialLoading(false);
       }
     };
 
@@ -681,17 +687,21 @@ export default function SubjectRankingExportPage() {
     }
   };
 
+  // Show loading overlay while initial data is loading
+  if (isInitialLoading) {
+    return <OverlayLoader open={true} label="" />;
+  }
 
   return (
     <div className="container-fluid px-2 px-sm-3 px-md-4 py-2 py-sm-3">
-      <div className="card shadow-sm border-0 mb-3">
+      <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
         <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
           <div>
             <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
               สร้างบัญชีรายชื่อผู้สอบผ่าน
             </h5>
             <small className="text-muted d-block">
-              คำนวณคะแนนรวมจากทุกรายวิชาที่มีในแคมเปญนี้
+              คำนวณคะแนนรวมจากทุกรายวิชาที่มีใน {activeCampaign?.name} และจัดอันดับผู้เข้าสอบตามคะแนนรวม
             </small>
           </div>
 
@@ -766,7 +776,7 @@ export default function SubjectRankingExportPage() {
                             <div className="small text-muted d-flex gap-1 text-nowrap">
                               <span>{s.questions.length} ข้อ</span>
                               <span>•</span>
-                              <span className="text-truncate">Session: {s.sessionIds.join(", ")}</span>
+                              {/* <span className="text-truncate">Session: {s.sessionIds.join(", ")}</span> */}
                             </div>
                           </div>
                         </div>
@@ -924,7 +934,7 @@ export default function SubjectRankingExportPage() {
           </div>
         </div>
       </div>
-      <div className="card shadow-sm border-0 mb-3">
+      <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
         <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
           <div>
             <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
@@ -1080,8 +1090,9 @@ export default function SubjectRankingExportPage() {
                                     return (
                                       <div key={q.key} className="col-12 col-md-6 col-xl-4">
                                         <label
-                                          className={`border rounded bg-white p-2 d-flex gap-2 align-items-start cursor-pointer h-100 ${checked ? "border-primary shadow-sm" : ""
+                                          className={`border rounded bg-white p-2 d-flex gap-2 align-items-start cursor-pointer h-100 ${checked ? "border-primary" : ""
                                             }`}
+                                          style={checked ? { boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)' } : undefined}
                                         >
                                           <input
                                             type="checkbox"
@@ -1140,7 +1151,7 @@ export default function SubjectRankingExportPage() {
                             หากคะแนนรวมเท่ากัน ระบบจะดูคะแนนจากหัวข้อเหล่านี้เป็นอันดับแรกในการตัดสิน
                           </small>
                           {groups.map((g, idx) => (
-                            <div key={g.id} className="card shadow-sm border-0 bg-light-subtle">
+                            <div key={g.id} className="card bg-light-subtle" style={{ boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)' }}>
                               <div className="card-body p-2">
                                 <div className="d-flex align-items-start gap-2">
                                   <span className="badge bg-dark rounded-pill mt-1 flex-shrink-0">{idx + 1}</span>
