@@ -22,7 +22,7 @@ export function CampaignFiltersCard({
   onCreateCampaign,
 }: CampaignFiltersCardProps) {
   return (
-    <div className="card shadow-sm mb-4">
+    <div className="card shadow-sm mb-4" style={{ borderTop: "4px solid #3B82F6" }}>
       <div className="card-header bg-white">
         <div className="d-flex flex-column flex-lg-row gap-2 align-items-start align-items-lg-center justify-content-lg-between">
           <div>

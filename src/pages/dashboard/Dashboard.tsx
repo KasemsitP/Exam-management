@@ -23,6 +23,7 @@ import { selectCurrentUser } from "@/store/slices/auth.slice";
 import { useDispatch } from "react-redux";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
 
+
 /* -----------------------------------------
    ✅ Muted / Neutral theme (ไม่ฉูดฉาด)
 ------------------------------------------ */
@@ -285,31 +286,46 @@ export default function Dashboard() {
   useEffect(() => {
     if (!activeCampaign?.id) return;
 
+    let interval: NodeJS.Timeout;
+    let isFetching = false;
+
+
+
     const fetchDashboard = async () => {
       try {
+        if (isFetching) return;
+        isFetching = true;
+
         setLoadingDashboard(true);
         setDashboardError(null);
 
-        dispatch(fetchBagsForCampaignThunk(activeCampaign.id))
+        dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
 
-        const res = await axios.get<DashboardApiResponse>(
+        const res = await axios.get(
           `/api/dashboard/campaign/${activeCampaign.id}`
         );
 
-        console.log("Dashboard API:", res.data);
         setDashboardData(res.data);
-      } catch (err: any) {
-        console.error("Fetch dashboard error:", err);
-        setDashboardError("โหลดข้อมูลแดชบอร์ดไม่สำเร็จ หรือเชื่อมต่อ Server ไม่ได้");
+      } catch (err) {
+        setDashboardError("โหลดข้อมูลแดชบอร์ดไม่สำเร็จ");
         setDashboardData(null);
       } finally {
+        isFetching = false;
         setLoadingDashboard(false);
       }
     };
 
+    // ยิงครั้งแรกทันที
     fetchDashboard();
-  }, [activeCampaign?.id]);
 
+    // ยิงซ้ำทุก 1 นาที
+    interval = setInterval(() => {
+      fetchDashboard();
+    }, 60000); // 60000 ms = 1 นาที
+
+    // cleanup ตอน unmount
+    return () => clearInterval(interval);
+  }, [activeCampaign?.id]);
   const USE_MOCK_SCORE = false; // <-- เปลี่ยนเป็น false ตอนอยากกลับไปใช้ของจริง
 
   const calculateUsers = dashboardData?.seatAssignmentStatus?.reduce((sum, s) => sum + s.count_user, 0) ?? 0;
@@ -440,7 +456,8 @@ export default function Dashboard() {
     if (!dashboardData?.sessions) return [];
     return Object.values(dashboardData.sessions).map((s) => ({
       sessionId: s.sessionId,
-      sessionLabel: `${s.sessionCode} (${s.subject_name ?? "-"})`,
+      sessionLabel: s.sessionCode,
+      sessionFullLabel: `${s.sessionCode} (${s.subject_name ?? "-"})`,
       bagCount: s.bags.total,
       //  subject_name: s.subject_name
     }));
@@ -546,40 +563,29 @@ export default function Dashboard() {
       return null;
     }
 
-    const radius = innerRadius + (outerRadius - innerRadius) / 2;
-    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
-    const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+    // คำนวณ % สำหรับแสดงบน label
+    const total = bagCounts.reduce((sum, b) => sum + b.bagCount, 0);
+    const percent = total > 0 ? ((value / total) * 100).toFixed(0) : "0";
+
+    // วาง label ด้านนอก pie
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 22;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-      <g>
-        {/* Shadow/outline for better visibility */}
-        <text
-          x={x}
-          y={y}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={18}
-          fontWeight={700}
-          fill="none"
-          strokeWidth={3}
-          pointerEvents="none"
-        >
-          {value}
-        </text>
-        {/* Main text */}
-        <text
-          x={x}
-          y={y}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={18}
-          fontWeight={700}
-          fill="#fff"
-          pointerEvents="none"
-        >
-          {value}
-        </text>
-      </g>
+      <text
+        x={x}
+        y={y}
+        textAnchor={x > cx ? "start" : "end"}
+        dominantBaseline="central"
+        fontSize={13}
+        fontWeight={700}
+        fill="#334155"
+        pointerEvents="none"
+      >
+        {value} ({percent}%)
+      </text>
     );
   };
   // รายวิชาทั้งหมดจาก subjectQuestion
@@ -628,7 +634,7 @@ export default function Dashboard() {
     <ShowIfCan permission="dashboard" fallback={<div className="p-4 alert alert-warning">คุณไม่มีสิทธิ์เข้าถึงแดชบอร์ดนี้</div>}>
       <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
         {/* Header */}
-        <div className="card border-0 shadow-sm" style={{ background: surface }}>
+        <div className="card border-0 shadow-sm" style={{ background: surface, borderBottom: "4px solid #3B82F6" }}>
           <div className="card-body p-3 p-md-4">
             <div className="d-flex align-items-start gap-2 gap-md-3">
               <div className="flex-grow-1">
@@ -643,427 +649,451 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Loading State */}
-        {loadingDashboard ? (
-          <div className="d-flex flex-column align-items-center justify-content-center py-5">
-            <div className="spinner-border mb-3" style={{ color: primary }} role="status"></div>
-            <div style={{ color: muted }}>กำลังโหลดข้อมูลจาก Server...</div>
-          </div>
-        ) : (
-          <>
-            {dashboardError && (
-              <div className="alert alert-danger shadow-sm border-0">{dashboardError}</div>
-            )}
 
-            {/* Stat Cards */}
-            <section className="d-flex flex-wrap gap-3 gap-md-4">
-              {/* Sessions */}
-              <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
-                <div className="card shadow-sm h-100 border-start border-4" style={{ borderLeftColor: "#3B82F6" }}>
-                  <div className="card-body p-3 p-sm-4">
-                    <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
-                      <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
-                        จำนวนรายวิชาที่สอบทั้งหมด
+        <>
+          {dashboardError && (
+            <div className="alert alert-danger shadow-sm border-0">{dashboardError}</div>
+          )}
+
+          {/* Stat Cards */}
+          <section className="d-flex flex-wrap gap-3 gap-md-4">
+            {/* Sessions */}
+            <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
+              <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #3B82F6", borderTop: "3px solid #3B82F6", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(59,130,246,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
+                <div className="card-body p-3 p-sm-4">
+                  <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
+                    <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
+                      จำนวนรายวิชาที่สอบทั้งหมด
+                    </div>
+                    <CalendarDays size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
+                  </div>
+                  <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
+                    {sessionCount}
+                  </div>
+                  <div className="small d-none d-sm-block" style={{ color: muted }}>
+                    วิชา
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Subjects */}
+            <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
+              <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #22C55E", borderTop: "3px solid #22C55E", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(34,197,94,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
+                <div className="card-body p-3 p-sm-4">
+                  <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
+                    <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
+                      รายวิชาที่สอบทั้งหมด
+                    </div>
+                    <GraduationCap size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
+                  </div>
+
+                  {subjectList.length > 0 && (
+                    <ul className="list-unstyled mb-0 text-dark small" style={{ fontSize: "0.85rem" }}>
+                      {subjectList.slice(0, 2).map((subj) => (
+                        <li key={subj.subjectId} className="fw-bold text-truncate">
+                          {subj.name}
+                        </li>
+                      ))}
+
+                      {subjectList.length > 2 && (
+                        <li className="fst-italic text-muted">
+                          + อีก {subjectList.length - 2} วิชา
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Total Users */}
+            <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
+              <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #F59E0B", borderTop: "3px solid #F59E0B", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(245,158,11,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
+                <div className="card-body p-3 p-sm-4">
+                  <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
+                    <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
+                      ผู้เข้าสอบภายในรอบสอบนี้
+                    </div>
+                    <Users size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
+                  </div>
+                  <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
+                    {totalUsersInCampaign.toLocaleString()}
+                  </div>
+                  <div className="small d-none d-sm-block" style={{ color: muted }}>
+                    คน
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
+              <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #8B5CF6", borderTop: "3px solid #8B5CF6", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(139,92,246,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
+                <div className="card-body p-3 p-sm-4">
+                  <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
+                    <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
+                      จำนวนถุงข้อสอบทั้งหมด
+                    </div>
+                    <Package size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
+                  </div>
+                  <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
+                    {totalBags}
+                  </div>
+                  <div className="small d-none d-sm-block" style={{ color: muted }}>
+                    ถุง {/* ถุง (ความจุ {defaultBagCapacity}) */}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+            {/* Total Booklets */}
+            <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
+              <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #EF4444", borderTop: "3px solid #EF4444", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(239,68,68,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
+                <div className="card-body p-3 p-sm-4">
+                  <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
+                    <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
+                      จำนวนสมุดข้อสอบทั้งหมด
+                    </div>
+                    <BookOpen size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
+                  </div>
+                  <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
+                    {dashboardData?.rawBookletsCount?.toLocaleString() ?? 0}
+                  </div>
+                  <div className="small d-none d-sm-block" style={{ color: muted }}>
+                    เล่ม
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bags */}    <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
+              <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #0EA5E9", borderTop: "3px solid #0EA5E9", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(14,165,233,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
+                <div className="card-body p-3 p-sm-4">
+                  <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
+                    <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
+                      จำนวนผู้เข้าสอบที่ถูกจัดสรรที่นั่งแล้ว
+                    </div>
+                    <Package size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
+                  </div>
+                  <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
+                    {calculateUsers.toLocaleString()}
+                  </div>
+                  <div className="small d-none d-sm-block" style={{ color: muted }}>
+                    คน {/* ถุง (ความจุ {defaultBagCapacity}) */}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Charts */}
+          <section className="row g-3 g-md-4">
+            {/* Score Distribution */}
+            <div className="col-lg-7">
+              <div className="card shadow-sm h-100" style={{ background: surface, borderTop: "3px solid #3B82F6" }}>
+                <div className="card-header bg-white py-3 py-sm-4">
+                  <h6 className="mb-1 fw-bold">ช่วงคะแนนรวม</h6>
+                  <small className="d-none d-sm-block" style={{ color: muted }}>
+                    กราฟแสดงช่วงคะแนนรวมทั้งหมดทุกวิชา
+                  </small>
+                </div>
+                <div className="card-body p-3 p-sm-4" style={{ minHeight: 300 }}>
+                  <div className="h-100 d-flex align-items-center justify-content-center rounded">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={scoreChartData}>
+                        <XAxis
+                          dataKey="range"
+                          tick={{ fontSize: 10 }}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fontSize: 10 }}
+                        />
+                        <Tooltip formatter={(value) => [`${value} คน`, "จำนวน"]} />
+                        <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bags by Session */}
+            <div className="col-lg-5">
+              <div className="d-flex flex-column gap-3 gap-md-4 h-100">
+                <div style={{ background: surface }}>
+                  {bagCounts.length > 0 && (
+                    <div className="card shadow-sm" style={{ background: surface, borderTop: "3px solid #8B5CF6" }}>
+                      <div className="card-header bg-white py-3 py-sm-4">
+                        <h6 className="mb-0 fw-bold">จำนวนถุงข้อสอบในแต่ละวิชา</h6>
                       </div>
-                      <CalendarDays size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
-                    </div>
-                    <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
-                      {sessionCount}
-                    </div>
-                    <div className="small d-none d-sm-block" style={{ color: muted }}>
-                      วิชา
-                    </div>
-                  </div>
-                </div>
-              </div>
+                      <div className="card-body p-3 p-sm-4" style={{ minHeight: 420 }}>
+                        <ResponsiveContainer width="100%" height={260}>
+                          <PieChart>
+                            <Pie
+                              data={bagCounts}
+                              dataKey="bagCount"
+                              nameKey="sessionLabel"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={45}
+                              outerRadius={75}
+                              paddingAngle={3}
+                              label={renderLabel}
+                              labelLine={{ stroke: "#94A3B8", strokeWidth: 1 }}
+                            >
+                              {bagCounts.map((_, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={pieColors[index % pieColors.length]}
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              formatter={(value: number, name: string) => {
+                                const item = bagCounts.find((b) => b.sessionLabel === name);
+                                return [`${value} ถุง`, item?.sessionFullLabel ?? name];
+                              }}
+                              contentStyle={{
+                                background: "#FFFFFF",
+                                border: `1px solid ${border}`,
+                                borderRadius: 10,
+                                boxShadow: "0 6px 20px rgba(15, 69, 195, 0.08)",
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
 
-              {/* Subjects */}
-              <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
-                <div className="card shadow-sm h-100 border-start border-4" style={{ borderLeftColor: "#22C55E" }}>
-                  <div className="card-body p-3 p-sm-4">
-                    <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
-                      <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
-                        รายวิชาที่สอบทั้งหมด
-                      </div>
-                      <GraduationCap size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
-                    </div>
-
-                    {subjectList.length > 0 && (
-                      <ul className="list-unstyled mb-0 text-dark small" style={{ fontSize: "0.85rem" }}>
-                        {subjectList.slice(0, 2).map((subj) => (
-                          <li key={subj.subjectId} className="fw-bold text-truncate">
-                            {subj.name}
-                          </li>
-                        ))}
-
-                        {subjectList.length > 2 && (
-                          <li className="fst-italic text-muted">
-                            + อีก {subjectList.length - 2} วิชา
-                          </li>
-                        )}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Total Users */}
-              <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
-                <div className="card shadow-sm h-100 border-start border-4" style={{ borderLeftColor: "#F59E0B" }}>
-                  <div className="card-body p-3 p-sm-4">
-                    <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
-                      <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
-                        ผู้เข้าสอบภายในรอบสอบนี้
-                      </div>
-                      <Users size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
-                    </div>
-                    <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
-                      {totalUsersInCampaign.toLocaleString()}
-                    </div>
-                    <div className="small d-none d-sm-block" style={{ color: muted }}>
-                      คน
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
-                <div className="card shadow-sm h-100 border-start border-4" style={{ borderLeftColor: "#8B5CF6" }}>
-                  <div className="card-body p-3 p-sm-4">
-                    <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
-                      <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
-                        จำนวนถุงข้อสอบทั้งหมด
-                      </div>
-                      <Package size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
-                    </div>
-                    <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
-                      {totalBags}
-                    </div>
-                    <div className="small d-none d-sm-block" style={{ color: muted }}>
-                      ถุง {/* ถุง (ความจุ {defaultBagCapacity}) */}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-
-              {/* Total Booklets */}
-              <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
-                <div className="card shadow-sm h-100 border-start border-4" style={{ borderLeftColor: "#EF4444" }}>
-                  <div className="card-body p-3 p-sm-4">
-                    <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
-                      <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
-                        จำนวนสมุดข้อสอบทั้งหมด
-                      </div>
-                      <BookOpen size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
-                    </div>
-                    <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
-                      {dashboardData?.rawBookletsCount?.toLocaleString() ?? 0}
-                    </div>
-                    <div className="small d-none d-sm-block" style={{ color: muted }}>
-                      เล่ม
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bags */}    <div style={{ flex: "1 1 calc(20% - 0.75rem)", minWidth: 160 }}>
-                <div className="card shadow-sm h-100 border-start border-4" style={{ borderLeftColor: "#8B5CF6" }}>
-                  <div className="card-body p-3 p-sm-4">
-                    <div className="d-flex justify-content-between align-items-start mb-2 mb-sm-3">
-                      <div className="small text-uppercase fw-semibold" style={{ color: muted, fontSize: "0.8rem" }}>
-                        จำนวนผู้เข้าสอบที่ถูกจัดสรรที่นั่งแล้ว
-                      </div>
-                      <Package size={18} className="opacity-75 d-none d-sm-block" style={{ color: muted }} />
-                    </div>
-                    <div className="h2 h-sm-3 mb-1 mb-sm-2 fw-bold" style={{ color: "#0F172A" }}>
-                      {calculateUsers.toLocaleString()}
-                    </div>
-                    <div className="small d-none d-sm-block" style={{ color: muted }}>
-                      คน {/* ถุง (ความจุ {defaultBagCapacity}) */}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Charts */}
-            <section className="row g-3 g-md-4">
-              {/* Score Distribution */}
-              <div className="col-lg-8">
-                <div className="card shadow-sm h-100" style={{ background: surface }}>
-                  <div className="card-header bg-white py-3 py-sm-4">
-                    <h6 className="mb-1 fw-bold">ช่วงคะแนนรวม</h6>
-                    <small className="d-none d-sm-block" style={{ color: muted }}>
-                      กราฟแสดงช่วงคะแนนรวมทั้งหมดทุกวิชา
-                    </small>
-                  </div>
-                  <div className="card-body p-3 p-sm-4" style={{ minHeight: 300 }}>
-                    <div className="h-100 d-flex align-items-center justify-content-center rounded">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={scoreChartData}>
-                          <XAxis
-                            dataKey="range"
-                            tick={{ fontSize: 10 }}
-                            interval="preserveStartEnd"
-                          />
-                          <YAxis
-                            allowDecimals={false}
-                            tick={{ fontSize: 10 }}
-                          />
-                          <Tooltip formatter={(value) => [`${value} คน`, "จำนวน"]} />
-                          <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bags by Session */}
-              <div className="col-lg-4">
-                <div className="d-flex flex-column gap-3 gap-md-4 h-100">
-                  <div style={{ background: surface }}>
-                    {bagCounts.length > 0 && (
-                      <div className="card shadow-sm" style={{ background: surface }}>
-                        <div className="card-header bg-white py-3 py-sm-4">
-                          <h6 className="mb-0 fw-bold">จำนวนถุงข้อสอบในแต่ละวิชา</h6>
-                        </div>
-                        <div className="card-body p-3 p-sm-4" style={{ minHeight: 300 }}>
-                          <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                              <Pie
-                                data={bagCounts}
-                                dataKey="bagCount"
-                                nameKey="sessionLabel"
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={85}
-                                paddingAngle={4}
-                                label={renderLabel}
-                                labelLine={false}
-                              >
-                                {bagCounts.map((_, index) => (
-                                  <Cell
-                                    key={`cell-${index}`}
-                                    fill={pieColors[index % pieColors.length]}
-                                  />
-                                ))}
-                              </Pie>
-                              <Tooltip
-                                contentStyle={{
-                                  background: "#FFFFFF",
-                                  border: `1px solid ${border}`,
-                                  borderRadius: 10,
-                                  boxShadow: "0 6px 20px rgba(15, 69, 195, 0.08)",
+                        {/* Custom Legend */}
+                        <div className="mt-3 d-flex flex-column gap-2">
+                          {bagCounts.map((item, index) => (
+                            <div key={item.sessionId} className="d-flex align-items-start gap-2">
+                              <span
+                                className="rounded-circle flex-shrink-0 mt-1"
+                                style={{
+                                  width: 10,
+                                  height: 10,
+                                  backgroundColor: pieColors[index % pieColors.length],
+                                  display: "inline-block",
                                 }}
                               />
-                              <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                            </PieChart>
-                          </ResponsiveContainer>
+                              <div className="small" style={{ color: "#334155", lineHeight: 1.3 }}>
+                                <span className="fw-semibold">{item.sessionLabel}</span>
+                                {" "}
+                                <span className="text-muted">
+                                  ({(item as any).sessionFullLabel?.replace(`${item.sessionLabel} `, "") ?? ""})
+                                </span>
+                                <span className="ms-1 fw-bold" style={{ color: pieColors[index % pieColors.length] }}>
+                                  {item.bagCount} ถุง
+                                </span>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
+                </div>
 
-                  {/* Summary box */}
-                  <div className="card shadow-sm border-0" style={{ background: surface }}>
-                    <div className="card-body p-2 p-sm-3">
-                      <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2">
-                        <div>
-                          <div className="fw-bold mb-1 small" style={{ color: primary }}>
-                            ผู้ตรวจ
-                          </div>
-                          <div className="h6 h-sm-5 mb-0" style={{ color: "#0F172A" }}>
-                            {gradersCount} คน
-                          </div>
+                {/* Summary box */}
+                <div className="card shadow-sm" style={{ background: surface, borderTop: "3px solid #10B981" }}>
+                  <div className="card-body p-2 p-sm-3">
+                    <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2">
+                      <div>
+                        <div className="fw-bold mb-1 small" style={{ color: primary }}>
+                          ผู้ตรวจ
                         </div>
-                        <div className="text-start text-sm-end">
-                          <div className="fw-bold mb-1 small" style={{ color: primary }}>
-                            คีย์สำหรับการเข้ารหัส
-                          </div>
-                          <div className="h6 h-sm-5 mb-0" style={{ color: "#0F172A" }}>
-                            {keysCount} คีย์
-                          </div>
+                        <div className="h6 h-sm-5 mb-0" style={{ color: "#0F172A" }}>
+                          {gradersCount} คน
+                        </div>
+                      </div>
+                      <div className="text-start text-sm-end">
+                        <div className="fw-bold mb-1 small" style={{ color: primary }}>
+                          คีย์สำหรับการเข้ารหัส
+                        </div>
+                        <div className="h6 h-sm-5 mb-0" style={{ color: "#0F172A" }}>
+                          {keysCount} คีย์
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
+            <div className="col-12">
+              <div className="card shadow-sm" style={{ background: surface, borderLeft: "3px solid #F59E0B" }}>
+                <div className="card-header bg-white py-2 py-sm-3">
+                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                    <h6 className="mb-0 fw-bold small">หัวข้อสอบในแต่ละวิชา</h6>
+                    <span
+                      className="badge rounded-pill fw-semibold text-nowrap"
+                      style={badgeStyle("neutral")}
+                    >
+                      โครงสร้างข้อสอบ
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className="card-body p-2 p-sm-3"
+                  style={{ maxHeight: 360, overflowY: "auto" }}
+                >
+                  {subjectQuestionList.length === 0 && (
+                    <div className="text-muted small">
+                      ยังไม่มีการกำหนดหัวข้อในรายวิชา
+                    </div>
+                  )}
+
+                  {subjectQuestionList.map((subj) => {
+                    return (
+                      <div
+                        key={subj.subjectId}
+                        className="mb-3 pb-2 border-bottom"
+                        style={{ borderColor: "#E2E8F0" }}
+                      >
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div>
+                            <div className="fw-semibold" style={{ color: "#0F172A" }}>
+                              {subj.name}
+                            </div>
+                            <small>
+                              รหัสวิชา: {subj.code}
+                            </small>
+
+                            {/* จำนวนหัวข้อ + คะแนนเต็มรวม */}
+                            <div className="small" style={{ color: muted }}>
+                              {subj.questionCount} หัวข้อ | คะแนนเต็มรวม{" "}
+                              {subj.totalMaxScore}
+                            </div>
+
+                            {/* ⬇⬇ แสดงรอบสอบที่วิชานี้เปิดสอบ ⬇⬇ */}
+                            {subj.sessionCodes && subj.sessionCodes.length > 0 && (
+                              <div className="small" style={{ color: muted }}>
+                                ลำดับวันสอบ:{" "}
+                                {subj.sessionCodes.join(" • ")}
+                                {/* เช่น "วันที่ 1 • วันที่ 2" */}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <ul className="small mt-2 mb-0" style={{ color: "#475569" }}>
+                          {subj.questions.map((q) => (
+                            <li
+                              key={q.id}
+                              className="d-flex justify-content-between align-items-center mb-1"
+                            >
+                              <span>
+                                ข้อ {q.questionNo}: {q.label}
+                              </span>
+                              <span className="text-muted">
+                                {Number(q.maxScore).toLocaleString()} คะแนน
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+
+                </div>
+              </div>
+            </div>
+
+            {/* Grading Status Table */}
+            {dashboardData?.rawStatus && dashboardData.rawStatus.length > 0 && (
               <div className="col-12">
-                <div className="card shadow-sm" style={{ background: surface }}>
+                <div className="card shadow-sm" style={{ background: surface, borderLeft: "3px solid #0EA5E9" }}>
                   <div className="card-header bg-white py-2 py-sm-3">
                     <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                      <h6 className="mb-0 fw-bold small">หัวข้อสอบในแต่ละวิชา</h6>
+                      <h6 className="mb-0 fw-bold small">สถานะการตรวจข้อสอบ</h6>
                       <span
                         className="badge rounded-pill fw-semibold text-nowrap"
                         style={badgeStyle("neutral")}
                       >
-                        โครงสร้างข้อสอบ
+                        รายละเอียด
                       </span>
                     </div>
                   </div>
 
-                  <div
-                    className="card-body p-2 p-sm-3"
-                    style={{ maxHeight: 360, overflowY: "auto" }}
-                  >
-                    {subjectQuestionList.length === 0 && (
-                      <div className="text-muted small">
-                        ยังไม่มีการกำหนดหัวข้อในรายวิชา
-                      </div>
-                    )}
-
-                    {subjectQuestionList.map((subj) => {
-                      return (
-                        <div
-                          key={subj.subjectId}
-                          className="mb-3 pb-2 border-bottom"
-                          style={{ borderColor: "#E2E8F0" }}
-                        >
-                          <div className="d-flex justify-content-between align-items-center">
-                            <div>
-                              <div className="fw-semibold" style={{ color: "#0F172A" }}>
-                                {subj.name}
-                              </div>
-                              <small>
-                                รหัสวิชา: {subj.code}
-                              </small>
-
-                              {/* จำนวนหัวข้อ + คะแนนเต็มรวม */}
-                              <div className="small" style={{ color: muted }}>
-                                {subj.questionCount} หัวข้อ | คะแนนเต็มรวม{" "}
-                                {subj.totalMaxScore}
-                              </div>
-
-                              {/* ⬇⬇ แสดงรอบสอบที่วิชานี้เปิดสอบ ⬇⬇ */}
-                              {subj.sessionCodes && subj.sessionCodes.length > 0 && (
-                                <div className="small" style={{ color: muted }}>
-                                  ลำดับวันสอบ:{" "}
-                                  {subj.sessionCodes.join(" • ")}
-                                  {/* เช่น "วันที่ 1 • วันที่ 2" */}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          <ul className="small mt-2 mb-0" style={{ color: "#475569" }}>
-                            {subj.questions.map((q) => (
-                              <li
-                                key={q.id}
-                                className="d-flex justify-content-between align-items-center mb-1"
-                              >
-                                <span>
-                                  ข้อ {q.questionNo}: {q.label}
-                                </span>
-                                <span className="text-muted">
-                                  {Number(q.maxScore).toLocaleString()} คะแนน
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      );
-                    })}
-
-                  </div>
-                </div>
-              </div>
-
-              {/* Grading Status Table */}
-              {dashboardData?.rawStatus && dashboardData.rawStatus.length > 0 && (
-                <div className="col-12">
-                  <div className="card shadow-sm" style={{ background: surface }}>
-                    <div className="card-header bg-white py-2 py-sm-3">
-                      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                        <h6 className="mb-0 fw-bold small">สถานะการตรวจข้อสอบ</h6>
-                        <span
-                          className="badge rounded-pill fw-semibold text-nowrap"
-                          style={badgeStyle("neutral")}
-                        >
-                          รายละเอียด
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="card-body p-0">
-                      <div className="table-responsive">
-                        <table className="table table-sm table-hover align-middle mb-0" style={{ tableLayout: "fixed", width: "100%" }}>
-                          <thead style={{ background: "#F8FAFC", borderBottom: "2px solid #E2E8F0" }}>
-                            <tr>
-                              <th className="px-3 py-2 small fw-semibold" style={{ color: primary, width: "25%" }}>รอบสอบ/วิชา</th>
-                              <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "10%" }}>ผู้สอบ</th>
-                              <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "10%" }}>ข้อ</th>
-                              <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "15%" }}>ช่องตรวจคะแนนทั้งหมด</th>
-                              {/* <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "15%" }}>ช่องตรวจคะแนนปัจจุบัน</th> */}
-                              <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "25%" }}>เสร็จ</th>
-                              {/* <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary }}>คะแนนห่างเกิน 4</th>
+                  <div className="card-body p-0">
+                    <div className="table-responsive">
+                      <table className="table table-sm table-hover align-middle mb-0" style={{ tableLayout: "fixed", width: "100%" }}>
+                        <thead style={{ background: "#F8FAFC", borderBottom: "2px solid #E2E8F0" }}>
+                          <tr>
+                            <th className="px-3 py-2 small fw-semibold" style={{ color: primary, width: "25%" }}>รอบสอบ/วิชา</th>
+                            <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "10%" }}>ผู้สอบ</th>
+                            <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "10%" }}>ข้อ</th>
+                            <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "15%" }}>ช่องตรวจคะแนนทั้งหมด</th>
+                            {/* <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "15%" }}>ช่องตรวจคะแนนปัจจุบัน</th> */}
+                            <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary, width: "25%" }}>เสร็จ</th>
+                            {/* <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary }}>คะแนนห่างเกิน 4</th>
                             <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary }}>Pending</th>
                             <th className="px-2 py-2 small fw-semibold text-center" style={{ color: primary }}>สถานะ</th> */}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {dashboardData.rawStatus.map((item, idx) => {
-                              const session = Object.values(dashboardData.sessions || {}).find(
-                                (s) => s.sessionId === item.session_id
-                              );
-                              const subject = Object.values(dashboardData.subjectQuestions || {}).find(
-                                (s) => s.subjectId === item.subject_id
-                              );
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {dashboardData.rawStatus.map((item, idx) => {
+                            const session = Object.values(dashboardData.sessions || {}).find(
+                              (s) => s.sessionId === item.session_id
+                            );
+                            const subject = Object.values(dashboardData.subjectQuestions || {}).find(
+                              (s) => s.subjectId === item.subject_id
+                            );
 
-                              const isComplete = item.missing_slots === 0 && item.mismatch_question_count === 0;
-                              const hasIssues = item.missing_slots > 0 || item.mismatch_question_count > 0;
-                              const progressPercent = item.expected_slots > 0
-                                ? Math.round((Number(item.completed_slots) / item.expected_slots) * 100)
-                                : 0;
+                            const isComplete = item.missing_slots === 0 && item.mismatch_question_count === 0;
+                            const hasIssues = item.missing_slots > 0 || item.mismatch_question_count > 0;
+                            const progressPercent = item.expected_slots > 0
+                              ? Math.round((Number(item.completed_slots) / item.expected_slots) * 100)
+                              : 0;
 
-                              return (
-                                <tr key={idx} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                                  <td className="px-3 py-3">
-                                    <div className="fw-semibold small" style={{ color: "#0F172A" }}>
-                                      {session?.sessionCode || `Session ${item.session_id}`}
-                                    </div>
-                                    <div className="small text-muted text-truncate" style={{ maxWidth: "200px" }} title={subject?.name}>
-                                      {subject?.name || `Subject ${item.subject_id}`}
-                                    </div>
-                                  </td>
-                                  <td className="px-2 py-3 text-center">
-                                    <span className="badge bg-light text-dark border small">
-                                      {item.booklet_count}
-                                    </span>
-                                  </td>
-                                  <td className="px-2 py-3 text-center">
-                                    <span className="badge bg-light text-dark border small">
-                                      {item.question_count}
-                                    </span>
-                                  </td>
-                                  <td className="px-2 py-3 text-center">
-                                    <div className="small fw-semibold" style={{ color: item.actual_slots === item.expected_slots ? "#059669" : "#DC2626" }}>
-                                      {/* {item.actual_slots}/{item.expected_slots} */}
-                                      {item.expected_slots}
-                                    </div>
-                                  </td>
-                                  {/* <td className="px-2 py-3 text-center">
+                            return (
+                              <tr key={idx} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                                <td className="px-3 py-3">
+                                  <div className="fw-semibold small" style={{ color: "#0F172A" }}>
+                                    {session?.sessionCode || `Session ${item.session_id}`}
+                                  </div>
+                                  <div className="small text-muted text-truncate" style={{ maxWidth: "200px" }} title={subject?.name}>
+                                    {subject?.name || `Subject ${item.subject_id}`}
+                                  </div>
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <span className="badge bg-light text-dark border small">
+                                    {item.booklet_count}
+                                  </span>
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <span className="badge bg-light text-dark border small">
+                                    {item.question_count}
+                                  </span>
+                                </td>
+                                <td className="px-2 py-3 text-center">
+                                  <div className="small fw-semibold" style={{ color: item.actual_slots === item.expected_slots ? "#059669" : "#DC2626" }}>
+                                    {/* {item.actual_slots}/{item.expected_slots} */}
+                                    {item.expected_slots}
+                                  </div>
+                                </td>
+                                {/* <td className="px-2 py-3 text-center">
                                   <span className={`badge ${item.actual_slots === item.expected_slots ? "bg-success-subtle text-success border border-success" : "bg-danger-subtle text-danger border border-danger"} small`}>
                                     {item.actual_slots}
                                   </span>
                                 </td> */}
-                                  <td className="px-2 py-3 text-center">
-                                    <div className="small fw-semibold mb-1" style={{ color: "#0891B2" }}>
-                                      {item.completed_slots}/{item.expected_slots}
-                                    </div>
-                                    <div className="progress" style={{ height: "6px" }}>
-                                      <div
-                                        className="progress-bar bg-info"
-                                        style={{ width: `${progressPercent}%` }}
-                                      />
-                                    </div>
-                                    <div className="small text-muted mt-1" style={{ fontSize: "0.7rem" }}>
-                                      {progressPercent}%
-                                    </div>
-                                  </td>
-                                  {/* <td className="px-2 py-2 text-center">
+                                <td className="px-2 py-3 text-center">
+                                  <div className="small fw-semibold mb-1" style={{ color: "#0891B2" }}>
+                                    {item.completed_slots}/{item.expected_slots}
+                                  </div>
+                                  <div className="progress" style={{ height: "6px" }}>
+                                    <div
+                                      className="progress-bar bg-info"
+                                      style={{ width: `${progressPercent}%` }}
+                                    />
+                                  </div>
+                                  <div className="small text-muted mt-1" style={{ fontSize: "0.7rem" }}>
+                                    {progressPercent}%
+                                  </div>
+                                </td>
+                                {/* <td className="px-2 py-2 text-center">
                                   <span className={`badge ${Number(item.disputed_slots) > 0 ? "bg-warning" : "bg-light border"} small`}>
                                     {item.disputed_slots}
                                   </span>
@@ -1073,7 +1103,7 @@ export default function Dashboard() {
                                     {item.pending_slots}
                                   </span>
                                 </td> */}
-                                  {/* <td className="px-2 py-2 text-center">
+                                {/* <td className="px-2 py-2 text-center">
                                   {isComplete ? (
                                     <span className="badge bg-success-subtle text-success border border-success small">
                                       ✓ ปกติ
@@ -1088,16 +1118,16 @@ export default function Dashboard() {
                                     </span>
                                   )}
                                 </td> */}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
 
-                      {/* Legend */}
-                      <div className="p-2 p-sm-3 border-top" style={{ background: "#FAFAFA" }}>
-                        {/* <div className="row g-2 small text-muted">
+                    {/* Legend */}
+                    <div className="p-2 p-sm-3 border-top" style={{ background: "#FAFAFA" }}>
+                      {/* <div className="row g-2 small text-muted">
                         <div className="col-6 col-md-3">
                           <strong>Slots:</strong> จำนวน slot ที่สร้าง/ต้องการ
                         </div>
@@ -1111,244 +1141,244 @@ export default function Dashboard() {
                           <strong>Pending:</strong> ข้อที่รอ finalize
                         </div>
                       </div> */}
-                        {dashboardData.rawDisputedQuestions != null && (
-                          <div className="mt-2 pt-2 border-top">
-                            <span className="badge bg-warning-subtle text-warning-emphasis border border-warning">
-                              <strong>คำถามที่คะแนนห่างเกิน 4 ทั้งหมด:</strong> {dashboardData.rawDisputedQuestions} ข้อ
-                            </span>
+                      {dashboardData.rawDisputedQuestions != null && (
+                        <div className="mt-2 pt-2 border-top">
+                          <span className="badge bg-warning-subtle text-warning-emphasis border border-warning">
+                            <strong>คำถามที่คะแนนห่างเกิน 4 ทั้งหมด:</strong> {dashboardData.rawDisputedQuestions} ข้อ
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Operational Status (Lists) */}
+          <section className="row g-3 g-md-4">
+            {/* Import */}
+            <div className="col-lg-6">
+              <div className="card shadow-sm h-100" style={{ background: surface, borderLeft: "3px solid #F59E0B" }}>
+                <div className="card-header bg-white py-3 py-sm-4">
+                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                    <h6 className="mb-0 fw-bold">สถานะการนำเข้าข้อมูล</h6>
+                    <span
+                      className="badge rounded-pill fw-semibold text-nowrap"
+                      style={badgeStyle("neutral")}
+                    >
+                      รายวิชา
+                    </span>
+                  </div>
+                </div>
+                <div className="card-body p-0">
+                  <div className="list-group list-group-flush">
+                    {importStatusList.map((s) => {
+                      let tone: Tone = "neutral";
+                      let textStatus = "รอการนำเข้า";
+
+                      if (s.importStatus === "IMPORTED") {
+                        tone = "good";
+                        textStatus = "เรียบร้อย";
+                      } else if (s.importStatus === "PARTIAL") {
+                        tone = "warn";
+                        textStatus = "บางส่วน";
+                      }
+
+                      return (
+                        <div
+                          key={s.sessionId}
+                          className="list-group-item d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
+                        >
+                          <div className="flex-grow-1">
+                            <div className="fw-medium text-dark small">{s.sessionCode} {s.subject_name}</div>
+                            <div className="small text-nowrap" style={{ color: muted, fontSize: "0.75rem" }}>
+                              ผู้เข้าสอบ: {s.inSession} / {s.inCampaign} คน
+                            </div>
                           </div>
-                        )}
+                          <span
+                            className="badge rounded-pill fw-semibold text-nowrap flex-shrink-0"
+                            style={badgeStyle(tone)}
+                          >
+                            {textStatus}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {importStatusList.length === 0 && (
+                      <div className="p-4 text-center" style={{ color: muted }}>
+                        ไม่มีข้อมูลรอบสอบ
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </section>
+              </div>
+            </div>
 
-            {/* Operational Status (Lists) */}
-            <section className="row g-3 g-md-4">
-              {/* Import */}
-              <div className="col-lg-6">
-                <div className="card shadow-sm h-100" style={{ background: surface }}>
-                  <div className="card-header bg-white py-3 py-sm-4">
-                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                      <h6 className="mb-0 fw-bold">สถานะการนำเข้าข้อมูล</h6>
-                      <span
-                        className="badge rounded-pill fw-semibold text-nowrap"
-                        style={badgeStyle("neutral")}
-                      >
-                        รายวิชา
-                      </span>
-                    </div>
+
+            {/* Encryption */}
+            <div className="col-lg-6">
+              <div className="card shadow-sm h-100" style={{ background: surface, borderLeft: "3px solid #8B5CF6" }}>
+                <div className="card-header bg-white py-3 py-sm-4">
+                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                    <h6 className="mb-0 fw-bold">สถานะการเข้ารหัสข้อมูลเพื่อสร้างคิวอาร์โค้ด</h6>
+                    <span
+                      className="badge rounded-pill fw-semibold text-nowrap"
+                      style={badgeStyle("neutral")}
+                    >
+                      รายวิชา
+                    </span>
                   </div>
-                  <div className="card-body p-0">
-                    <div className="list-group list-group-flush">
-                      {importStatusList.map((s) => {
-                        let tone: Tone = "neutral";
-                        let textStatus = "รอการนำเข้า";
+                </div>
+                <div className="card-body p-0">
+                  <div className="list-group list-group-flush">
+                    {encryptedStatusList.map((s) => {
+                      let tone: Tone = "neutral";
+                      let textStatus = "ยังไม่ทำ";
 
-                        if (s.importStatus === "IMPORTED") {
-                          tone = "good";
-                          textStatus = "เรียบร้อย";
-                        } else if (s.importStatus === "PARTIAL") {
-                          tone = "warn";
-                          textStatus = "บางส่วน";
-                        }
+                      if (s.status === "ENCRYPTED_ALL") {
+                        tone = "good";
+                        textStatus = "เรียบร้อย";
+                      } else if (s.status === "PARTIAL") {
+                        tone = "warn";
+                        textStatus = `ค้าง ${s.pending}`;
+                      }
+
+                      return (
+                        <div
+                          key={s.sessionId}
+                          className="list-group-item d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
+                        >
+                          <div className="flex-grow-1">
+                            <div className="fw-medium text-dark small">{s.sessionCode} {s.subject_name}</div>
+                            <div className="small text-nowrap" style={{ color: muted, fontSize: "0.75rem" }}>
+                              เข้ารหัสแล้ว: {s.encrypted} / {s.totalUsersInSession} คน
+                            </div>
+                          </div>
+                          <span
+                            className="badge rounded-pill fw-semibold text-nowrap flex-shrink-0"
+                            style={badgeStyle(tone)}
+                          >
+                            {textStatus}
+                          </span>
+                        </div>
+                      );
+                    })}
+
+                    {encryptedStatusList.length === 0 && (
+                      <div className="p-4 text-center" style={{ color: muted }}>
+                        ไม่มีข้อมูลรอบสอบ
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-6">
+              <div className="card shadow-sm h-100" style={{ background: surface, borderLeft: "3px solid #22C55E" }}>
+                <div className="card-header bg-white py-3 py-sm-4">
+                  <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                    <h6 className="mb-0 fw-bold">สถานะการจัดสรรที่นั่งสอบ</h6>
+                    <span
+                      className="badge rounded-pill fw-semibold text-nowrap"
+                      style={badgeStyle("neutral")}
+                    >
+                      ห้องสอบ
+                    </span>
+                  </div>
+                </div>
+                <div className="card-body p-0">
+                  <div className="list-group  list-group-flush">
+                    {dashboardData?.seatAssignmentStatus && dashboardData.seatAssignmentStatus.length > 0 ? (
+                      dashboardData.seatAssignmentStatus.map((item, idx) => {
+                        const occupancyPercent = item.capacity > 0
+                          ? Math.round((item.count_user / item.capacity) * 100)
+                          : 0;
+                        const tone: Tone = item.count_user === item.capacity ? "good" : item.count_user > 0 ? "neutral" : "neutral";
 
                         return (
                           <div
-                            key={s.sessionId}
-                            className="list-group-item d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
+                            key={idx}
+                            className="list-group-item list-group-item border-bottom  d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
                           >
                             <div className="flex-grow-1">
-                              <div className="fw-medium text-dark small">{s.sessionCode} {s.subject_name}</div>
+                              <div className="fw-medium text-dark small">{item.room_code}</div>
                               <div className="small text-nowrap" style={{ color: muted, fontSize: "0.75rem" }}>
-                                ผู้เข้าสอบ: {s.inSession} / {s.inCampaign} คน
+                                จัดสรรที่นั่งผู้เข้าสอบแล้ว: {item.count_user} / {item.capacity} คน
                               </div>
                             </div>
                             <span
                               className="badge rounded-pill fw-semibold text-nowrap flex-shrink-0"
                               style={badgeStyle(tone)}
                             >
-                              {textStatus}
+                              {occupancyPercent}%
                             </span>
                           </div>
                         );
-                      })}
-
-                      {importStatusList.length === 0 && (
-                        <div className="p-4 text-center" style={{ color: muted }}>
-                          ไม่มีข้อมูลรอบสอบ
-                        </div>
-                      )}
-                    </div>
+                      })
+                    ) : (
+                      <div className="p-4 text-center" style={{ color: muted }}>
+                        ไม่มีข้อมูลการจัดสรรที่นั่งสอบ
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+            </div>
 
-
-              {/* Encryption */}
-              <div className="col-lg-6">
-                <div className="card shadow-sm h-100" style={{ background: surface }}>
-                  <div className="card-header bg-white py-3 py-sm-4">
-                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                      <h6 className="mb-0 fw-bold">สถานะการเข้ารหัสข้อมูลเพื่อสร้างคิวอาร์โค้ด</h6>
-                      <span
-                        className="badge rounded-pill fw-semibold text-nowrap"
-                        style={badgeStyle("neutral")}
-                      >
-                        รายวิชา
-                      </span>
-                    </div>
+            <div className="col-lg-6">
+              <div className="card shadow-sm h-100" style={{ background: surface, borderLeft: "3px solid #EF4444" }}>
+                <div className="card-header bg-white py-3 py-sm-4">
+                  <div className="d-flex flex-column  flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
+                    <h6 className="mb-0 fw-bold">สถานะการนำเส่งเล่มข้อสอบ (ลงถุง)</h6>
+                    <span
+                      className="badge rounded-pill fw-semibold text-nowrap"
+                      style={badgeStyle("neutral")}
+                    >
+                      จำนวนสมุดข้อสอบ
+                    </span>
                   </div>
-                  <div className="card-body p-0">
-                    <div className="list-group list-group-flush">
-                      {encryptedStatusList.map((s) => {
-                        let tone: Tone = "neutral";
-                        let textStatus = "ยังไม่ทำ";
-
-                        if (s.status === "ENCRYPTED_ALL") {
-                          tone = "good";
-                          textStatus = "เรียบร้อย";
-                        } else if (s.status === "PARTIAL") {
-                          tone = "warn";
-                          textStatus = `ค้าง ${s.pending}`;
-                        }
-
+                </div>
+                <div className="card-body p-0">
+                  <div className="list-group list-group-flush">
+                    {dashboardData?.rawBookletsBySession && dashboardData.rawBookletsBySession.length > 0 ? (
+                      dashboardData.rawBookletsBySession.map((item) => {
                         return (
                           <div
-                            key={s.sessionId}
-                            className="list-group-item d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
+                            key={item.session_id}
+                            className="list-group-item d-flex flex-column list-group-item border-bottom d-flex  flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
                           >
                             <div className="flex-grow-1">
-                              <div className="fw-medium text-dark small">{s.sessionCode} {s.subject_name}</div>
-                              <div className="small text-nowrap" style={{ color: muted, fontSize: "0.75rem" }}>
-                                เข้ารหัสแล้ว: {s.encrypted} / {s.totalUsersInSession} คน
-                              </div>
-                            </div>
-                            <span
-                              className="badge rounded-pill fw-semibold text-nowrap flex-shrink-0"
-                              style={badgeStyle(tone)}
-                            >
-                              {textStatus}
-                            </span>
-                          </div>
-                        );
-                      })}
-
-                      {encryptedStatusList.length === 0 && (
-                        <div className="p-4 text-center" style={{ color: muted }}>
-                          ไม่มีข้อมูลรอบสอบ
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="col-lg-6">
-                <div className="card shadow-sm h-100" style={{ background: surface }}>
-                  <div className="card-header bg-white py-3 py-sm-4">
-                    <div className="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                      <h6 className="mb-0 fw-bold">สถานะการจัดสรรที่นั่งสอบ</h6>
-                      <span
-                        className="badge rounded-pill fw-semibold text-nowrap"
-                        style={badgeStyle("neutral")}
-                      >
-                        ห้องสอบ
-                      </span>
-                    </div>
-                  </div>
-                  <div className="card-body p-0">
-                    <div className="list-group  list-group-flush">
-                      {dashboardData?.seatAssignmentStatus && dashboardData.seatAssignmentStatus.length > 0 ? (
-                        dashboardData.seatAssignmentStatus.map((item, idx) => {
-                          const occupancyPercent = item.capacity > 0
-                            ? Math.round((item.count_user / item.capacity) * 100)
-                            : 0;
-                          const tone: Tone = item.count_user === item.capacity ? "good" : item.count_user > 0 ? "neutral" : "neutral";
-
-                          return (
-                            <div
-                              key={idx}
-                              className="list-group-item list-group-item border-bottom  d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
-                            >
-                              <div className="flex-grow-1">
-                                <div className="fw-medium text-dark small">{item.room_code}</div>
-                                <div className="small text-nowrap" style={{ color: muted, fontSize: "0.75rem" }}>
-                                  จัดสรรที่นั่งผู้เข้าสอบแล้ว: {item.count_user} / {item.capacity} คน
-                                </div>
-                              </div>
-                              <span
-                                className="badge rounded-pill fw-semibold text-nowrap flex-shrink-0"
-                                style={badgeStyle(tone)}
-                              >
-                                {occupancyPercent}%
-                              </span>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="p-4 text-center" style={{ color: muted }}>
-                          ไม่มีข้อมูลการจัดสรรที่นั่งสอบ
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-lg-6">
-                <div className="card shadow-sm h-100" style={{ background: surface }}>
-                  <div className="card-header bg-white py-3 py-sm-4">
-                    <div className="d-flex flex-column  flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                      <h6 className="mb-0 fw-bold">สถานะการนำเส่งเล่มข้อสอบ (ลงถุง)</h6>
-                      <span
-                        className="badge rounded-pill fw-semibold text-nowrap"
-                        style={badgeStyle("neutral")}
-                      >
-                        จำนวนสมุดข้อสอบ
-                      </span>
-                    </div>
-                  </div>
-                  <div className="card-body p-0">
-                    <div className="list-group list-group-flush">
-                      {dashboardData?.rawBookletsBySession && dashboardData.rawBookletsBySession.length > 0 ? (
-                        dashboardData.rawBookletsBySession.map((item) => {
-                          return (
-                            <div
-                              key={item.session_id}
-                              className="list-group-item d-flex flex-column list-group-item border-bottom d-flex  flex-sm-row align-items-start align-items-sm-center justify-content-between py-2 py-sm-3 gap-2"
-                            >
-                              <div className="flex-grow-1">
-                                <div className="fw-medium text-dark small">{item.session_code} {item.subject_name}</div>
-                                {/* <div className="small text-nowrap" style={{ color: muted, fontSize: "0.75rem" }}>
+                              <div className="fw-medium text-dark small">{item.session_code} {item.subject_name}</div>
+                              {/* <div className="small text-nowrap" style={{ color: muted, fontSize: "0.75rem" }}>
                                 จำนวนสมุดที่ส่ง: {item.count}
                               </div> */}
-                              </div>
-                              <span
-                                className=" rounded-pill fw-semibold text-nowrap flex-shrink-0"
-
-                              >
-                                {item.count} เล่ม
-                              </span>
                             </div>
-                          );
-                        })
-                      ) : (
-                        <div className="p-4 text-center" style={{ color: muted }}>
-                          ไม่มีข้อมูลการนำเส่ง
-                        </div>
-                      )}
-                    </div>
+                            <span
+                              className=" rounded-pill fw-semibold text-nowrap flex-shrink-0"
+
+                            >
+                              {item.count} เล่ม
+                            </span>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="p-4 text-center" style={{ color: muted }}>
+                        ไม่มีข้อมูลการนำเส่ง
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
+            </div>
 
 
-            </section>
+          </section>
 
-            {/* PieChart ตามรอบสอบ (UI เดิมที่มีอยู่แล้ว) */}
-            {/* {bagCounts.length > 0 && (
+          {/* PieChart ตามรอบสอบ (UI เดิมที่มีอยู่แล้ว) */}
+          {/* {bagCounts.length > 0 && (
             <div className="card shadow-sm" style={{ background: surface }}>
               <div className="card-header bg-white py-3">
                 <h6 className="mb-0 fw-bold">สัดส่วนถุงข้อสอบแบ่งตามวันที่สอบ</h6>
@@ -1387,8 +1417,8 @@ export default function Dashboard() {
               </div>
             </div>
           )} */}
-          </>
-        )}
+        </>
+
       </div>
     </ShowIfCan>
   );

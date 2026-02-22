@@ -64,6 +64,20 @@ export const NAV_ITEMS: NavItem[] = [
 
   { to: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard , permissions: ["dashboard"]},
 
+    {
+    to: "/import-csv",
+    label: "นำเข้าข้อมูล",
+    icon: DownloadCloud,
+    permissions: ["importcsv"],
+  },
+
+    {
+    to: "/keys",
+    label: "เข้ารหัสข้อมูลสอบ",
+    icon: KeyRound,
+    permissions: ["manage_keys"],
+  },
+
   {
     to: "/seat-allocation",
     label: "จัดที่นั่งสอบ",
@@ -89,29 +103,17 @@ export const NAV_ITEMS: NavItem[] = [
   //   icon: HandCoins,
   //   permissions: ["manage_bagshandover"],
   // },
-  {
-    to: "/import-csv",
-    label: "นำเข้าข้อมูล",
-    icon: DownloadCloud,
-    permissions: ["importcsv"],
-  },
-  {
-    to: "/keys",
-    label: "เข้ารหัสข้อมูลสอบ",
-    icon: KeyRound,
-    permissions: ["manage_keys"],
+    {
+    to: "/grading-station",
+    label: "บันทึกคะแนน",
+    icon: GraduationCap,
+    permissions: ["grade_exams"],
   },
   {
     to: "/sign-sheets",
     label: "ใบบันทึกการสอบ",
     icon: FilePenLine,
     permissions: ["view_sessions"],
-  },
-  {
-    to: "/grading-station",
-    label: "บันทึกคะแนน",
-    icon: GraduationCap,
-    permissions: ["grade_exams"],
   },
   //   {
   //   to: "/grading-recheck",
@@ -137,6 +139,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: User2Icon,
     permissions: ["manage_graders"],
   },
+    {
+    to: "/subject-ranking-export",
+    label: "ออกใบสรุป",
+    icon: ClipboardMinus,
+    permissions: ["manage_grading"],
+  },
   {
     to: "/qrscanner",
     label: "สแกนคิวอาร์โค้ด",
@@ -147,12 +155,6 @@ export const NAV_ITEMS: NavItem[] = [
     to: "/admin-reset",
     label: "รีเซ็ตคะแนน",
     icon: RotateCcw,
-    permissions: ["manage_grading"],
-  },
-  {
-    to: "/subject-ranking-export",
-    label: "ออกใบสรุป",
-    icon: ClipboardMinus,
     permissions: ["manage_grading"],
   },
   {

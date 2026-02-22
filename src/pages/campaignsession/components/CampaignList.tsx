@@ -42,7 +42,7 @@ export function CampaignList({
 
 }: CampaignListProps) {
   return (
-    <div className="card shadow-sm">
+    <div className="card shadow-sm" style={{ borderLeft: "3px solid #8B5CF6" }}>
       <div className="card-header bg-light d-flex justify-content-between align-items-start">
 
         <div>

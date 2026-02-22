@@ -26,6 +26,8 @@ if (import.meta.env.DEV) {
 }
 
 axios.defaults.withCredentials = true;
+let isLoggingOut = false; // <-- เพิ่มตัวแปรนี้
+
 axios.interceptors.response.use(
   (res) => res,
   (err) => {
@@ -38,13 +40,21 @@ axios.interceptors.response.use(
       url.includes("/api/auth/logout");
 
     if (!isAuthEndpoint && (status === 401 || status === 403)) {
-      store.dispatch(clearAuth());
-      Swal.fire({
-        icon: "warning",
-        title: "Session หมดอายุ",
-        text: "กรุณาเข้าสู่ระบบใหม่",
-        timer: 2000,
-      });
+      if (!isLoggingOut) {
+        isLoggingOut = true; // ล็อคไว้ ไม่ให้เด้งซ้ำ
+        store.dispatch(clearAuth());
+        
+        Swal.fire({
+          icon: "warning",
+          title: "Session หมดอายุ",
+          text: "กรุณาเข้าสู่ระบบใหม่",
+          timer: 2000,
+          showConfirmButton: false
+        }).then(() => {
+          isLoggingOut = false; // ปลดล็อค
+          window.location.href = "/"; // บังคับกลับหน้า Login ชัวร์ๆ
+        });
+      }
     }
 
     return Promise.reject(err);

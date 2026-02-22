@@ -57,7 +57,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         aria-modal="true"
       >
         <div className="modal-dialog modal-dialog-centered" role="document">
-          <div className="modal-content">
+          <div className="modal-content" style={{ borderTop: "4px solid #F59E0B" }}>
             <form onSubmit={handleSubmit}>
               <div className="modal-header">
                 <h5 className="modal-title">เพิ่มข้อสอบใหม่</h5>

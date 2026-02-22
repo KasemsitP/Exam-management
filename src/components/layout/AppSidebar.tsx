@@ -6,6 +6,7 @@ import type { AuthUser } from "@/store/slices/auth.slice";
 import Logo from "../../assets/kmutnblogo.png";
 import type { Theme } from "@/components/layout/theme";
 import { useNavigate } from "react-router-dom";
+import { PRELOAD_BY_PATH } from "@/routes/pages";
 
 interface AppSidebarProps {
   user: AuthUser | null;
@@ -144,6 +145,15 @@ export function AppSidebar({
                 <NavLink
                   key={to}
                   to={to}
+                  onMouseEnter={() => PRELOAD_BY_PATH[to]?.()} // ✅ hover preload
+                  onClick={async (e) => {
+                    e.preventDefault(); // ✅ กัน NavLink route ทันที
+                    await PRELOAD_BY_PATH[to]?.(); // ✅ โหลด chunk ให้เสร็จก่อน
+                    navigate(to); // ✅ ค่อย route ทีหลัง
+
+                    setOnClickMobileSidebar?.(label);
+                    mobile && onCloseMobile?.();
+                  }}
                   className={({ isActive }) =>
                     [
                       "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none sidebar-item",
@@ -153,29 +163,17 @@ export function AppSidebar({
                   style={({ isActive }) => ({
                     background: isActive ? SB.active : "transparent",
                     color: SB.text,
-                    border: `1px solid ${isActive ? SB.activeBorder : "transparent"
-                      }`,
-                    borderLeft: isActive
-                      ? `4px solid ${theme.color}`
-                      : "4px solid transparent",
-                    boxShadow: isActive
-                      ? "0 1px 0 rgba(255,255,255,0.7) inset"
-                      : "none",
+                    border: `1px solid ${isActive ? SB.activeBorder : "transparent"}`,
+                    borderLeft: isActive ? `4px solid ${theme.color}` : "4px solid transparent",
+                    boxShadow: isActive ? "0 1px 0 rgba(255,255,255,0.7) inset" : "none",
                   })}
-                  onClick={() => {
-                    setOnClickMobileSidebar?.(label);
-                    mobile && onCloseMobile?.();
-                  }}
                 >
                   {({ isActive }) => (
                     <>
                       <Icon
                         size={16}
                         strokeWidth={2}
-                        style={{
-                          color: theme.color,
-                          opacity: isActive ? 1 : 0.78,
-                        }}
+                        style={{ color: theme.color, opacity: isActive ? 1 : 0.78 }}
                       />
                       <span className="menu-title" style={{ color: SB.text }}>
                         {label}
@@ -216,6 +214,15 @@ export function AppSidebar({
                 <NavLink
                   key={to}
                   to={to}
+                  onMouseEnter={() => PRELOAD_BY_PATH[to]?.()} // ✅ hover preload
+                  onClick={async (e) => {
+                    e.preventDefault(); // ✅ กัน NavLink route ทันที
+                    await PRELOAD_BY_PATH[to]?.(); // ✅ โหลด chunk ให้เสร็จก่อน
+                    navigate(to); // ✅ ค่อย route ทีหลัง
+
+                    setOnClickMobileSidebar?.(label);
+                    mobile && onCloseMobile?.();
+                  }}
                   className={({ isActive }) =>
                     [
                       "d-flex align-items-center gap-2 px-3 py-2 rounded-3 text-decoration-none sidebar-item",
@@ -225,29 +232,17 @@ export function AppSidebar({
                   style={({ isActive }) => ({
                     background: isActive ? SB.active : "transparent",
                     color: SB.text,
-                    border: `1px solid ${isActive ? SB.activeBorder : "transparent"
-                      }`,
-                    borderLeft: isActive
-                      ? `4px solid ${theme.color}`
-                      : "4px solid transparent",
-                    boxShadow: isActive
-                      ? "0 1px 0 rgba(255,255,255,0.7) inset"
-                      : "none",
+                    border: `1px solid ${isActive ? SB.activeBorder : "transparent"}`,
+                    borderLeft: isActive ? `4px solid ${theme.color}` : "4px solid transparent",
+                    boxShadow: isActive ? "0 1px 0 rgba(255,255,255,0.7) inset" : "none",
                   })}
-                  onClick={() => {
-                    setOnClickMobileSidebar?.(label);
-                    mobile && onCloseMobile?.();
-                  }}
                 >
                   {({ isActive }) => (
                     <>
                       <Icon
                         size={16}
                         strokeWidth={2}
-                        style={{
-                          color: theme.color,
-                          opacity: isActive ? 1 : 0.78,
-                        }}
+                        style={{ color: theme.color, opacity: isActive ? 1 : 0.78 }}
                       />
                       <span className="menu-title" style={{ color: SB.text }}>
                         {label}
@@ -269,6 +264,7 @@ export function AppSidebar({
                 </NavLink>
               ))}
           </nav>
+
         </div>
 
         {/* User footer */}

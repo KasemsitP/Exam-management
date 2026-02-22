@@ -27,6 +27,8 @@ export type Theme = {
   success: string;
   warning: string;
   error: string;
+
+  white : string
 };
 
 const tint = (hex: string, percent: number) =>
@@ -65,6 +67,7 @@ export const BASE: Omit<
   headerBg: "#ffffff",
   surface: "#ffffff",
   border: "#d7e0ea",
+  white: "#ffffff",
 
   text: "#0f172a",
   textMuted: "#64748b",

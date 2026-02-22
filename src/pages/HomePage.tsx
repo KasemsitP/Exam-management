@@ -285,7 +285,7 @@ export default function HomePage() {
       style={{ background: "#f6f7fb", minHeight: "calc(100vh - 56px)" }}
     >
       {/* Header (เรียบๆ เหมือนรูป) */}
-      <div className="card shadow-sm mb-4">
+      <div className="card shadow-sm mb-4" style={{ borderTop: "4px solid #3B82F6" }}>
         <div className="card-body">
           <div className="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
             <div>
@@ -301,7 +301,7 @@ export default function HomePage() {
       {/* Status row (เรียบๆ) */}
       <div className="row g-3 mb-4">
         <div className="col-lg-6">
-          <div className="card shadow-sm h-100">
+          <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #22C55E", borderTop: "3px solid #22C55E", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(34,197,94,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
             <div className="card-body">
               <div className="text-muted small mb-1">ผู้ใช้</div>
               <div className="fw-semibold">{userName}</div>
@@ -311,7 +311,7 @@ export default function HomePage() {
         </div>
 
         <div className="col-lg-6">
-          <div className="card shadow-sm h-100">
+          <div className="card shadow-sm h-100" style={{ borderLeft: "4px solid #8B5CF6", borderTop: "3px solid #8B5CF6", transition: "transform 0.2s, box-shadow 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(139,92,246,0.15)"; }} onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = ""; }}>
             <div className="card-body">
               <div className="text-muted small mb-1">รอบสอบที่กำลังใช้งาน</div>
               <div className="fw-semibold">
@@ -326,7 +326,7 @@ export default function HomePage() {
       <div className="row g-3">
         {/* Steps -> ทำเป็นตารางแบบหน้าอื่น */}
         <div className="col-lg-12">
-          <div className="card shadow-sm">
+          <div className="card shadow-sm" style={{ borderLeft: "3px solid #F59E0B" }}>
             <div className="card-body">
               <div className="d-flex align-items-baseline justify-content-between mb-3">
                 <div>

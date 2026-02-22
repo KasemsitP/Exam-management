@@ -76,7 +76,7 @@ export function CampaignModal({
         style={{ zIndex: 1055 }}
       >
         <div className="modal-dialog modal-dialog-centered modal-lg">
-          <div className="modal-content border-0 shadow-sm">
+          <div className="modal-content border-0 shadow-sm" style={{ borderTop: "4px solid #22C55E" }}>
             <div className="modal-header bg-white border-bottom">
               <div>
                 <h6 className="modal-title mb-0 fw-semibold">
@@ -243,7 +243,7 @@ export function SessionModal({
         style={{ zIndex: 1055 }}
       >
         <div className="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-          <div className="modal-content border-0 shadow-sm">
+          <div className="modal-content border-0 shadow-sm" style={{ borderTop: "4px solid #F59E0B" }}>
             {/* Header */}
             <div className="modal-header bg-white border-bottom">
               <div>
@@ -496,7 +496,7 @@ export function SessionFormModal({
         style={{ zIndex: 1065 }}
       >
         <div className="modal-dialog modal-dialog-centered">
-          <div className="modal-content border-0 shadow-sm">
+          <div className="modal-content border-0 shadow-sm" style={{ borderTop: "4px solid #EF4444" }}>
             <div className="modal-header bg-white border-bottom">
               <div>
                 <h6 className="modal-title mb-0 fw-semibold">
@@ -629,7 +629,7 @@ export function SubjectModal({
         style={{ zIndex: 1065 }}
       >
         <div className="modal-dialog modal-dialog-centered modal-lg">
-          <div className="modal-content border-0 shadow-sm">
+          <div className="modal-content border-0 shadow-sm" style={{ borderTop: "4px solid #0EA5E9" }}>
             <div className="modal-header bg-white border-bottom">
               <div>
                 <h6 className="modal-title mb-0 fw-semibold">

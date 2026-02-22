@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { showLoginSuccessAlert, showLoginSuccessAlertWithData } from "@/components/ui/successAlert";
-import Logo from "../assets/kmutnblogo.png"
+import Logo from "../assets/kmutnblogo.png";
 import {
   login,
   selectAuthError,
@@ -13,8 +13,7 @@ import {
   AuthUser,
   Role
 } from "@/store/slices/auth.slice";
-import { User, Lock, Loader2, GraduationCap, BookOpen } from "lucide-react"; // ใช้ไอคอนการศึกษา
-import { showError } from "@/components/ui/ErrorAlert"
+import { showError } from "@/components/ui/ErrorAlert";
 
 interface LoginFormValues {
   username: string;
@@ -34,23 +33,21 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // State สำหรับลูกเล่นตอนกดช่องกรอกข้อมูล
-  const [activeField, setActiveField] = useState<string | null>(null);
-
   useEffect(() => {
-    if (status === "authenticated" && user) {
-      showLoginSuccessAlert(user.name);
-      const redirect = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
-      // navigate(redirect ?? "/dashboard", { replace: true });
-      navigate("/home", { replace: true });
-    }
-      if (status === "error" && error) {
+    if (status === "error" && error) {
       showError("ล็อคอินไม่สำเร็จ", "ชื่อผู้ใช้หรือรหัสผ่านผิด");
     }
-  }, [status, user, navigate, location.state]);
+  }, [status, error]);
 
-  const onSubmit = (values: LoginFormValues) => {
-    dispatch(login(values))
+  const onSubmit = async (values: LoginFormValues) => {
+    if (status === "loading") return;
+
+    const resultAction = await dispatch(login(values));
+
+    if (login.fulfilled.match(resultAction)) {
+      showLoginSuccessAlert(resultAction.payload.name);
+      navigate("/home", { replace: true });
+    }
   };
 
   const handleBypass = () => {
@@ -66,16 +63,15 @@ export default function Login() {
     navigate("/home", { replace: true });
   };
 
+  const isLoading = status === "loading"; //  สร้างตัวแปรเช็คสถานะโหล
   return (
     <div
       className="min-vh-100 w-100 d-flex flex-column align-items-center justify-content-center position-relative overflow-hidden"
       style={{
-        backgroundColor: "#f8faff", // พื้นหลังโทนสว่างสบายตา
+        backgroundColor: "#f8faff",
         fontFamily: "'Sarabun', 'Inter', sans-serif"
       }}
     >
-
-      {/* --- Main Content --- */}
       <div
         className="card mx-auto mt-5 p-4"
         style={{
@@ -85,7 +81,6 @@ export default function Login() {
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
         }}
       >
-
         <div className="text-center mb-3">
           <img
             src={Logo}
@@ -94,13 +89,11 @@ export default function Login() {
           />
         </div>
 
-
         <h5 className="text-center mb-4" style={{ fontWeight: '500' }}>
           ระบบจัดการข้อสอบเพื่อหน่วยงานทางด้านความยุติธรรม
         </h5>
 
         <form onSubmit={handleSubmit(onSubmit)}>
-
           <div className="mb-3">
             <label htmlFor="username" className="form-label fw-semibold">
               ชื่อผู้ใช้งาน
@@ -109,9 +102,8 @@ export default function Login() {
               type="text"
               className="form-control"
               id="username"
-              placeholder="Username "
-              onFocus={() => setActiveField('username')}
-              onBlur={() => setActiveField(null)}
+              placeholder="Username"
+              disabled={isLoading} //  ล็อคช่องพิมพ์ตอนกำลังโหลด
               {...register("username", { required: true })}
             />
           </div>
@@ -124,45 +116,47 @@ export default function Login() {
               className="form-control"
               id="password"
               placeholder="Password"
-              onFocus={() => setActiveField('password')}
-              onBlur={() => setActiveField(null)}
+              disabled={isLoading} //  ล็อคช่องพิมพ์ตอนกำลังโหลด
               {...register("password", { required: true })}
             />
           </div>
 
-
-          <div className="d-flex justify-content-between align-items-center mb-4">
-            <div className="form-check">
-              {/* <input className="form-check-input" type="checkbox" id="remember" />
-              <label className="form-check-label" htmlFor="remember">
-                จดจำข้อมูลของฉัน
-              </label> */}
-            </div>
+          <div className="d-flex justify-content-end align-items-center mb-4">
             <a href="#" className="text-decoration-none">
               ลืมรหัสผ่าน
             </a>
           </div>
 
-
-          <button type="submit" className="btn btn-success w-100 py-2 rounded-3">
-            เข้าสู่ระบบ
+          {/*  ป้องกันการกดปุ่มเบิ้ล และโชว์สถานะโหลด */}
+          <button
+            type="submit"
+            className="btn btn-success w-100 py-2 rounded-3"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                กำลังเข้าสู่ระบบ...
+              </>
+            ) : (
+              "เข้าสู่ระบบ"
+            )}
           </button>
         </form>
       </div>
 
-
-
-
-      {/* Footer Text */}
-      <div className="mt-4 text-center">
-        <button
-          onClick={handleBypass}
-          className="btn btn-spm text-secondary opacity-25 hover-opacity-100"
-          style={{ fontSize: '0.7rem' }}
-        >
-          Developer Mode
-        </button>
-      </div>
+      {/*  ป้องกันปุ่มหลุดไปบน Production ด้วย import.meta.env.DEV */}
+      {import.meta.env.DEV && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={handleBypass}
+            className="btn btn-sm text-secondary opacity-25 hover-opacity-100"
+            style={{ fontSize: '0.7rem' }}
+          >
+            Developer Mode
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -674,10 +674,7 @@ export default function SignSheetsPage() {
                   backdropFilter: "blur(1px)" // (Optional) เบลอข้อมูลเก่าเล็กน้อย
                 }}
               >
-                <div className="bg-white p-2 rounded shadow-sm border d-flex align-items-center gap-2">
-                  <Loader2 size={20} className="spin-animation text-primary" />
-                  <span className="small fw-medium text-muted">กำลังโหลด...</span>
-                </div>
+     
               </div>
             )}
 
@@ -708,7 +705,6 @@ export default function SignSheetsPage() {
                   {rows.length === 0 && isLoading && (
                     <tr>
                       <td colSpan={6} className="text-center py-5 text-muted" style={{ height: "300px" }}>
-                        <Loader2 size={30} className="mb-2 spin-animation text-primary" />
                         <div>กำลังโหลดข้อมูล...</div>
                       </td>
                     </tr>

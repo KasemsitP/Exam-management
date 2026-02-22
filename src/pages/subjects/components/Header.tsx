@@ -15,7 +15,7 @@ export const Header: React.FC<HeaderProps> = ({
   loading,
 }) => {
   return (
-    <div className="card shadow-sm mx-0">
+    <div className="card shadow-sm mx-0" style={{ borderTop: "4px solid #3B82F6" }}>
       <div className="card-header bg-white">
         <div className="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2">
           <div className="me-auto">

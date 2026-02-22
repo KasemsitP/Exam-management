@@ -1,5 +1,5 @@
 // AppLayout.tsx
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { logout, selectCurrentUser } from "@/store/slices/auth.slice";
@@ -19,6 +19,7 @@ import { CampaignPickerModal } from "./CampaignPickerModal";
 import { showSuccess } from "../ui/successAlert";
 import type { Role } from "@/store/slices/auth.slice";
 import { buildThemeByRole, pickRoleKey } from "@/components/layout/theme"
+import { Suspense } from "react";
 
 
 /* =========================================================
@@ -29,11 +30,47 @@ import { buildThemeByRole, pickRoleKey } from "@/components/layout/theme"
  * Utilities
  * ======================================================= */
 
+const ContentFallback = () => (
+  <div
+    style={{
+      minHeight: "60vh",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 10,
+    }}
+  >
+    <div
+      style={{
+        width: 24,
+        height: 24,
+        border: "3px solid #dee2e6",
+        borderTop: "3px solid #6c757d",
+        borderRadius: "50%",
+        animation: "spin 0.8s linear infinite",
+      }}
+    />
+
+    <span style={{ fontSize: 13, color: "#6c757d" }}>
+      กำลังโหลด...
+    </span>
+
+    <style>
+      {`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}
+    </style>
+  </div>
+);
 /* =========================================================
  * AppLayout
  * ======================================================= */
 export function AppLayout() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate(); // 2. เรียกใช้งาน hook
 
   const user = useAppSelector(selectCurrentUser);
   const activeCampaign = useAppSelector(selectActiveCampaign);
@@ -70,9 +107,16 @@ export function AppLayout() {
   );
 
   const handleLogout = async () => {
-    dispatch(logout());
-    await showSuccess("ออกจากระบบสำเร็จ", "ออกจากระบบ");
-    window.location.reload();
+    try {
+      await dispatch(logout()).unwrap();
+    } finally {
+      // 3.  เอา await ออก! ให้ Alert ยิงขึ้นมาโชว์โดยไม่ต้องรอคิว
+      showSuccess("ออกจากระบบสำเร็จ", "ออกจากระบบ");
+
+      // 4. ✅ ใช้ navigate แทน window.location.href
+      // { replace: true } จะลบประวัติการกด Back ป้องกันไม่ให้ผู้ใช้กด ถอยหลัง กลับมาหน้า Dashboard ได้อีก
+      navigate("/", { replace: true });
+    }
   };
 
   const handleSelectCampaign = (campaignId: number) => {
@@ -113,7 +157,9 @@ export function AppLayout() {
         />
 
         <main className="flex-grow-1 overflow-auto p-2 p-sm-3 p-lg-4">
-          <Outlet />
+          <Suspense fallback={<ContentFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

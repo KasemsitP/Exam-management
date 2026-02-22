@@ -37,16 +37,16 @@ export function AppHeader({
       className="px-3 px-md-4 d-flex justify-content-between align-items-center sticky-top"
       style={{
         height: 64,
-        background: theme.headerGradient ?? theme.headerBg,
+        background: headerSurface ?? theme.headerBg,
         borderBottom: `1px solid ${theme.border}`,
-        // ✅ ทำให้ header ดู “มีชั้น” ไม่แบน
+        //  ทำให้ header ดู “มีชั้น” ไม่แบน
         boxShadow: "0 2px 10px rgba(15,23,42,0.06)",
         position: "sticky",
         top: 0,
         zIndex: 1030,
       }}
     >
-      {/* ✅ เส้น role accent ด้านล่าง (ช่วยให้ role ชัดขึ้นทันที) */}
+      {/*  เส้น role accent ด้านล่าง (ช่วยให้ role ชัดขึ้นทันที) */}
       <div
         style={{
           position: "absolute",
@@ -54,7 +54,8 @@ export function AppHeader({
           right: 0,
           bottom: 0,
           height: 3,
-          background: `linear-gradient(90deg, ${theme.color} 0%, transparent 70%)`,
+          // background: `linear-gradient(90deg, ${theme.color} 0%, transparent 70%)`,
+           background: ` ${theme.color} `,
           opacity: 0.9,
           pointerEvents: "none",
         }}
@@ -66,7 +67,7 @@ export function AppHeader({
           onClick={onOpenMobileSidebar}
           aria-label="Open menu"
           style={{
-            background: headerSurface,
+            background: theme.mainBg,
             border: `1.5px solid ${theme.border}`,
             color: theme.text,
             boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
@@ -75,7 +76,9 @@ export function AppHeader({
           <Menu size={20} />
         </button>
 
-        <div className="d-flex flex-column justify-content-center">
+        <div className="d-flex flex-column justify-content-center border rounded-3 px-3 py-2 shadow-sm"   style={{
+    backgroundColor: theme.mainBg,
+  }}>
           <div className="d-flex align-items-center gap-2">
             {/* ✅ role dot */}
             <span
@@ -101,7 +104,6 @@ export function AppHeader({
               className="small fw-medium d-none d-sm-inline"
               style={{ color: theme.textMuted, fontFamily: "monospace" }}
             >
-              Console
             </span>
             
             <ChevronRight
@@ -110,7 +112,7 @@ export function AppHeader({
               style={{ color: theme.textMuted }}
             />
             <h1 className="h6 mb-0 fw-semibold d-none d-sm-block" style={{ color: theme.text, fontFamily: "monospace" }}>
-              {onclickSidebar || "Dashboard"}
+              {onclickSidebar || "หน้าแรก"}
             </h1>
           </div>
         </div>
@@ -122,7 +124,7 @@ export function AppHeader({
             <div
               className="d-flex align-items-center gap-3 px-4 py-2 rounded-pill"
               style={{
-                background: headerSurface, // ✅ tinted แทน white
+                background:theme.headerBg, // ✅ tinted แทน white
                 border: `1.5px solid ${theme.border}`,
                 boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
               }}
@@ -162,7 +164,7 @@ export function AppHeader({
             disabled={!isAdmin}
             className="btn btn-sm d-flex align-items-center gap-2"
             style={{
-              background: headerSurface,
+              background: theme.headerBg, // ใช้ขาวล้วนเพื่อเน้นให้ปุ่มเด่นขึ้น (เพราะเป็น action สำคัญ)
               border: `1.5px solid ${theme.border}`,
               color: theme.text,
               borderRadius: 10,
@@ -189,7 +191,7 @@ export function AppHeader({
           }}
         />
 
-        {/* ✅ Logout ใช้ tinted + icon muted red */}
+        {/*  Logout ใช้ tinted + icon muted red */}
         <button
           type="button"
           className="btn btn-sm d-flex align-items-center gap-2 rounded-3 px-3"
@@ -197,7 +199,7 @@ export function AppHeader({
           title="ออกจากระบบ"
           style={{
             height: 36,
-            background: headerSurface, // ✅ tinted
+            background:theme.headerBg, //  tinted
             border: `1.5px solid ${theme.border}`,
             color: theme.text,
             boxShadow: "0 2px 8px rgba(15,23,42,0.12)",

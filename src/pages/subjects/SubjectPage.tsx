@@ -204,6 +204,8 @@ const SubjectPage: React.FC = () => {
     });
   };
 
+  
+
   return (
     <div className="container-fluid px-4 py-3 d-flex flex-column gap-3">
       {/* HEADER */}
@@ -218,7 +220,7 @@ const SubjectPage: React.FC = () => {
       {error && <div className="alert alert-danger mb-0">เกิดข้อผิดพลาด: {error}</div>}
 
       {/* ===================== TABLE SUBJECTS ===================== */}
-      <div className="card shadow-sm">
+      <div className="card shadow-sm" style={{ borderLeft: "3px solid #3B82F6" }}>
         <div className="card-header bg-white d-flex justify-content-between align-items-center">
           <div>
             <h5 className="mb-1">รายวิชา</h5>
@@ -230,7 +232,7 @@ const SubjectPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="card-body p-3">
+        {/* <div className="card-body p-3">
                   <div className="table-responsive">
           {loading ? (
             <div className="d-flex justify-content-center align-items-center py-5">
@@ -294,6 +296,69 @@ const SubjectPage: React.FC = () => {
             </table>
           )}
         </div>
+        </div> */}
+        <div className="card-body p-3 position-relative">
+          {loading && (
+            <div></div>
+          )}
+
+          <div className="table-responsive" style={{ opacity: loading ? 1 : 1 }}>
+            <table className="table table-sm table-hover align-middle mb-0">
+              <thead className="table-light">
+                <tr>
+                  <th className="text-nowrap" style={{ width: 120 }}>รหัส</th>
+                  <th>วิชา</th>
+                  <th className="text-center text-nowrap" style={{ width: 110 }}>จำนวนข้อ</th>
+                  <th className="text-center text-nowrap" style={{ width: 110 }}>คะแนนเต็ม</th>
+                  <th className="text-center text-nowrap" style={{ width: 220 }}>จัดการ</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {SortedSubject.map((sub) => (
+                  <tr key={sub.id}>
+                    <td className="fw-semibold text-nowrap">{sub.code}</td>
+
+                    <td style={{ minWidth: 150 }}>
+                      <div className="fw-semibold">{sub.name}</div>
+                      <small className="text-muted">วิชา {sub.code}</small>
+                    </td>
+
+                    <td className="text-center text-nowrap">{sub.questions.length}</td>
+                    <td className="text-center text-nowrap">{sub.full_score}</td>
+
+                    <td className="text-center text-nowrap">
+                      <div className="d-flex justify-content-center gap-2">
+                        <button
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={() => openViewSubjectModal(sub.id)}
+                          disabled={loading}
+                        >
+                          ดูหัวข้อ
+                        </button>
+
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleDeleteSubject(sub.id)}
+                          disabled={loading}
+                        >
+                          ลบ
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+
+                {subjects.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={5} className="text-center text-muted py-4">
+                      ยังไม่มีวิชาในระบบ
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -303,7 +368,7 @@ const SubjectPage: React.FC = () => {
           <div className="modal-backdrop show" style={{ zIndex: 1040 }} />
           <div className="modal d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
             <div className="modal-dialog modal-lg modal-dialog-centered">
-              <div className="modal-content">
+              <div className="modal-content" style={{ borderTop: "4px solid #22C55E" }}>
                 <div className="modal-header">
                   <h6 className="modal-title">สร้างวิชาใหม่</h6>
                   <button className="btn-close" onClick={() => setShowCreateForm(false)} disabled={loading} />
@@ -363,7 +428,7 @@ const SubjectPage: React.FC = () => {
           <div className="modal-backdrop show" style={{ zIndex: 1040 }} />
           <div className="modal d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
             <div className="modal-dialog modal-lg modal-dialog-centered">
-              <div className="modal-content">
+              <div className="modal-content" style={{ borderTop: "4px solid #8B5CF6" }}>
                 <div className="modal-header">
                   <div>
                     <h6 className="mb-0">รายการหัวข้อวิชา</h6>

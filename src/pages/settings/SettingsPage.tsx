@@ -10,111 +10,106 @@ export default function SettingsPage() {
   const dispatch = useAppDispatch();
   const locked = useAppSelector(selectIsSystemLocked);
   const activeCampaign = useAppSelector(selectActiveCampaign);
+
+  // ใช้ป้องกันการกดปุ่มซ้ำตอนกำลังโหลด API หรือรอ Dialog
   const [loading, setLoading] = useState(false);
 
-  // 1. เปลี่ยนมาใช้ boolean เพื่อผูกกับปุ่ม Toggle (true = เปิด, false = ปิด)
   const [isCampActive, setIsCampActive] = useState<boolean>(false);
   const [isQrActive, setIsQrActive] = useState<boolean>(false);
-
-  // useEffect(() => {
-  //   dispatch(fetchInitialExamData());
-  // }, [dispatch]);
-
   useEffect(() => {
     if (activeCampaign?.id) {
       loadsStatus();
     }
-  }, [activeCampaign]);
+  }, [activeCampaign?.id]);
 
   const loadsStatus = async () => {
     if (!activeCampaign?.id) return;
-    console.log(activeCampaign, "Loading campaign status for ID");
 
     try {
-      const { data } = await axios.get(
-        `api/settings/campaign/${activeCampaign.id}`
-      );
-
+      setLoading(true);
+      const { data } = await axios.get(`api/settings/campaign/${activeCampaign.id}`);
       const loaded = data?.data ?? {};
-      console.log(loaded)
 
-      //const campList = Array.isArray(loaded.campStatus) ? loaded.campStatus : [];
-     // const  campList = activeCampaign ? [activeCampaign] : []; 
+      // ปรับให้ใช้ข้อมูลจาก API ที่โหลดมา (สมมติว่า API return ชื่อฟิลด์ is_active / qr_active)
+      // หาก API return ชื่ออื่น ให้แก้ตรง loaded.is_active เป็นชื่อที่ถูกต้องครับ
+      const campStatus = loaded.isActive ?? activeCampaign.isActive ?? false;
+      const qrStatus = loaded.qrActive ?? activeCampaign.qrActive ?? false;
 
-      // เช็คสถานะรอบสอบ
-      // const hasActiveCampaign = campList.some((item: any) => item.is_active === 1);
-     const hasActiveCampaign = activeCampaign?.isActive;
-      setIsCampActive(hasActiveCampaign);
-
-      const QRactive = activeCampaign?.qrActive
-      setIsQrActive(QRactive);  
-      console.log(QRactive)
+      setIsCampActive(campStatus);
+      setIsQrActive(qrStatus);
 
     } catch (err) {
       console.error("Load status error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCampToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!activeCampaign?.id) return; // เช็คเพื่อป้องกัน error ถ้ายังไม่มี activeCampaign
+    e.target.blur();
+    if (!activeCampaign?.id) return;
+
+    // ดึงค่าใหม่ที่ผู้ใช้กด
+    const newValue = e.target.checked;
+    const previousValue = isCampActive; // จำค่าเดิมไว้ เผื่อ API พังจะได้ถอยกลับถูก
+    const actionText = newValue ? "เปิด" : "ปิด";
+    const textCheckCamp = `${actionText}ใช้งานรอบสอบนี้`;
 
     const ok = await Swal.fire({
       icon: "warning",
       title: "ยืนยันการเปลี่ยนสถานะรอบสอบ",
-      text: `คุณแน่ใจหรือไม่ว่าต้องการ${e.target.checked ? "เปิด" : "ปิด"}รอบสอบนี้?`,
+      text: `คุณแน่ใจหรือไม่ว่าต้องการ${actionText}รอบสอบนี้?`,
       showCancelButton: true,
       confirmButtonText: "ยืนยัน",
       cancelButtonText: "ยกเลิก",
     });
-    if (!ok.isConfirmed) {
-      e.preventDefault();
-      return;
-    }
 
-    const newValue = e.target.checked;
-    const previousValue = isCampActive; // เก็บค่าเดิมไว้เผื่อ API พัง
+    if (!ok.isConfirmed) return;
 
-    const TextCheckCamp = !e.target.checked ? "เปิดใช้งานรอบสอบนี้" : "ปิดใช้งานรอบสอบนี้";
-    // const TextCheckQR = e.target.checked ? "เปิดใช้งานคิวอาร์โค้ด" : "ปิดใช้งานคิวอาร์โค้ด";
-
-
-    console.log(e.target.checked, "Toggle Camp Status");
-
+    // 💡 อัปเดต State ทันทีที่กดยืนยัน! (ไม่ต้องรอ API) UI จะสมูทและไม่เด้งกลับ
     setIsCampActive(newValue);
 
     try {
-      const result = await axios.patch(`api/settings/set/active/campaign/${activeCampaign.id}`)
+      setLoading(true);
+      const result = await axios.patch(`api/settings/set/active/campaign/${activeCampaign.id}`);
+
       if (result.data?.success) {
         await Swal.fire({
           icon: "success",
-          title: `${TextCheckCamp}สำเร็จ`,
+          title: `${textCheckCamp}สำเร็จ`,
           timer: 1500,
           showConfirmButton: false
         });
+      } else {
+        // ถ้า API ส่งค่า success: false กลับมา (แต่ไม่เข้า catch) ให้ถอยค่ากลับ
+        setIsCampActive(previousValue);
       }
-      console.log("Update Campaign Status to:", newValue);
-      loadsStatus()
-      fetchInitialExamData();
+
+
+      dispatch(fetchInitialExamData());
+
     } catch (error) {
       console.error("Failed to update campaign status:", error);
+      // 💡 ถ้า API ล่ม ให้ถอย State สวิตช์กลับไปเป็นค่าเดิม
       setIsCampActive(previousValue);
       await Swal.fire({
         icon: "error",
-        title: `ไม่สามารถ${TextCheckCamp}ได้`,
+        title: `ไม่สามารถ${textCheckCamp}ได้`,
         text: "กรุณาลองใหม่อีกครั้ง",
       });
-      loadsStatus()
-      fetchInitialExamData();
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleQrToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!activeCampaign?.id) return; // เช็คเพื่อป้องกัน error ถ้ายังไม่มี activeCampaign
+    e.target.blur();
+    if (!activeCampaign?.id) return;
 
-    // สร้างตัวแปรเก็บสถานะไว้ก่อน จะได้ไม่งงเวลาดึงไปสร้างประโยคแจ้งเตือน
-    const isChecking = e.target.checked;
-    const actionText = isChecking ? "เปิด" : "ปิด";
-    const TextCheckQR = isChecking ? "เปิดใช้งานคิวอาร์โค้ด" : "ปิดใช้งานคิวอาร์โค้ด";
+    const newValue = e.target.checked;
+    const previousValue = isQrActive; // จำค่าเดิมไว้
+    const actionText = newValue ? "เปิด" : "ปิด";
+    const textCheckQR = `${actionText}ใช้งานคิวอาร์โค้ด`;
 
     const ok = await Swal.fire({
       icon: "warning",
@@ -125,50 +120,45 @@ export default function SettingsPage() {
       cancelButtonText: "ยกเลิก",
     });
 
-    if (!ok.isConfirmed) {
-      e.preventDefault();
-      return;
-    }
+    if (!ok.isConfirmed) return;
 
-    const newValue = isChecking;
-    const previousValue = isQrActive; // เก็บค่าเดิมไว้เผื่อ API พัง
-
-    console.log(newValue, "Toggle QR Status");
-
+    // 💡 อัปเดต State ทันทีที่กดยืนยัน!
     setIsQrActive(newValue);
 
     try {
-      const result = await axios.patch(`api/settings/set/active/keys/${activeCampaign.id}`)
+      setLoading(true);
+      const result = await axios.patch(`api/settings/set/active/keys/${activeCampaign.id}`);
+
       if (result.data?.success) {
         await Swal.fire({
           icon: "success",
-          title: `${TextCheckQR}สำเร็จ`,
+          title: `${textCheckQR}สำเร็จ`,
           timer: 1500,
           showConfirmButton: false
         });
+      } else {
+        setIsQrActive(previousValue);
       }
 
-      console.log("Update QR Status to:", newValue);
-      loadsStatus();
+
       dispatch(fetchInitialExamData());
 
     } catch (error) {
       console.error("Failed to update QR status:", error);
+      // 💡 ถ้า API ล่ม ให้ถอย State สวิตช์กลับไปเป็นค่าเดิม
       setIsQrActive(previousValue);
-
       await Swal.fire({
         icon: "error",
-        title: `ไม่สามารถ${TextCheckQR}ได้`,
+        title: `ไม่สามารถ${textCheckQR}ได้`,
         text: "กรุณาลองใหม่อีกครั้ง",
       });
-
-      // ดึงข้อมูลใหม่เพื่อรีเฟรชหน้า
-      loadsStatus();
-      dispatch(fetchInitialExamData());
+    } finally {
+      setLoading(false);
     }
   };
+
   return (
-    <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
+    <fieldset disabled={locked || loading} style={{ opacity: locked || loading ? 0.7 : 1 }}>
       <ShowIfCan anyOf={["manage_graders"]}>
         <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
           <div className="card shadow-sm border-0">
@@ -192,12 +182,10 @@ export default function SettingsPage() {
                       <div className="small text-muted mb-2 mb-sm-3">สถานะรอบสอบ</div>
 
                       <div className="d-flex flex-row justify-content-between align-items-center border rounded px-2 px-sm-3 py-2 py-sm-3 gap-2">
-                        {/* แสดงข้อความสถานะ */}
                         <span className={`badge ${isCampActive ? 'bg-success' : 'bg-secondary'} fs-6 py-1 px-2 py-sm-2 px-sm-3 text-nowrap`}>
                           {isCampActive ? "เปิดใช้งาน" : "ปิดใช้งาน"}
                         </span>
 
-                        {/* ปุ่ม Toggle สวิตช์ */}
                         <div
                           className="form-check form-switch mb-0 flex-shrink-0 toggle-switch-mobile"
                           style={{ transform: "scale(1.1)", transformOrigin: "right center" }}
@@ -209,7 +197,8 @@ export default function SettingsPage() {
                             id="campToggleSwitch"
                             checked={isCampActive}
                             onChange={handleCampToggle}
-                            style={{ cursor: "pointer" }}
+                            disabled={loading || locked}
+                            style={{ cursor: loading ? "not-allowed" : "pointer" }}
                           />
                         </div>
                       </div>
@@ -227,12 +216,10 @@ export default function SettingsPage() {
                       </div>
 
                       <div className="d-flex flex-row justify-content-between align-items-center border rounded px-2 px-sm-3 py-2 py-sm-3 gap-2">
-                        {/* แสดงข้อความสถานะ */}
                         <span className={`badge ${isQrActive ? 'bg-success' : 'bg-secondary'} fs-6 py-1 px-2 py-sm-2 px-sm-3 text-nowrap`}>
                           {isQrActive ? "เปิดใช้งาน" : "ปิดใช้งาน"}
                         </span>
 
-                        {/* ปุ่ม Toggle สวิตช์ */}
                         <div
                           className="form-check form-switch mb-0 flex-shrink-0 toggle-switch-mobile"
                           style={{ transform: "scale(1.1)", transformOrigin: "right center" }}
@@ -244,7 +231,8 @@ export default function SettingsPage() {
                             id="qrToggleSwitch"
                             checked={isQrActive}
                             onChange={handleQrToggle}
-                            style={{ cursor: "pointer" }}
+                            disabled={loading || locked}
+                            style={{ cursor: loading ? "not-allowed" : "pointer" }}
                           />
                         </div>
                       </div>
