@@ -12,12 +12,14 @@ import type { DisputedQuestionDto } from "./types";
 import { OverlayLoader } from "@/components/ui/Loading";
 
 import ScannerModal from "./components/VerificationScannerModal";
+import { selectCurrentUser } from "@/store/slices/auth.slice";
 
 // ============================================================================
 // Main Component
 // ============================================================================
 export default function AdminResetScoresPage() {
   const activeCampaign = useAppSelector(selectActiveCampaign);
+  const user = useAppSelector(selectCurrentUser)
   const locked = useAppSelector(selectIsSystemLocked);
   const QRActive = useAppSelector(selectQrActiveCampaign);
   const [rows, setRows] = useState<DisputedQuestionDto[]>([]);
@@ -29,6 +31,7 @@ export default function AdminResetScoresPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedBookletId, setSelectedBookletId] = useState<number | null>(null);
 
+  const isAdmin = user?.roles?.includes("admin") ? true : false;
 
 
   const campaignNumericId = activeCampaign?.id
@@ -68,6 +71,16 @@ export default function AdminResetScoresPage() {
   }, [reloadRows]);
 
   const handleReset = async (row: DisputedQuestionDto) => {
+    if (!isAdmin) {
+      Swal.fire(
+        {
+          icon: "error",
+          title: "สิทธิ์ไม่เพียงพอ",
+          text: "คุณไม่มีสิทธิ์ในการรีเซ็ตคะแนนกรุณาติดต่อผู้ดูแลระบบ",
+        }
+      );
+      return;
+    }
     const result = await Swal.fire({
       icon: "warning",
       title: "ยืนยันการรีเซ็ตคะแนน",

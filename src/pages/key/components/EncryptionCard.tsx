@@ -38,7 +38,7 @@ export default function EncryptionCard({
   onRunBulkEncryption,
 }: EncryptionCardProps) {
   return (
-    <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
+    <div className="card " style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
       <div className="card-header bg-white">
         <h6 className="mb-0">3. เข้ารหัสข้อมูล </h6>
       </div>

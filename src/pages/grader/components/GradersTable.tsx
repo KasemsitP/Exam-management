@@ -70,7 +70,7 @@ export default function AccountsTable({
                     )}
                   </td>
                   <td className="text-end">
-                    <div className="d-flex flex-wrap gap-1 justify-content-center justify-content-lg-end">
+                   <div className="d-flex flex-nowrap gap-1 justify-content-center justify-content-lg-end overflow-auto">
 
                       <button
                         className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"

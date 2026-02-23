@@ -32,12 +32,12 @@ import {
   selectActiveCampaignSessions,
 } from "@/store/slices/examData.slice";
 import { set } from "react-hook-form";
+import axios from "axios";
 
 const parseCampaignId = (id: string): number => Number(id.replace("camp-", ""));
 const parseSessionId = (id: string): number => Number(id.replace("sess-", ""));
 
 export const useKeyManagement = () => {
-  const { toast } = useToast();
   const dispatch = useAppDispatch();
 
   // --- Redux state ---
@@ -76,7 +76,13 @@ export const useKeyManagement = () => {
   const [manager2, setmanager2] = useState<string>("");
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
+  const [forgetKey, setForgetKey] = useState("")
+  const [modalforgetKey, setModalForgetKey] = useState(false)
+  const [selectedKeyId, setSelectedKeyId] = useState<number | null>(null);
 
+
+  const accountFullName = users ? users.name : "ไม่พบผู้ใช้";
+  const isManager = users ? users.roles.includes("manager") : false;
   // console.log("KeyCreateCard props:", {
   //   manager1
   // });
@@ -92,7 +98,7 @@ export const useKeyManagement = () => {
   const canEncrypt =
     !!prerequisites?.hasTwoKeys && !!prerequisites?.hasImportedUsers;
 
-    console.log(sessions, "sessions from useKeyManagement")
+  console.log(sessions, "sessions from useKeyManagement")
 
 
 
@@ -106,9 +112,9 @@ export const useKeyManagement = () => {
         ? EncryptedStatus.filter((s) => s.encryption_status === "ENCRYPTED_ALL").length
         : 0;
 
-      return { totalSessions, importedSessions,EncryptedStatus, encryptedSessions , keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo , keyStatus};;
+      return { totalSessions, importedSessions, EncryptedStatus, encryptedSessions, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo, keyStatus };;
     },
-    [ImportStatus, EncryptedStatus, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo ,keyStatus]
+    [ImportStatus, EncryptedStatus, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo, keyStatus]
   );
 
   function syncLocalFromKeys(keys: any[]) {
@@ -193,9 +199,28 @@ export const useKeyManagement = () => {
   const handleSaveSecondKey = () => handleSaveKey(2);
 
 
-
+  const openForgetKeyModal = (keyId: number) => {
+    if (!isManager) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถกู้คืนคีย์ได้",
+        text: "คุณไม่มีสิทธิ์ในการกู้คืนคีย์เนื่องจากคุณไม่ใช่ผู้จัดการคีย์",
+      });
+      return;
+    }
+    setSelectedKeyId(keyId);
+    setModalForgetKey(true);
+  };
 
   const handleSaveKey = (orderNum: 1 | 2) => {
+    if (!isManager) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถสร้างคีย์ได้",
+        text: "คุณไม่มีสิทธิ์ในการสร้างคีย์เนื่องจากคุณไม่ใช่ผู้จัดการคีย์",
+      });
+      return;
+    }
     if (!numericCampaignId || !userAccountId) {
       Swal.fire({
         icon: "warning",
@@ -307,9 +332,59 @@ export const useKeyManagement = () => {
   };
 
 
+  const handleForgetKey = async (password: string) => {
+    if (!selectedKeyId) {
+      return;
+    }
+    if (!isManager) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถกู้คืนคีย์ได้",
+        text: "คุณไม่มีสิทธิ์ในการกู้คืนคีย์เนื่องจากคุณไม่ใช่ผู้จัดการคีย์",
+      });
+      return;
+    }
+    try {
+      const result = await axios.post("/api/keys/forget", {
+        campaignId: numericCampaignId,
+        accountId: userAccountId,
+        keyId: selectedKeyId,
+        password
+      })
+      if (result.data.success) {
+        Swal.fire({
+          icon: "success",
+          title: "กู้คืนคีย์สำเร็จ",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        console.log(result)
+        setForgetKey(result.data.data)
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "กู้คืนคีย์ไม่สำเร็จ",
+        text: error.response?.data?.message || "เกิดข้อผิดพลาด",
+        confirmButtonText: "ตกลง",
+      });
+    }
+
+  }
+
+
   const handleDeleteKey = (keyId: number) => {
+    if (!isManager) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถลบคีย์ได้",
+        text: "คุณไม่มีสิทธิ์ในการลบคีย์เนื่องจากคุณไม่ใช่ผู้จัดการคีย์",
+      });
+      return;
+    }
     Swal.fire({
-      title: `ยืนยันการลบคีย์ ID: ${keyId}?`,
+      title: `ยืนยันการลบคีย์  ${keyId === firstKeyId ? "ผู้จัดการคีย์คนที่ 1" : "ผู้จัดการคีย์คนที่ 2"}`,
+      text: `คุณต้องการลบคีย์ของ ${keyId === firstKeyId ? manager1 : manager2} หรือไม่?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "ลบ",
@@ -346,11 +421,11 @@ export const useKeyManagement = () => {
   };
 
   const handleRunBulkEncryption = async () => {
-    if (!numericCampaignId || !selectedSessionId || !canEncrypt) {
+    if (!numericCampaignId || !canEncrypt) {
       await Swal.fire({
         icon: "warning",
         title: "ข้อมูลไม่ครบ",
-        text: "กรุณาเลือก Session และตรวจสอบว่าคีย์/ข้อมูล พร้อม",
+        text: "กรุณาตรวจสอบให้แน่ใจว่ามีคีย์ 2 คีย์ และนำเข้าผู้สอบเรียบร้อยแล้ว",
         confirmButtonText: "ตกลง",
       });
       return;
@@ -391,7 +466,7 @@ export const useKeyManagement = () => {
       await Swal.fire({
         icon: "success",
         title: "เข้ารหัสสำเร็จ!",
-        text: `เข้ารหัสผู้สอบ ${result.payload.usersEncrypted / NumberOfSession} คน ใน Session นี้`,
+        text: `เข้ารหัสผู้สอบ ${result.payload.usersEncrypted / NumberOfSession} คนในรอบสอบนี้`,
         timer: 2000,
         showConfirmButton: false,
       });
@@ -461,5 +536,15 @@ export const useKeyManagement = () => {
     keyStatusDashboard,
     subjects,
     subjectQuestionsGrouped,
+
+    //forgetkey
+    forgetKey,
+    setForgetKey,
+    modalforgetKey,
+    setModalForgetKey,
+    handleForgetKey,
+    accountFullName,
+    openForgetKeyModal
+
   };
 };

@@ -9,12 +9,35 @@ interface CustomQrScannerProps {
   isLoading?: boolean;
   isPaused?: boolean;
   facingMode?: "environment" | "user";
-  cooldownMs?: number;
+  cooldownMs?: number; 
+  duplicateTimeoutMs?: number; // ✅ เพิ่มระยะเวลาหน่วงโค้ดซ้ำ
   formats?: BarcodeFormat[];
   aspectRatio?: string;
-  qrActive?: boolean;           
-  minHeight?: string | number; // ✅ เพิ่ม minHeight
+  qrActive?: boolean;            
+  minHeight?: string | number; 
+  allowMultipleScans?: boolean; // เปิด/ปิดการยิงโค้ดเดิมซ้ำๆ
 }
+
+// ✅ ฟังก์ชันเสียง Beep
+const playBeep = () => {
+  try {
+    const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 800; 
+    gainNode.gain.setValueAtTime(0.1, context.currentTime); 
+    
+    oscillator.start(context.currentTime);
+    oscillator.stop(context.currentTime + 0.1); 
+  } catch (err) {
+    console.warn("Audio error", err);
+  }
+};
 
 export const CustomQrScanner = React.memo(({
   onResult,
@@ -22,21 +45,43 @@ export const CustomQrScanner = React.memo(({
   isPaused = false,
   facingMode = "environment",
   qrActive = true,   
-  cooldownMs = 1200,
+  cooldownMs = 300, // ✅ ให้กล้องสแกนเร็วขึ้น (ทุกๆ 300ms)
+  duplicateTimeoutMs = 1500, // ✅ โค้ดเดิมจะถูกบล็อคแค่ 1.5 วินาที
   formats = DEFAULT_FORMATS,
-  aspectRatio = "1/1", // ✅ เปลี่ยน Default เป็น จัตุรัส (1:1) จะพอดีสุด
-  minHeight = 350,     // ✅ กำหนดความสูงขั้นต่ำเป็น 350px กันจอมือถือเล็กเกิน
+  aspectRatio = "1/1", 
+  minHeight = 350,  
+  allowMultipleScans = false,
 }: CustomQrScannerProps) => {
 
   const onResultRef = useRef(onResult);
+  // ✅ สร้างตัวจำโค้ดของเราเอง (ฉลาดกว่าของ Library)
+  const lastScanRef = useRef<{ code: string; time: number } | null>(null);
+
   useEffect(() => {
     onResultRef.current = onResult;
   }, [onResult]);
 
   const handleScan = useCallback((codes: IDetectedBarcode[]) => {
     if (!codes?.length) return;
-    onResultRef.current(codes[0].rawValue);
-  }, []);
+    const rawValue = codes[0].rawValue;
+    const now = Date.now();
+    const last = lastScanRef.current;
+
+    // ✅ ถ้าไม่อนุญาตให้ยิงซ้ำรัวๆ ให้มาเช็คเวลาตรงนี้
+    if (!allowMultipleScans) {
+      // ถ้าเป็นโค้ดเดิม และเวลาผ่านไปยังไม่ถึง 1.5 วินาที ให้ข้ามไป
+      // แต่ถ้าถือแช่ไว้เกิน 1.5 วิ มันจะถือว่าเป็นรอบใหม่และสแกนให้ติดเอง!
+      if (last && last.code === rawValue && (now - last.time) < duplicateTimeoutMs) {
+        return; 
+      }
+    }
+
+    // อัปเดตความจำของเรา
+    lastScanRef.current = { code: rawValue, time: now };
+
+    playBeep();
+    onResultRef.current(rawValue);
+  }, [allowMultipleScans, duplicateTimeoutMs]);
 
   const handleError = useCallback((error: unknown) => {
     console.warn("Scanner error:", error);
@@ -44,7 +89,6 @@ export const CustomQrScanner = React.memo(({
 
   const customTracker = useCallback((detectedCodes: IDetectedBarcode[], ctx: CanvasRenderingContext2D) => {
     if (detectedCodes && detectedCodes.length > 0) {
-      // ส่งไปให้ boundingBox วาดแค่ index [0] (ตัวแรกที่โฟกัสได้) ตัวเดียวเท่านั้น
       boundingBox([detectedCodes[0]], ctx);
     }
   }, []);
@@ -63,10 +107,10 @@ export const CustomQrScanner = React.memo(({
     zoom: true,
     finder: true,
     tracker: customTracker,
+    audio: false, // ปิดเสียง Library
   }), []);
 
-    const effectivePaused = isPaused || !qrActive;   // ✅ ถ้า backend ปิด -> หยุดทันที
-
+  const effectivePaused = isPaused || !qrActive;   
 
   return (
   <div
@@ -81,27 +125,22 @@ export const CustomQrScanner = React.memo(({
         constraints={constraints}
         styles={styles}
         components={components}
-        allowMultiple={false}
-        scanDelay={cooldownMs}
+        allowMultiple={true} // 🔥 จุดสำคัญ! บังคับให้ Library ส่งข้อมูลมาเสมอ เพื่อแก้บัคแช่แล้วไม่ติด
+        scanDelay={cooldownMs} 
         paused={isLoading}
+        sound={false} 
       />
     ) : !qrActive ? (
-      // 🔴 เคส backend ปิด
       <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-white">
         <Pause size={48} className="mb-3 opacity-50 text-danger" />
         <div className="fw-medium">ระบบสแกนคิวอาร์โค้ดถูกปิดโดยผู้ดูแล</div>
-        <div className="small mt-1 text-light">
-          กรุณาติดต่อเจ้าหน้าที่
-        </div>
+        <div className="small mt-1 text-light">กรุณาติดต่อเจ้าหน้าที่</div>
       </div>
     ) : (
-      // 🟡 เคส user กด pause เอง
       <div className="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column align-items-center justify-content-center bg-dark text-white">
         <Pause size={48} className="mb-3 opacity-50 text-white" />
         <div className="fw-medium">กล้องถูกหยุดการใช้งาน</div>
-        <div className="small mt-1 text-light">
-          กดปุ่ม “เริ่ม” เพื่อเปิดกล้องอีกครั้ง
-        </div>
+        <div className="small mt-1 text-light">กดปุ่ม “เริ่ม” เพื่อเปิดกล้องอีกครั้ง</div>
       </div>
     )}
 

@@ -325,7 +325,7 @@ export function SessionModal({
                             className="btn btn-sm btn-outline-danger"
                             onClick={() => onDeleteSession(campaign.id, session)}
                           >
-                            ลบ
+                            ลบวันที่สอบ
                           </button>
                         </div>
                       </div>
@@ -403,7 +403,7 @@ export function SessionModal({
 
                                   <td className="text-center text-nowrap">
                                     <div className="d-flex justify-content-center gap-2">
-                                      <button
+                                      {/* <button
                                         className="btn btn-sm btn-outline-secondary"
                                         onClick={() =>
                                           onOpenSubjectDialog(
@@ -414,7 +414,7 @@ export function SessionModal({
                                         }
                                       >
                                         แก้ไข
-                                      </button>
+                                      </button> */}
 
                                       <button
                                         className="btn btn-sm btn-outline-danger"
@@ -426,7 +426,7 @@ export function SessionModal({
                                           )
                                         }
                                       >
-                                        ลบ
+                                        ลบรายวิชา
                                       </button>
                                     </div>
                                   </td>
@@ -503,7 +503,7 @@ export function SessionFormModal({
                   {isEdit ? "แก้ไขวันสอบ" : "เพิ่มวันสอบใหม่"}
                 </h6>
                 <small className="text-muted">
-                  ระบุรอบสอบและวันที่สอบให้ถูกต้อง
+                  ระบุวันที่สอบให้ถูกต้อง
                 </small>
               </div>
               <button

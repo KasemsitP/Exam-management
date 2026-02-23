@@ -71,7 +71,7 @@ export default function BagsTable({
                       const st = getStatusStyle((bag as any).status);
                       return (
                         <span className={`badge ${st.badge}`}>
-                          {st.label}
+                          {st.label=== "SEALED"? "ปิดผนึก" : st.label}
                         </span>
                       );
                     })()}

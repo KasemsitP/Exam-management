@@ -13,6 +13,7 @@ interface ImportControlsProps {
   excelSelectedSheet: string;
   onSheetChange: (value: string) => void;
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  resetState: () => void;
 }
 
 export default function ImportControls({
@@ -27,6 +28,7 @@ export default function ImportControls({
   excelSelectedSheet,
   onSheetChange,
   onFileChange,
+  resetState
 }: ImportControlsProps) {
   return (
     <>
@@ -44,13 +46,13 @@ export default function ImportControls({
           )}
         </div>
 
-        <div className="col-md-3">
+        <div className="col-md-2">
           <label className="form-label">CSV encoding</label>
           <select
             className="form-select"
             value={encoding}
             onChange={(event) => onEncodingChange(event.target.value)}
-            disabled = { true}
+            disabled={true}
           >
             {ENCODINGS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -60,7 +62,7 @@ export default function ImportControls({
           </select>
         </div>
 
-        <div className="col-md-3">
+        <div className="col-md-2">
           <label className="form-label">ตัวอย่างแถว</label>
           <select
             className="form-select"
@@ -73,6 +75,12 @@ export default function ImportControls({
               </option>
             ))}
           </select>
+        </div>
+        <div className="col-md-2">
+          <label className="form-label invisible">dummy</label>
+          <button className="btn btn-secondary w-100" onClick={resetState}>
+            รีเซ็ต
+          </button>
         </div>
       </div>
 

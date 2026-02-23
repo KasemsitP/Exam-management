@@ -76,6 +76,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "importcsv",
     "view_sessions",
     "view_qr",
+    "manage_grading"
   ],
   grader: ["grade_exams",],
 };

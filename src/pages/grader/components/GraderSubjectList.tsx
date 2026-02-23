@@ -1,15 +1,7 @@
 // src/pages/accounts/components/GraderSubjectList.tsx
 import ModalBackdrop from "./ModalBackdrop";
 import type { Account } from "../types";
-
-export type SimpleAssignment = {
-  id: number;
-  question_no: number;
-  label: string;
-  session_code : string 
-  title : string
-};
-
+import type { SimpleAssignment } from "../types";
 interface GraderSubjectListProps {
   open: boolean;
   account: Account | null;
@@ -51,9 +43,10 @@ export default function GraderSubjectList({
               ) : (
                 <div className="table-responsive">
                   {/* รายวิชา {assignments[0]?.title} */}
-                  <table className="table table-sm align-middle mb-0">
+                  <table className="table table-sm align-middle mb-0 text-nowrap">
                     <thead className="table-light">
                       <tr>
+                        <th style={{ width: 80 }}>วันที่สอบ</th>
                         <th style={{ width: 80 }}>ข้อ</th>
                         <th>หัวข้อ</th>
                         <th>รายวิชา</th>
@@ -62,9 +55,10 @@ export default function GraderSubjectList({
                     <tbody>
                       {assignments.map((a) => (
                         <tr key={`${a.id}-${a.question_no}-${a.title}`}>
+                          <td>{a.session_code}</td>
                           <td>ข้อ {a.question_no}</td>
                           <td>{a.label}</td>
-                          <td>{a.title ?? a.session_code}</td>
+                          <td>{a.subject_name}</td>
                         </tr>
                       ))}
                     </tbody>

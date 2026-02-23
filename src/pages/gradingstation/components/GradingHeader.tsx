@@ -27,11 +27,21 @@ export default function GradingHeader({
         </div>
 
         {graderProfile && activeAssignment ? (
-          <div className="d-flex flex-wrap gap-2 small">
-            <span className="badge text-bg-light d-inline-flex align-items-center gap-1 text-capitalize">
-              {(user as any)?.full_name ??
-                user?.username ??
-                `Grader #${activeAssignment.grader_name}`}
+          <div className="d-flex flex-wrap gap-5 text-bold ">
+            <span className="d-inline-flex align-items-center gap-3">
+              <span>
+                <span className="text-muted">ผู้ตรวจ: </span>
+                <span className="fw-semibold text-dark">
+                  {user?.name ?? "ผู้ตรวจไม่ทราบชื่อ"}
+                </span>
+              </span>
+
+              <span>
+                <span className="text-muted">ชื่อผู้ใช้งาน (username): </span>
+                <span className="fw-semibold text-dark">
+                  {user?.username ?? "unknown"}
+                </span>
+              </span>
             </span>
 
             {/* <span className="badge text-bg-light d-inline-flex align-items-center gap-1">

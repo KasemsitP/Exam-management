@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useState, useCallback, useRef, use } from "react";
+import { useState, useCallback, useRef } from "react";
 import Swal from "sweetalert2";
 
 import { CustomQrScanner } from "@/lib/Scanner";
@@ -14,7 +14,6 @@ interface ScannerModalProps {
 
 export default function ScannerModal({ onClose, activeCampaignId, initialCode = "" }: ScannerModalProps) {
   const [manualCode, setManualCode] = useState("");
-  const [scannerEnabled, setScannerEnabled] = useState(true);
   const QRactive = useAppSelector(selectQrActiveCampaign);  
   const isProcessing = useRef(false);
 
@@ -22,8 +21,8 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
     const code = rawCode.trim();
     if (!code || !activeCampaignId || isProcessing.current) return;
 
-    isProcessing.current = true;
-    setScannerEnabled(false);
+    isProcessing.current = true; // บล็อคไม่ให้สแกนโค้ดอื่นจนกว่า API จะทำงานเสร็จ
+    // ❌ เอา setScannerEnabled(false) ออก กล้องจะได้ไม่ค้าง
 
     try {
       const result = await axios.post("/api/verify/check-booklets-orders", {
@@ -36,6 +35,8 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
       console.log("Verify response:", data);
 
       if (data.success) {
+        // 💡 แนะนำ: ถ้าอยากสแกนรัวๆ ควรเปลี่ยน popup เป็นแบบ Toast (แจ้งเตือนมุมจอ)
+        // เพราะ Swal.fire แบบนี้จะบล็อคหน้าจอ 2 วินาที ทำให้สแกนเล่มต่อไปไม่ต่อเนื่อง
         await Swal.fire({
           icon: "success",
           title: "สแกนสำเร็จ",
@@ -46,7 +47,7 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
               <div><strong>หมายเลขถุง:</strong> ${data.data.bag_no}</div>
             </div>
           `,
-          timer: 2000,
+          timer: 1500, // ลดเวลาลงนิดนึงจะได้สแกนต่อได้เร็วขึ้น
           showConfirmButton: false,
         });
       }
@@ -56,12 +57,12 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
         icon: "error",
         title: "ไม่พบข้อมูล",
         text: error?.response?.data?.message ?? "ไม่พบข้อมูลในระบบ",
-        timer: 2000,
+        timer: 1500,
         showConfirmButton: false
       });
     } finally {
-      setScannerEnabled(true);
-      isProcessing.current = false;
+      // ❌ เอา setScannerEnabled(true) ออก
+      isProcessing.current = false; // ปลดล็อคให้สแกนรอบต่อไปได้
     }
   }, [activeCampaignId, initialCode]);
 
@@ -84,8 +85,10 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
                 <label className="form-label small text-uppercase text-muted fw-bold">สแกนด้วยกล้อง</label>
                 <CustomQrScanner
                   onResult={handleVerify}
-                  isLoading={!scannerEnabled} 
+                  isLoading={isProcessing.current} // ใช้ isProcessing เพื่อเช็คว่ากำลังโหลดอยู่ไหม
                   minHeight={360} 
+                  allowMultipleScans={true} // ✅ 1. เพิ่ม Prop นี้เข้าไปเพื่ออนุญาตให้สแกนซ้ำได้
+                  cooldownMs={500} // ✅ 2. (ตัวเลือก) ปรับความไวของการพ่นข้อมูลซ้ำ
                   // qrActive={QRactive}
                 />
               </div>
@@ -98,10 +101,10 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
                     value={manualCode}
                     onChange={(e) => setManualCode(e.target.value)}
                     placeholder="กรอกคิวอาร์โค้ด"
-                    disabled={!scannerEnabled}
+                    disabled={isProcessing.current}
                     onKeyDown={(e) => e.key === 'Enter' && onManualSubmit()}
                   />
-                  <button className="btn btn-primary" onClick={onManualSubmit} disabled={!scannerEnabled || !manualCode}>
+                  <button className="btn btn-primary" onClick={onManualSubmit} disabled={isProcessing.current || !manualCode}>
                     ตรวจสอบ
                   </button>
                 </div>

@@ -78,12 +78,12 @@ export default function AccountsPage() {
   const campaignId = camp ? Number(camp.id) : 0;
   const accountId = subjectListAccount ? Number(subjectListAccount.id) : 0;
 
-  const graderAssignments = useAppSelector(
-    subjectListAccount
-      ? selectAssignmentsForGrader(campaignId, accountId)
-      : () => [] // ถ้ายังไม่เลือก account ให้คืน array ว่าง
-  );
-  console.log(graderAssignments, campaignId, accountId)
+  // const graderAssignments = useAppSelector(
+  //   subjectListAccount
+  //     ? selectAssignmentsForGrader(campaignId, accountId)
+  //     : () => [] // ถ้ายังไม่เลือก account ให้คืน array ว่าง
+  // );
+  // console.log(graderAssignments, campaignId, accountId)
 
   const openSubjectList = async (acc: Account) => {
     if (!camp) return;
@@ -101,7 +101,16 @@ export default function AccountsPage() {
       // );
       // console.log(data)
 
-      setSubjectAssignments(res.data);
+      const data = res.data.map((rows) => ({
+        id: rows.id,
+        question_no: rows.question_no,
+        label: rows.label,
+        session_code: rows.session_code,
+        title: rows.title,
+        subject_name: rows.name
+      }));
+
+      setSubjectAssignments(data);
 
 
       setSubjectListAccount(acc);
@@ -138,7 +147,7 @@ export default function AccountsPage() {
     if (!campaignId) {
       return;
     }
-    
+
     const loadGraderData = async () => {
       try {
         await dispatch(fetchAccountsGradersThunk(campaignId)).unwrap();
@@ -406,7 +415,7 @@ export default function AccountsPage() {
   }
 
   return (
- 
+
     <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
       <GradersHeader stats={stats} />
 
@@ -459,6 +468,6 @@ export default function AccountsPage() {
       />
     </div>
 
-   
+
   );
 }

@@ -21,6 +21,7 @@ import { useAppSelector } from "@/store/hook";
 import { selectActiveCampaign, selectActiveCampaignSessions } from "@/store/slices/examData.slice";
 import { selectSession } from "@/store/slices/dashboard.slice";
 import { OverlayLoader } from "@/components/ui/Loading";
+import { ShowIfCan } from "@/components/auth/ShowIfCan";
 
 /** =========================
  * Types
@@ -692,8 +693,10 @@ export default function SubjectRankingExportPage() {
     return <OverlayLoader open={true} label="" />;
   }
 
-  return (
-    <div className="container-fluid px-2 px-sm-3 px-md-4 py-2 py-sm-3">
+return (
+  <>
+    <ShowIfCan permission="manage_grading">
+         <div className="container-fluid px-2 px-sm-3 px-md-4 py-2 py-sm-3">
       <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
         <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
           <div>
@@ -1273,5 +1276,7 @@ export default function SubjectRankingExportPage() {
         @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
       `}</style>
     </div>
-  );
+    </ShowIfCan>
+  </>
+);
 }

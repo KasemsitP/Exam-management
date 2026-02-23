@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { showLoginSuccessAlert, showLoginSuccessAlertWithData } from "@/components/ui/successAlert";
 import Logo from "../assets/kmutnblogo.png";
+import { EyeOff  , Eye} from "lucide-react";
 import {
   login,
   selectAuthError,
@@ -25,6 +26,7 @@ export default function Login() {
   const status = useAppSelector(selectAuthStatus);
   const error = useAppSelector(selectAuthError);
   const user = useAppSelector(selectCurrentUser);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { handleSubmit, register } = useForm<LoginFormValues>({
     defaultValues: { username: "", password: "" },
@@ -109,23 +111,43 @@ export default function Login() {
               {...register("username", { required: true })}
             />
           </div>
-          <div className="mb-3 position-relative">
+          <div className="mb-3">
             <label htmlFor="password" className="form-label fw-semibold">
               รหัสผ่าน
             </label>
-            <input
-              type='password'
-              className="form-control"
-              id="password"
-              placeholder="Password"
-              disabled={isLoading} //  ล็อคช่องพิมพ์ตอนกำลังโหลด
-              {...register("password", { required: true })}
-            />
+
+            <div className="position-relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                className="form-control pe-5"
+                id="password"
+                placeholder="Password"
+                disabled={isLoading}
+                {...register("password", { required: true })}
+              />
+
+              <button
+                type="button"
+                className="btn p-0 border-0 bg-transparent position-absolute end-0 me-3"
+                style={{
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  cursor: "pointer"
+                }}
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+              >
+                {showPassword ? (<EyeOff size={20} className="text-muted" />) : (
+                  <Eye size={20} className="text-muted" />
+                )}
+              </button>
+            </div>
           </div>
+
 
           <div className="d-flex justify-content-end align-items-center mb-4">
             <a href="#" className="text-decoration-none">
-              ลืมรหัสผ่าน
+              {` `}
             </a>
           </div>
 

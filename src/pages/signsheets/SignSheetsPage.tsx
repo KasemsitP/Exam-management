@@ -40,7 +40,7 @@ function useDebounce<T>(value: T, delay: number): T {
 /*  Types                                                                     */
 /* -------------------------------------------------------------------------- */
 
-const ITEMS_PER_PAGE = 5; // จำนวนแถวต่อหน้าใน table
+const ITEMS_PER_PAGE = 30; // จำนวนแถวต่อหน้าใน table
 
 type SignSheetRow = {
   user_session_id: number;
@@ -52,6 +52,7 @@ type SignSheetRow = {
   seat_code: string | null;
   qr_payload: string | null;
   row_no: number
+  col_no: number
 };
 
 type SignSheetApiResponse = {
@@ -73,7 +74,6 @@ type QrPreviewProps = {
   size?: number;
   onClick?: () => void;
 };
-
 const QrPreview: React.FC<QrPreviewProps> = ({ value, size = 56, onClick }) => {
   const [src, setSrc] = useState<string | null>(null);
 
@@ -86,7 +86,7 @@ const QrPreview: React.FC<QrPreviewProps> = ({ value, size = 56, onClick }) => {
     }
 
     QRCodeLib.toDataURL(value, {
-      width: 350, // ใช้ resolution สูง แล้วค่อย scale ลง
+      width: 350,
       margin: 1,
       errorCorrectionLevel: "M",
     })
@@ -103,7 +103,20 @@ const QrPreview: React.FC<QrPreviewProps> = ({ value, size = 56, onClick }) => {
     };
   }, [value]);
 
-  if (!src) return null;
+  // ✅ เพิ่ม: ถ้ายังไม่มีภาพ ให้แสดงกล่องสีเทาขนาดเท่าเดิมแทนการ return null
+  if (!src) return (
+    <div
+      style={{
+        width: size,
+        height: size,
+        display: "block",
+        margin: "0 auto",
+        backgroundColor: "#f3f4f6", // สีเทาอ่อน (Skeleton)
+        borderRadius: "4px",
+        animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite" // ออปชันเสริม: ใส่ CSS animation ให้ดูกำลังโหลด
+      }}
+    />
+  );
 
   return (
     <img
@@ -120,8 +133,6 @@ const QrPreview: React.FC<QrPreviewProps> = ({ value, size = 56, onClick }) => {
     />
   );
 };
-
-
 
 /* -------------------------------------------------------------------------- */
 /*  Component                                                                 */
@@ -228,7 +239,7 @@ export default function SignSheetsPage() {
           },
         }
       );
-      console.log("signshhett",res.data)
+      console.log("signshhett", res.data)
       setRows(res.data.data);
       setTotalCount(res.data.meta.total);
       setTotalPages(res.data.meta.totalPages || 1);
@@ -256,7 +267,7 @@ export default function SignSheetsPage() {
 
   /* ------------------------------ Handlers -------------------------------- */
 
- const handleDownloadPdf = async () => {
+  const handleDownloadPdf = async () => {
     if (!activeCampaign?.id || !selectedSessionId) return;
 
     const numericSessionId = parseInt(
@@ -607,6 +618,16 @@ export default function SignSheetsPage() {
                           )}
                         </select>
                       </div>
+                      <div className="col-12 col-md-6 col-lg-3">
+                        <label className="form-label small text-nowrap">รอบสอบ</label>
+                        <input
+                          className="form-control form-control-sm"
+                          value={org}
+                          onChange={(e) => setOrg(e.target.value)}
+                          placeholder="เช่น สนามใหญ่อัยการ 2568"
+                          disabled={true}
+                        />
+                      </div>
 
                       <div className="col-12 col-md-6 col-lg-3">
                         <label className="form-label small text-nowrap">วิชา</label>
@@ -630,16 +651,6 @@ export default function SignSheetsPage() {
                         />
                       </div>
 
-                      <div className="col-12 col-md-6 col-lg-3">
-                        <label className="form-label small text-nowrap">รอบสอบ</label>
-                        <input
-                          className="form-control form-control-sm"
-                          value={org}
-                          onChange={(e) => setOrg(e.target.value)}
-                          placeholder="เช่น สนามใหญ่อัยการ 2568"
-                          disabled={true}
-                        />
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -683,34 +694,40 @@ export default function SignSheetsPage() {
               <div
                 className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
                 style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.6)", // พื้นหลังสีขาวจางๆ
+                  backgroundColor: "rgba(255, 255, 255, 0.6)",
                   zIndex: 10,
-                  backdropFilter: "blur(1px)" // (Optional) เบลอข้อมูลเก่าเล็กน้อย
+                  backdropFilter: "blur(2px)", // เพิ่มความเบลออีกนิดให้สมูท
+                  transition: "opacity 0.2s ease-in-out", // เฟดเข้าออกนุ่มๆ
                 }}
               >
-     
+                {/* ✅ เพิ่ม: กล่องวงกลมลอยๆ พร้อม Spinner ตรงกลางตาราง */}
+                <div className="bg-white p-3 rounded-circle shadow-sm d-flex align-items-center justify-content-center">
+                  <Loader2 size={28} className="spin-animation text-primary" />
+                </div>
               </div>
             )}
 
             <div className="table-responsive" style={{ minHeight: "300px" }}> {/* กำหนด minHeight กันตารางยุบ */}
-              <table className="table table-hover align-middle mb-0 table-striped table-sm">
+              <table className="table align-middle mb-0 table-sm" style={{ borderCollapse: "separate", borderSpacing: "0 4px" }}>
                 <colgroup>
                   <col style={{ minWidth: 50 }} />
                   <col style={{ minWidth: 100 }} />
                   <col style={{ minWidth: 140 }} />
                   <col style={{ minWidth: 45 }} />
                   <col style={{ minWidth: 140 }} />
+                  <col style={{ minWidth: 120 }} />
                   <col style={{ minWidth: 80 }} />
                 </colgroup>
-                <thead className="table-light sticky-top">
-                  <tr>
+                <thead>
+                  <tr className="bg-light border-bottom">
                     {/* ... หัวตารางเหมือนเดิม ... */}
-                    <th className="text-center text-nowrap small">ลำดับ</th>
-                    <th className="text-nowrap small">รหัส</th>
-                    <th className="text-nowrap small">ชื่อ - นามสกุล</th>
-                    <th className="text-center text-nowrap small">แถว</th>
-                    <th className="text-nowrap small">ห้อง / ที่นั่ง</th>
-                    <th className="text-center text-nowrap small">QR</th>
+                    <th className="text-center text-nowrap small text-uppercase fw-bold text-muted px-3 py-3">ลำดับ</th>
+                    <th className="text-nowrap text-center small text-uppercase fw-bold text-muted px-3 py-3">รหัสประจำตัวสอบ</th>
+                    <th className="text-nowrap text-center small text-uppercase fw-bold text-muted px-3 py-3">ชื่อ-นามสกุล</th>
+                    <th className="text-center text-nowrap small text-uppercase fw-bold text-muted px-3 py-3">แถว</th>
+                    <th className="text-center text-nowrap small text-uppercase fw-bold text-muted px-3 py-3">ลำดับในแถว</th>
+                    <th className="text-center text-nowrap small text-uppercase fw-bold text-muted px-3 py-3">ห้องสอบ</th>
+                    <th className="text-center text-nowrap small text-uppercase fw-bold text-muted px-3 py-3">คิวอาร์โค้ด</th>
                   </tr>
                 </thead>
 
@@ -718,7 +735,7 @@ export default function SignSheetsPage() {
                   {/* Case 1: Loading ครั้งแรก (ยังไม่มีข้อมูลเลย) */}
                   {rows.length === 0 && isLoading && (
                     <tr>
-                      <td colSpan={6} className="text-center py-5 text-muted" style={{ height: "300px" }}>
+                      <td colSpan={7} className="text-center py-5 text-muted" style={{ height: "300px" }}>
                         <div>กำลังโหลดข้อมูล...</div>
                       </td>
                     </tr>
@@ -727,7 +744,7 @@ export default function SignSheetsPage() {
                   {/* Case 2: ไม่มีข้อมูล (Empty State) */}
                   {rows.length === 0 && !isLoading && (
                     <tr>
-                      <td colSpan={6} className="text-center py-5 text-muted" style={{ height: "300px" }}>
+                      <td colSpan={7} className="text-center py-5 text-muted" style={{ height: "300px" }}>
                         <div className="mb-2">🚫</div>
                         ไม่พบข้อมูลผู้เข้าสอบในหน้านี้
                       </td>
@@ -738,35 +755,54 @@ export default function SignSheetsPage() {
                   {rows.map((r, idx) => (
                     <tr
                       key={r.user_session_id}
+                      className={idx % 2 === 0 ? "bg-white" : "bg-light"}
                       style={{
-                        height: "55px",
-                        opacity: isLoading ? 0.4 : 1,   // <--- จุดสำคัญที่ช่วยลดการกระพริบ
-                        transition: "opacity 0.2s ease" // <--- ช่วยให้นุ่มนวลขึ้น
+                        height: "60px",
+                        opacity: isLoading ? 0.4 : 1,
+                        transition: "all 0.2s ease",
+                        borderRadius: "8px",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+                        marginBottom: "4px"
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isLoading) {
+                          e.currentTarget.classList.add("bg-info");
+                          e.currentTarget.classList.remove(idx % 2 === 0 ? "bg-white" : "bg-light");
+                          e.currentTarget.style.boxShadow = "0 2px 8px rgba(59, 130, 246, 0.1)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.classList.remove("bg-info");
+                        e.currentTarget.classList.add(idx % 2 === 0 ? "bg-white" : "bg-light");
+                        e.currentTarget.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.05)";
                       }}
                     >
-                      <td className="text-center text-muted small text-nowrap">
+                      <td className="text-center text-muted small text-nowrap px-3 py-3">
                         {(page - 1) * ITEMS_PER_PAGE + idx + 1}
                       </td>
-                      <td className="fw-semibold text-nowrap small">{r.userCode}</td>
-                      <td>
-                        <div className="fw-medium small text-nowrap">
+                      <td className="fw-semibold text-center small text-nowrap px-3 py-3 text-dark">{r.userCode}</td>
+                      <td className="px-3 py-3">
+                        <div className="fw-medium small text-center text-nowrap text-dark">
                           {r.firstName} {r.lastName}
                         </div>
                       </td>
-                      <td className="text-center text-nowrap">
-                        <span className="badge bg-light text-dark small">{r.row_no ?? "-"}</span>
+                      <td className="text-center text-nowrap px-3 py-3">
+                        <span className="badge  text-dark small">{r.row_no ?? "-"}</span>
                       </td>
-                      <td>
-                        <div className="d-flex flex-column gap-1">
-                          <span className="badge bg-secondary-subtle text-secondary-emphasis align-self-start small" style={{ fontSize: "0.7rem" }}>
+                      <td className="text-center text-nowrap px-3 py-3">
+                        <span className="badge text-dark small">{r.col_no ?? "-"}</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="d-flex flex-column gap-2">
+                          <span className="badge  text-dark small">
                             ห้อง {r.roomName ?? "-"}
                           </span>
                           {r.seat_code && (
-                            <small className="text-muted text-nowrap" style={{ fontSize: "0.75rem" }}>ที่นั่ง: {r.seat_code}</small>
+                            <small className="text-muted text-nowrap">ที่นั่ง: {r.seat_code}</small>
                           )}
                         </div>
                       </td>
-                      <td className="text-center text-nowrap">
+                      <td className="text-center text-nowrap px-3 py-3">
                         {r.qr_payload ? (
                           <QrPreview
                             value={r.qr_payload}
@@ -774,9 +810,7 @@ export default function SignSheetsPage() {
                             onClick={() => setEnlargedQr(r.qr_payload)}
                           />
                         ) : (
-                          <span className="badge bg-danger-subtle text-danger-emphasis small" style={{ fontSize: "0.65rem" }}>
-                            ไม่มี
-                          </span>
+                          <span className="badge bg-danger small">ไม่มี</span>
                         )}
                       </td>
                     </tr>
@@ -788,7 +822,7 @@ export default function SignSheetsPage() {
                   {emptyRows > 0 && rows.length > 0 && (
                     Array.from({ length: emptyRows }).map((_, index) => (
                       <tr key={`empty-${index}`} style={{ height: "55px" }}> {/* ความสูงต้องเท่ากับ Row ปกติ */}
-                        <td colSpan={6} />
+                        <td colSpan={7} />
                       </tr>
                     ))
                   )}

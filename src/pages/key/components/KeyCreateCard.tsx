@@ -15,7 +15,9 @@ interface KeyCreateCardProps {
   onSaveFirstKey: () => void;
   onSaveSecondKey: () => void;
 
+
   onDeleteKey: (id: number) => void;
+  onForgetKey: (id: number) => void;
 
   canGenerate: boolean;
   isLoading: boolean;
@@ -39,6 +41,7 @@ export default function KeyCreateCard({
   onSaveFirstKey,
   onSaveSecondKey,
   onDeleteKey,
+  onForgetKey,
   isLoading,
   hasActiveCampaign,
   activeKeyCount,
@@ -55,7 +58,7 @@ export default function KeyCreateCard({
 
 
   return (
-    <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
+    <div className="card mt-2" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
       <div className="card-header bg-white">
         <h6 className="mb-0 text-nowrap">1. กำหนดคีย์เข้ารหัส</h6>
       </div>
@@ -109,6 +112,15 @@ export default function KeyCreateCard({
               <Minus size={14} />
               <span className="d-none d-sm-inline">ลบ</span>
             </button>
+            <button
+              className="btn btn-sm btn-secondary w-100 d-inline-flex align-items-center justify-content-center gap-1"
+              onClick={() => firstKeyId && onForgetKey(firstKeyId)}
+              disabled={!firstKeyId}
+              title="ลืมคีย์"
+            >
+              <Key size={14} />
+              <span className="d-none d-sm-inline">ลืมคีย์</span>
+            </button>
           </div>
 
           {/* ===== SECOND KEY ===== */}
@@ -156,6 +168,15 @@ export default function KeyCreateCard({
             >
               <Minus size={14} />
               <span className="d-none d-sm-inline">ลบ</span>
+            </button>
+            <button
+              className="btn btn-sm btn-secondary w-100 d-inline-flex align-items-center justify-content-center gap-1"
+              onClick={() => secondKeyId && onForgetKey(secondKeyId)}
+              disabled={!secondKeyId}
+              title="ลืมคีย์"
+            >
+              <Key size={14} />
+              <span className="d-none d-sm-inline">ลืมคีย์</span>
             </button>
           </div>
         </div>

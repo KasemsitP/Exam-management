@@ -22,6 +22,7 @@ export type SimpleAssignment = {
   label: string;
   session_code : string 
   title : string
+  subject_name : string
 };
 
 export type CreateAccountFormValues = {

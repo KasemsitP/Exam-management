@@ -4,6 +4,17 @@ import type { RecordedScore } from "../hooks/useGradingStation";
 interface RecentScoresCardProps {
   recent: RecordedScore[];
 }
+const parseThaiDate = (dateStr) => {
+  // สมมติ dateStr คือ "22/02/2569 07:12:03"
+  const [datePart, timePart] = dateStr.split(' ');
+  const [day, month, yearBE] = datePart.split('/');
+  
+  // ลบ 543 เพื่อเปลี่ยนเป็น ค.ศ.
+  const yearAD = parseInt(yearBE) - 543;
+  
+  // สร้าง ISO format: YYYY-MM-DDTHH:mm:ss
+  return `${yearAD}-${month}-${day}T${timePart}`;
+};
 
 export default function RecentScoresCard({ recent }: RecentScoresCardProps) {
   return (
@@ -47,7 +58,7 @@ export default function RecentScoresCard({ recent }: RecentScoresCardProps) {
                         <span className="font-monospace">{r.qr_payload}</span>
                       </td>
                       <td className="text-center">
-                        {new Date(r.enteredAt).toLocaleString("th-TH", {
+                        {new Date(parseThaiDate(r.enteredAt)).toLocaleString("th-TH", {
                           timeZone: "Asia/Bangkok",
                           day: "numeric",
                           month: "short",

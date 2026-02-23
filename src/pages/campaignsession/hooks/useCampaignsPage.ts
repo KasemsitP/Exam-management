@@ -112,17 +112,23 @@ export function useCampaignsPage() {
     null
   );
   const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
-  const [sessionsCampaign, setSessionsCampaign] = useState<ExamCampaign | null>(null);
+ // const [sessionsCampaign, setSessionsCampaign] = useState<ExamCampaign | null>(null);
 
-  const openSessionsModal = (campaign: ExamCampaign) => {
-    setSessionsCampaign(campaign);
-    setSessionsModalOpen(true);
-  };
+const [sessionsCampaignId, setSessionsCampaignId] = useState<string | null>(null);
 
-  const closeSessionsModal = () => {
-    setSessionsModalOpen(false);
-    setSessionsCampaign(null);
-  };
+const openSessionsModal = (campaign: ExamCampaign) => {
+  setSessionsCampaignId(campaign.id);
+  setSessionsModalOpen(true);
+};
+
+const closeSessionsModal = () => {
+  setSessionsModalOpen(false);
+  setSessionsCampaignId(null);
+};
+const sessionsCampaign = useMemo(() => {
+  if (!sessionsCampaignId) return null;
+  return campaigns.find(c => c.id === sessionsCampaignId) ?? null;
+}, [campaigns, sessionsCampaignId]);
   const [sessionContext, setSessionContext] = useState<{
     campaignId: string;
     session: CampaignSession | null;
@@ -437,12 +443,14 @@ const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
           dayNo: (parentCampaign?.sessions.length ?? 0) + 1,
         })
       ).unwrap();
+
       Swal.fire({
         icon: "success",
         title: "สร้างเซสชันใหม่เรียบร้อย",
         text: values.label,
         confirmButtonText: "ตกลง",
       });
+      dispatch(fetchInitialExamData());
       setSessionDialogOpen(false);
     } catch (error) {
       setSessionDialogOpen(false);

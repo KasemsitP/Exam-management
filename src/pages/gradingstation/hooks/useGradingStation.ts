@@ -47,6 +47,7 @@ export const useGradingStation = () => {
   // --- 1. Slices ---
 
   const user = useAppSelector(selectCurrentUser);
+  console.log("Current user:", user);
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const lastSlotId = useAppSelector(selectLastSlotId);
   const records = useAppSelector(selectGradingRecords);
@@ -171,6 +172,7 @@ export const useGradingStation = () => {
 
   useEffect(() => {
     if (records && records.length > 0) {
+      console.log("Fetched grading records:", records);
       setRecent(
         records
           .slice(0, 5)
@@ -506,7 +508,6 @@ html: `
     closeConfirmModal,
     setQuestionMaxScore,
     questionMaxScore,
-
 
     bagNo,
     lastSlotId,

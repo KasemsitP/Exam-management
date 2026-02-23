@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { shuffle } from "lodash";
 
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
@@ -189,23 +190,78 @@ export const useUserImport = () => {
     }
   }, [excelBuffer, excelSelectedSheet]);
 
-  const handleConfirm = async () => {
+const handleConfirm = async () => {
     if (!parsed || !activeCampaign) return;
 
+    // --- 1. เช็คสถิตินามสกุลซ้ำ ---
+    const lastNameFreq: Record<string, number> = {};
+    let totalValidUsers = 0;
+
+    parsed.rows.forEach(row => {
+      const firstName = row.firstname ?? row.first_name ?? row.firstName ?? row["ชื่อ"] ?? row["first name"];
+      const lastName = row.lastname ?? row.last_name ?? row.lastName ?? row["นามสกุล"] ?? row["last name"];
+      
+      if (firstName || lastName) {
+        totalValidUsers++;
+        if (lastName) {
+          const lnKey = String(lastName).trim();
+          lastNameFreq[lnKey] = (lastNameFreq[lnKey] || 0) + 1;
+        }
+      }
+    });
+
+    // ดึงเฉพาะนามสกุลที่ซ้ำกัน (> 1) เรียงจากมากไปน้อย
+    const duplicateLastNames = Object.entries(lastNameFreq)
+      .filter(([_, count]) => count > 1)
+      .sort((a, b) => b[1] - a[1]);
+
+    // สร้าง HTML สำหรับ Swal.fire
+    let confirmHtml = `คุณกำลังจะนำเข้าข้อมูลผู้ใช้งานจำนวน <strong>${parsed.rows.length.toLocaleString()}</strong> คน<br>เข้าสู่รอบสอบ <strong>${activeCampaign.name}</strong><br>โปรดตรวจสอบให้แน่ใจว่าข้อมูลถูกต้องก่อนดำเนินการต่อ`;
+
+    // ถ้ามีนามสกุลซ้ำ เอา Top 5 มาแสดงเตือน
+    if (duplicateLastNames.length > 0) {
+      const topDuplicates = duplicateLastNames.slice(0, 5);
+      const duplicateListHtml = topDuplicates
+        .map(([ln, count]) => `<li>นามสกุล <b>${ln}</b> : ${count} คน</li>`)
+        .join("");
+      const moreText = duplicateLastNames.length > 5 ? `<li>...และอื่นๆ อีก ${duplicateLastNames.length - 5} นามสกุล</li>` : "";
+confirmHtml += `
+<br><br>
+<div style="
+  background-color: #fff3cd; 
+  color: #856404; 
+  border: 1px solid #ffeeba; 
+  padding: 12px; 
+  border-radius: 6px; 
+  text-align: left; 
+  font-size: 0.9em;
+  max-height: 200px;
+  overflow-y: auto;
+">
+  <strong>⚠️ พบผู้เข้านามสกุลซ้ำกันในรอบนี้:</strong>
+  <ul style="margin-top: 5px; margin-bottom: 0; padding-left: 20px;">
+    ${duplicateListHtml}
+    ${moreText}
+  </ul>
+  <div style="margin-top: 8px; font-size: 0.85em;">
+    ระบบจะพยายามสลับที่นั่งให้ห่างกันโดยอัตโนมัติ
+  </div>
+</div>`;
+    }
 
     const result = await Swal.fire({
       title: "ยืนยันการนำเข้าข้อมูล",
-      html: `คุณกำลังจะนำเข้าข้อมูลผู้ใช้งานจำนวน 
-<strong>${parsed.rows.length.toLocaleString()}</strong> คน<br>
-เข้าสู่รอบสอบ <strong>${activeCampaign.name}</strong><br>
-โปรดตรวจสอบให้แน่ใจว่าข้อมูลถูกต้องก่อนดำเนินการต่อ`,
-      icon: "warning",
+      html: confirmHtml,
+      icon: duplicateLastNames.length > 0 ? "warning" : "info",
       showCancelButton: true,
       confirmButtonText: "ยืนยัน",
       cancelButtonText: "ยกเลิก",
     });
 
     if (!result.isConfirmed) return;
+
+    // --- 2. สับเปลี่ยนข้อมูล (Shuffle) ก่อนส่งไป Backend ---
+    const shuffledRows = shuffle(parsed.rows);
 
     Swal.fire({
       title: "กำลังนำเข้าข้อมูล",
@@ -218,23 +274,19 @@ export const useUserImport = () => {
     });
 
     try {
-      const result = await dispatch(
+      const importResult = await dispatch(
         importUsersThunk({
           campaignId: activeCampaign.id,
-          rows: parsed.rows,
+          rows: shuffledRows, // ส่งตัวที่สับเปลี่ยนแล้วไป
         })
       ).unwrap();
 
       const parts = [
-        `ผู้เข้าสอบเดิมจำนวน ${result.totalUsersFound.toLocaleString()} คน`,
-        `นำเข้าข้อมูลผู้สอบจำนวน ${result.totalCampaignLinks.toLocaleString()} คน`,
-        `รวมทั้งสิ้นในรอบสอบ ${result.totalUsersCreated.toLocaleString()} คน`,
-        // //  `สร้างผู้ใช้งานใหม่ ${result.totalUsersCreated} รายการ`,
-        //  `พบผู้ใช้งานเดิม ${result.totalUsersFound} รายการ`,
-        //  `ผูกแคมเปญ ${result.totalCampaignLinks} รายการ`,
+        `ผู้เข้าสอบเดิมจำนวน ${importResult.totalUsersFound.toLocaleString()} คน`,
+        `นำเข้าข้อมูลผู้สอบจำนวน ${importResult.totalCampaignLinks.toLocaleString()} คน`,
+        `รวมทั้งสิ้นในรอบสอบ ${importResult.totalUsersCreated.toLocaleString()} คน`,
       ];
 
-      //  ปิด loading แล้วเปิด success
       Swal.fire({
         icon: "success",
         title: "นำเข้าข้อมูลสำเร็จ",
@@ -244,7 +296,6 @@ export const useUserImport = () => {
 
       resetState();
     } catch (err) {
-      // ปิด loading แล้วเปิด error
       Swal.fire({
         icon: "error",
         title: "นำเข้าผู้ใช้งานไม่สำเร็จ",
@@ -253,7 +304,6 @@ export const useUserImport = () => {
       });
     }
   };
-
   const preview = useMemo(() => {
     if (!parsed) return [];
     return parsed.rows.slice(0, previewRows);
@@ -297,7 +347,7 @@ export const useUserImport = () => {
     preview,
     summaryText,
     statsText,
-
+    resetState,
     // actions
     handleFile,
     handleConfirm,

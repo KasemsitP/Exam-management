@@ -120,38 +120,18 @@ const GUIDE: Record<
   },
 
   manager: {
-    title: "คู่มือสำหรับผู้จัดการรอบสอบ (Manager)",
+    title: "คู่มือสำหรับผู้จัดการคีย์ (Manager)",
     subtitle: "ดูภาพรวม ความพร้อม และแก้ปัญหาก่อนปล่อยผล",
     steps: [
       {
-        title: "ตรวจการนำเข้าข้อมูล",
-        desc: "ดูว่าแต่ละ session มีผู้เข้าสอบครบหรือไม่",
-        icon: <Users size={18} />,
-        path: "/dashboard",
-      },
-      {
-        title: "ตรวจการจัดที่นั่ง",
-        desc: "missing seat ต้องเป็น 0",
+        title: "กำหนดคีย์สำหรับการเข้ารหัสคิวอาร์โค้ด",
+        desc: "คีย์ต้องมี 2 คีย์ขึ้นไป (ผู้จัดการคีย์คนที่ 1 และคนที่ 2) ถึงจะสามารถเข้ารหัสคิวอาร์โค้ดได้",
         icon: <ClipboardList size={18} />,
-        path: "/seats",
       },
       {
-        title: "ตรวจคีย์เข้ารหัส",
-        desc: "คีย์ต้องครบและ active",
-        icon: <Lock size={18} />,
-        path: "/keys",
-      },
-      {
-        title: "ตรวจสถานะการตรวจข้อสอบ",
-        desc: "slot ต้องครบ และ pending/dispute ต้องเคลียร์",
-        icon: <BarChart3 size={18} />,
-        path: "/dashboard",
-      },
-      {
-        title: "ยืนยันความพร้อมก่อนปล่อยผล",
-        desc: "สรุปปัญหาและแจ้งทีมให้แก้",
+        title: "การเข้ารหัสเพื่อสร้างคิวอาร์โค้ด",
+        desc: "ผู้จัดการคีย์คนสุดท้ายสามารถกดเข้ารหัสเพื่อสร้างคิวอาร์โค้ดสำหรับผู้เข้าสอบได้",
         icon: <CheckCircle2 size={18} />,
-        path: "/unlock",
       },
     ],
     links: [
@@ -168,27 +148,23 @@ const GUIDE: Record<
     steps: [
       {
         title: "นำเข้าข้อมูลผู้เข้าสอบ",
-        desc: "ตรวจรายชื่อ ห้องสอบ และข้อมูลครบถ้วน",
+        desc: "นำเข้ารายการผู้เข้าสอบจาก csv ตามฟอร์แมตที่กำหนด",
         icon: <Users size={18} />,
-        path: "/import",
       },
       {
         title: "จัดสรรที่นั่งสอบ",
-        desc: "ทำให้ room/row/col ครบทุกคน",
+        desc: "จัดสรรที่นั่งสอบโดยผู้เข้าสอบนามสกุลเดียวจะไม่นั่งข้างกัน",
         icon: <ClipboardList size={18} />,
-        path: "/seats",
       },
       {
         title: "จัดถุงข้อสอบ",
-        desc: "สร้างถุงและบรรจุ booklet ให้ครบ (unbagged ต้อง 0)",
+        desc: "สร้างถุง สแกนคิวอาร์โค้ดผู้เข้าสอบเพื่อจัดใส่ถุง ปิดถุงนำส่ง",
         icon: <ClipboardList size={18} />,
-        path: "/bags",
       },
       {
-        title: "พิมพ์/ตรวจ QR และเอกสาร",
-        desc: "ตรวจว่าข้อมูล/QR ถูกต้องก่อนส่งต่อ",
+        title: "ส่งออกใบหรือเอกสารต่างๆได้",
+        desc: "-",
         icon: <Lock size={18} />,
-        path: "/print",
       },
     ],
     links: [
@@ -205,27 +181,18 @@ const GUIDE: Record<
     steps: [
       {
         title: "เข้าหน้าตรวจคะแนน",
-        desc: "เริ่มตรวจตามรายการที่ถูก assign",
+        desc: "เริ่มตรวจตามรายการที่ถูกมอบหมายให้ตรวจได้",
         icon: <ClipboardList size={18} />,
-        path: "/grading",
       },
       {
-        title: "สแกน QR / กรอกโค้ด",
-        desc: "สแกนเพื่อดึงข้อสอบและกรอกคะแนน",
+        title: "สแกนคิวอาร์โค้ดเพื่อตรวจข้อสอบ",
+        desc: "สแกนเพื่อดึงข้อสอบมาจากฐานข้อมูล",
         icon: <Lock size={18} />,
-        path: "/grading",
       },
       {
-        title: "กดส่งคะแนนให้ครบ",
-        desc: "ตรวจให้สถานะครบทุกข้อที่ได้รับมอบหมาย",
+        title: "กดบันทึกคะแนน",
+        desc: "คะแนนจะถูกบันทึกทันที",
         icon: <CheckCircle2 size={18} />,
-        path: "/grading",
-      },
-      {
-        title: "แก้ Dispute (ถ้ามี)",
-        desc: "ถ้าคะแนนห่างเกินเกณฑ์ ให้ทำตามขั้นตอน dispute",
-        icon: <BarChart3 size={18} />,
-        path: "/disputes",
       },
     ],
     links: [
@@ -409,7 +376,7 @@ export default function HomePage() {
                         <tr 
                           key={idx} 
                           style={{ 
-                            opacity: clickable ? 1 : 0.65,
+                            opacity: clickable ? 1 : 1,
                             cursor: clickable ? 'pointer' : 'default',
                             transition: 'background-color 0.2s ease'
                           }}

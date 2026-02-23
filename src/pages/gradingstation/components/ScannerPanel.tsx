@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 // ✅ Import CustomQrScanner (ปรับ path ให้ตรงกับโปรเจกต์ของคุณ)
-import { CustomQrScanner } from "@/lib/Scanner"; 
+import { CustomQrScanner } from "@/lib/Scanner";
 
 interface ScannerPanelProps {
   scanData: string | null;
@@ -84,29 +84,27 @@ export default function ScannerPanel({
           <div className="small text-muted">
             สถานะกล้อง:{" "}
             <span
-              className={`badge ${
-                !scannerEnabled
-                  ? "bg-secondary"
-                  : pause
+              className={`badge ${!scannerEnabled
+                ? "bg-secondary"
+                : pause
                   ? "bg-warning"
                   : "bg-success"
-              }`}
+                }`}
             >
               {!scannerEnabled ? "หยุดอยู่" : pause ? "พักอยู่" : "พร้อม"}
             </span>
           </div>
-          <div className="small text-muted">
+          {/* <div className="small text-muted">
             คะแนนเต็ม: {QuestionMaxScore !== null ? QuestionMaxScore : "-"}
-          </div>
+          </div> */}
         </div>
       </div>
 
       {/* Controls */}
       <div className="px-3 pt-2 d-flex flex-wrap align-items-center gap-2">
         <button
-          className={`btn btn-${
-            scannerEnabled ? "outline-secondary" : "success"
-          } btn-sm d-inline-flex align-items-center gap-1`}
+          className={`btn btn-${scannerEnabled ? "outline-secondary" : "success"
+            } btn-sm d-inline-flex align-items-center gap-1`}
           onClick={onToggleScanner}
           title={scannerEnabled ? "หยุดกล้อง" : "เริ่มกล้อง"}
         >
@@ -157,6 +155,16 @@ export default function ScannerPanel({
             </option>
           ))}
         </select>
+        <div
+          className={`badge fs-6 px-3 py-2 ${!QuestionMaxScore
+              ? "bg-secondary"
+              : pause
+                ? "bg-warning"
+                : "bg-success"
+            }`}
+        >
+          คะแนนเต็ม: {QuestionMaxScore !== null ? QuestionMaxScore : "-"}
+        </div>
       </div>
 
       {/* Ribbon แจ้งรหัสล่าสุด */}
@@ -203,8 +211,8 @@ export default function ScannerPanel({
             className="alert alert-secondary py-2 mb-0 d-flex align-items-center justify-content-between"
             role="status"
           >
-            <span className="small">ยังไม่ได้สแกน — โปรดสแกนก่อนบันทึกคะแนน</span>
-            <span className="badge text-bg-light border">Waiting</span>
+            <span className="small">{!questionNo ? "ยังไม่ได้เลือกข้อ" : "ยังไม่ได้สแกน — โปรดสแกนก่อนบันทึกคะแนน"}</span>
+            <span className="badge text-bg-light border">กำลังรอ</span>
           </div>
         )}
       </div>
@@ -217,14 +225,15 @@ export default function ScannerPanel({
             <CustomQrScanner
               onResult={onScan}
               // ให้กล้องหยุดเมื่อ scannerEnabled=false หรือติดสถานะ pause อยู่
-              isPaused={!scannerEnabled || pause} 
+              isPaused={!scannerEnabled || pause || !questionNo}
               // โยน isLoading ให้ CustomQrScanner เพื่อแสดง Overlay ตอนกำลังบันทึกคะแนน
-              isLoading={isLoading} 
               facingMode={facingMode}
-              cooldownMs={cooldownMs}
+              allowMultipleScans={true}
+              cooldownMs={500}
+
               aspectRatio="1/1" // ลองปรับเป็น 4/3 หรือ 1/1 ตามความสวยงามของหน้าจอ
               minHeight={300}
-              // qrActive={QrActive}
+            // qrActive={QrActive}
             />
           </div>
         </div>

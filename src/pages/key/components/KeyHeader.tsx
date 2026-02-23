@@ -53,47 +53,39 @@ export default function RoomsHeader({ activeCampaign,
         </div>
       </div>
 
-      <div className="card-body">
-        <div className="row g-2 g-md-3">
+      <div className="card-body p-2 p-sm-3">
+        <div className="row g-2">
           {/* Card 1: สถานะการสร้างรอบสอบ */}
-          <div className="col-6 col-lg-4">
-            <div className="card shadow-none border">
+          <div className="col-12 col-md-6 col-lg-4">
+            <div className="card shadow-none border h-100">
               <div className="card-body p-2 p-sm-3">
-                <div className="text-uppercase small text-muted mb-2">
-                  <div className="small text-muted mb-1">สถานะสร้างคีย์</div>
-
-                  <div className="d-flex justify-content-between align-items-center border rounded px-2 px-sm-3 py-2">
-                    <div className="d-flex gap-2 gap-sm-3">
-                      <div>
-                        <div className="small text-muted">คีย์ที่ 1</div>
-                        <div className={`text-nowrap ${headerSummary?.keyStatusDashboard?.key1_status ? "text-success fw-semibold" : "text-warning fw-semibold"}`} style={{ fontSize: "0.85rem" }}>
-                          {headerSummary?.keyStatusDashboard?.key1_status ? "สร้างแล้ว" : "ยังไม่สร้าง"}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="small text-muted">คีย์ที่ 2</div>
-                        <div className={`text-nowrap ${headerSummary?.keyStatusDashboard?.key2_status ? "text-success fw-semibold" : "text-warning fw-semibold"}`} style={{ fontSize: "0.85rem" }}>
-                          {headerSummary?.keyStatusDashboard?.key2_status ? "สร้างแล้ว" : "ยังไม่สร้าง"}
-                        </div>
-                      </div>
-                    </div>
+                <div className="small text-muted mb-2">สถานะสร้างคีย์</div>
+                <div className="d-flex flex-column gap-2">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span className="small text-muted">คีย์ที่ 1</span>
+                    <span className={`badge ${headerSummary?.keyStatusDashboard?.key1_status ? "bg-success" : "bg-warning"}`} style={{ fontSize: "0.75rem" }}>
+                      {headerSummary?.keyStatusDashboard?.key1_status ? "สร้างแล้ว" : "ยังไม่สร้าง"}
+                    </span>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <span className="small text-muted">คีย์ที่ 2</span>
+                    <span className={`badge ${headerSummary?.keyStatusDashboard?.key2_status ? "bg-success" : "bg-warning"}`} style={{ fontSize: "0.75rem" }}>
+                      {headerSummary?.keyStatusDashboard?.key2_status ? "สร้างแล้ว" : "ยังไม่สร้าง"}
+                    </span>
                   </div>
                 </div>
-
-
               </div>
             </div>
           </div>
 
           {/* Card 2: สถานะการนำเข้าข้อมูล */}
-          <div className="col-6 col-lg-4">
-            <div className="card shadow-none border">
+          <div className="col-12 col-md-6 col-lg-4">
+            <div className="card shadow-none border h-100">
               <div className="card-body p-2 p-sm-3">
-                <div className="text-uppercase small text-muted mb-1">
+                <div className="small text-muted mb-2">
                   สถานะนำเข้าข้อมูลผู้สอบ
                 </div>
-                <div className={`h5 h-sm-4 mb-0 ${importedSessions === totalSessions ? "text-success" : "text-warning"}`}>
+                <div className={`fw-bold mb-0 ${importedSessions === totalSessions ? "text-success" : "text-warning"}`} style={{ fontSize: "0.9rem" }}>
                   {importedSessions === totalSessions
                     ? "นำเข้าข้อมูลครบแล้ว"
                     : `นำเข้าข้อมูลไม่ครบ (${importedSessions}/${totalSessions})`}
@@ -110,25 +102,32 @@ export default function RoomsHeader({ activeCampaign,
               </div>
             </div>
           </div>
-
-          {/* Card 3: สถานะการเข้ารหัส */}
-          <div className="col-6 col-lg-4">
-            <div className="card shadow-none border">
+                    {/* Card 3: สถานะการเข้ารหัส */}
+          <div className="col-12 col-md-6 col-lg-4">
+            <div className="card shadow-none border h-100">
               <div className="card-body p-2 p-sm-3">
-                <div className="text-uppercase small text-muted mb-1">
-                  สถานะเข้ารหัสเพื่อสร้างคิวอาร์โค้ด
+                <div className="small text-muted mb-2">
+                  สถานะเข้ารหัสคิวอาร์โค้ด
                 </div>
-                <div className={`h5 h-sm-4 mb-0 ${encryptedSessions === totalSessions ? "text-success" : "text-warning"}`}>
-                  {encryptedSessions === totalSessions
-                    ? "เข้ารหัสครบแล้ว"
-                    : `เข้ารหัสไม่ครบ (${encryptedSessions}/${totalSessions})`}
-                </div>
-                <small className={encryptedSessions === totalSessions ? "text-success" : "text-warning"}>
-                  &nbsp;
-                </small>
+
+                  <div className={`fw-bold mb-0 ${encryptedSessions === totalSessions ? "text-success" : "text-warning"}`} style={{ fontSize: "0.9rem" }}>
+                    {encryptedSessions === totalSessions ? "เข้ารหัสคิวอาร์โค้ดครบแล้ว" : `ยังไม่ครบ (${encryptedSessions}/${totalSessions})`}
+                  </div>
+                  {/* <span className={`badge ${encryptedSessions === totalSessions ? "bg-success" : "bg-warning"}`} style={{ fontSize: "0.75rem" }}>
+                    {encryptedSessions === totalSessions
+                      ? "เข้ารหัสครบแล้ว"
+                      : "ยังไม่ครบ"}
+                  </span> */}
+                  <small
+
+                  >
+                    &nbsp;
+                  </small>
               </div>
             </div>
           </div>
+
+
 
           <div className="col-12">
             <div className="card shadow-none border">
@@ -180,7 +179,7 @@ export default function RoomsHeader({ activeCampaign,
                                 className="btn btn-xs btn-outline-primary text-nowrap"
                                 onClick={() => handleOpenModel(session.session_id)}
                               >
-                                ดู
+                                ดูรายหัวข้อวิชา
                               </button>
 
                             </td>
@@ -253,7 +252,7 @@ export default function RoomsHeader({ activeCampaign,
                             <tr>
                               <th className="text-nowrap">ข้อที่</th>
                               <th className="text-nowrap">หัวข้อ</th>
-                              <th className="text-nowrap">คะแนน</th>
+                              <th className="text-nowrap">คะแนนเต็ม</th>
                             </tr>
                           </thead>
                           <tbody>

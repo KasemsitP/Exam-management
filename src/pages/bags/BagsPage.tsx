@@ -270,6 +270,26 @@ export default function BagsPage() {
     }
   );
 
+
+  const playBeep = () => {
+  try {
+    const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    
+    oscillator.type = 'sine'; // ชนิดของเสียง (sine, square, sawtooth, triangle)
+    oscillator.frequency.value = 800; // ความถี่เสียง (Hz) - 800 จะคล้ายๆ เสียงเครื่องสแกน
+    gainNode.gain.setValueAtTime(0.1, context.currentTime); // ความดัง (0.0 ถึง 1.0)
+    
+    oscillator.start(context.currentTime);
+    oscillator.stop(context.currentTime + 0.1); // ให้ดังแค่ 0.1 วินาที (สั้นๆ ไม่น่ารำคาญ)
+  } catch (err) {
+    console.log("Audio not supported or disabled");
+  }
+};
   // ------------------------------
   // Scan logic
   // ------------------------------
@@ -280,9 +300,9 @@ export default function BagsPage() {
     const dateTime = new Date();
 
     // เช็ค duplicate จาก ref (เร็วมาก)
-    if (recentScanSetRef.current.has(data)) return;
-    recentScanSetRef.current.add(data);
-    setTimeout(() => recentScanSetRef.current.delete(data), RECENT_WINDOW_MS);
+    // if (recentScanSetRef.current.has(data)) return;
+    // recentScanSetRef.current.add(data);
+    // setTimeout(() => recentScanSetRef.current.delete(data), RECENT_WINDOW_MS);
 
     if (qrPayloads.includes(data)) {
       Swal.fire({
@@ -302,8 +322,9 @@ export default function BagsPage() {
     setManualCode("");
 
     // Trick: หยุด Scanner ชั่วคราวเพื่อให้ user รู้ว่าสแกนติดแล้ว (เสียง beep หรือ ui กระพริบ)
-    setScannerEnabled(false);
-    setTimeout(() => setScannerEnabled(true), 500);
+    // setScannerEnabled(false);
+    // setTimeout(() => setScannerEnabled(true), 500);
+    playBeep();
 
   }, [activeCampaign, scannerEnabled, qrPayloads]); // Dependencies ที่จำเป็น
 
@@ -317,106 +338,117 @@ export default function BagsPage() {
 
 
 
-const handleFinalizeAndLink = async () => {
-  if (!activeCampaign) return;
+  const handleFinalizeAndLink = async () => {
+    if (!activeCampaign) return;
 
     const numberofBag = qrPayloads.length;
-if (numberofBag < 30) {
-  const result = await Swal.fire({
-    icon: "warning",
-    title: "จำนวนสมุดข้อสอบน้อยกว่า 30 เล่ม",
-    text: "คุณแน่ใจหรือไม่ว่าจะสร้างถุงข้อสอบนี้?",
-    confirmButtonText: "ตกลง",
-    cancelButtonText: "ยกเลิก",
-    showCancelButton: true,
-  });
 
-  if (!result.isConfirmed) {
-    return; 
-  }
-}
-  try {
-    // ==============================
-    // 1️⃣ CHECK SUBJECTS
-    // ==============================
-    const { data } = await axios.post("/api/bags/check-subjects", {
-      campaignId: Number(activeCampaign.id),
-      payload: qrPayloads,
-      datetime: DatePayloads,
-    });
-
-    if (!data.success) {
-      await Swal.fire({
-        icon: "error",
-        title: "มีบางเล่มที่มีวิชาไม่ตรงกับรอบสอบ",
-        text: "กรุณาตรวจสอบ QR code ที่สแกนอีกครั้ง",
-      });
-      return;
+    if (numberofBag > 30) {
+      Swal.fire(
+        {
+          icon: "error",
+          title: "จำนวนสมุดข้อสอบมากกว่า 30 เล่ม",
+          text: "ไม่สามารถปิดถุงนำส่งได้กรุณาตรวจสอบเล่มข้อสอบ",
+        }
+      )
     }
 
-    // ==============================
-    // 2️⃣ CONFIRM
-    // ==============================
-    const confirm = await Swal.fire({
-      icon: "warning",
-      title: "ยืนยันการสร้างถุงข้อสอบ",
-      html: `
+    if (numberofBag < 30) {
+      const result = await Swal.fire({
+        icon: "warning",
+        title: "จำนวนสมุดข้อสอบน้อยกว่า 30 เล่ม",
+        text: "คุณแน่ใจหรือไม่ว่าจะสร้างถุงข้อสอบนี้?",
+        confirmButtonText: "ตกลง",
+        cancelButtonText: "ยกเลิก",
+        showCancelButton: true,
+      });
+
+      if (!result.isConfirmed) {
+        return;
+      }
+    }
+    try {
+      // ==============================
+      // 1️⃣ CHECK SUBJECTS
+      // ==============================
+      const { data } = await axios.post("/api/bags/check-subjects", {
+        campaignId: Number(activeCampaign.id),
+        payload: qrPayloads,
+        datetime: DatePayloads,
+      });
+
+      if (!data.success) {
+        await Swal.fire({
+          icon: "error",
+          title: "มีบางเล่มที่มีวิชาไม่ตรงกับรอบสอบ",
+          text: "กรุณาตรวจสอบ QR code ที่สแกนอีกครั้ง",
+        });
+        return;
+      }
+
+      // ==============================
+      // 2️⃣ CONFIRM
+      // ==============================
+      const confirm = await Swal.fire({
+        icon: "warning",
+        title: "ยืนยันการสร้างถุงข้อสอบ",
+        html: `
         สร้างถุงข้อสอบวิชา <b>${data.subject_name.name}</b><br/>
         ถุงเลขที่ <b>${data.bagNo}</b><br/>
         จำนวน <b>${qrPayloads.length}</b> เล่ม
       `,
-      showCancelButton: true,
-      confirmButtonText: "ยืนยัน",
-      cancelButtonText: "ยกเลิก",
-    });
+        showCancelButton: true,
+        confirmButtonText: "ยืนยัน",
+        cancelButtonText: "ยกเลิก",
+      });
 
-    if (!confirm.isConfirmed) return;
+      if (!confirm.isConfirmed) return;
 
-    // ==============================
-    // 3️⃣ CREATE BAG (Redux Thunk)
-    // ==============================
-    const result = await dispatch(
-      CreateBagAndAddQrPayload({
-        campaignId: Number(activeCampaign.id),
-        payload: qrPayloads,
-        datetime: DatePayloads,
-      })
-    ).unwrap();
+      // ==============================
+      // 3️⃣ CREATE BAG (Redux Thunk)
+      // ==============================
+      const result = await dispatch(
+        CreateBagAndAddQrPayload({
+          campaignId: Number(activeCampaign.id),
+          payload: qrPayloads,
+          datetime: DatePayloads,
+        })
+      ).unwrap();
 
-    await Swal.fire({
-      icon: "success",
-      title: "บันทึกข้อมูลสำเร็จ",
-      text: `สร้างถุงเลขที่ ${result.bagNo} จำนวน ${qrPayloads.length} เล่ม กรุณาปิดถุงเพื่อเตรียมนำส่ง`,
-    });
+      await Swal.fire({
+        icon: "success",
+        title: "บันทึกข้อมูลสำเร็จ",
+        text: `สร้างถุงเลขที่ ${result.bagNo} จำนวน ${qrPayloads.length} เล่ม กรุณาปิดถุงเพื่อเตรียมนำส่ง`,
+      });
 
-    ClearAll();
-    await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
-    setIsScannerModalOpen(false);
+      ClearAll();
+      await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
+      setIsScannerModalOpen(false);
 
-  } catch (error: unknown) {
-    console.error("CATCH ERROR:", error);
+    } catch (error: unknown) {
+      console.error("CATCH ERROR:", error);
 
-    let message = "เกิดข้อผิดพลาดบางอย่าง";
+      let message = "เกิดข้อผิดพลาดบางอย่าง";
 
-    // 👇 รองรับทั้ง axios error และ rejectWithValue
-    if (typeof error === "string") {
-      message = error;
-    } else if (axios.isAxiosError(error)) {
-      message =
-        error.response?.data?.message ||
-        error.message ||
-        message;
-    } else if (error instanceof Error) {
-      message = error.message;
+      // 👇 รองรับทั้ง axios error และ rejectWithValue
+      if (typeof error === "string") {
+        message = error;
+      } else if (axios.isAxiosError(error)) {
+        message =
+          error.response?.data?.message ||
+          error.message ||
+          message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+
+      await Swal.fire({
+        icon: "error",
+        title: "ผิดพลาด",
+        text: message,
+      });
     }
-
-    await Swal.fire({
-      icon: "error",
-      title: "ผิดพลาด",
-      text: message,
-    });
-  }
-};
+  };
 
   const handleRemoveCode = (code: string) => {
     if (!activeCampaign) return;
@@ -525,7 +557,7 @@ if (numberofBag < 30) {
   // ==============================
   // Render
   // ==============================
-  
+
   // Show loading overlay while initial data is loading
   if (isInitialLoading) {
     return <OverlayLoader open={true} label="" />;
@@ -546,7 +578,7 @@ if (numberofBag < 30) {
       <ModalBackdrop open={IsScannerModalOpen} />
       <BagScannerModal
         open={IsScannerModalOpen}
-        onClose={() => { setIsScannerModalOpen(false); ClearAll();}}
+        onClose={() => { setIsScannerModalOpen(false); ClearAll(); }}
         canScan={canScan}
         isSealed={isSealed}
         scannerEnabled={scannerEnabled}

@@ -240,10 +240,10 @@ export default function ProctorScanPage() {
                 {/* 🎯 เรียกใช้ CustomQrScanner (ในตัวมันมี Overlay และกรอบล็อคขนาดให้อยู่แล้ว) */}
                 <CustomQrScanner
                   onResult={onScannerResult}
-                  isLoading={status === "loading"}
                   isPaused={!scannerEnabled || pause}
                   facingMode={facingMode}
                   cooldownMs={cooldownMs}
+                  allowMultipleScans={true}
                   aspectRatio="1/1" 
                   minHeight={350}  
                   qrActive={QRActive}
