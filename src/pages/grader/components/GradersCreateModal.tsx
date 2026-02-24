@@ -38,6 +38,7 @@ export default function AccountCreateModal({
   } = useForm<CreateAccountFormValues>();
 
   const assignment = watch("assignments");
+  const password = watch("password");
 
   const selectedSessionId = assignment?.sessionId ?? 0;
   const selectedSubjectId = assignment?.subjectId ?? 0;
@@ -134,21 +135,6 @@ export default function AccountCreateModal({
                       <div className="invalid-feedback">{errors.username.message}</div>
                     )}
                   </div>
-
-                  <div className="col-md-6">
-                    <label className="form-label">
-                      Password <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      className={`form-control ${errors.password ? "is-invalid" : ""}`}
-                      {...register("password", { required: "จำเป็นต้องระบุ" })}
-                    />
-                    {errors.password && (
-                      <div className="invalid-feedback">{errors.password.message}</div>
-                    )}
-                  </div>
-
                   <div className="col-md-6">
                     <label className="form-label">
                       ชื่อ-นามสกุล <span className="text-danger">*</span>
@@ -161,6 +147,47 @@ export default function AccountCreateModal({
                       <div className="invalid-feedback">{errors.full_name.message}</div>
                     )}
                   </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      Password <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      className={`form-control ${errors.password ? "is-invalid" : ""}`}
+                      {...register("password", {
+                        required: "จำเป็นต้องระบุ",
+                        minLength: {
+                          value: 8,
+                          message: "รหัสผ่านต้องอย่างน้อย 8 ตัวอักษร",
+                        },
+                      })}
+                    />
+                    {errors.password && (
+                      <div className="invalid-feedback">{errors.password.message}</div>
+                    )}
+                  </div>
+
+                  <div className="col-md-6">
+                    <label className="form-label">
+                      ยืนยัน Password <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      className={`form-control ${errors.confirmPassword ? "is-invalid" : ""}`}
+                      {...register("confirmPassword", {
+                        required: "จำเป็นต้องระบุ",
+                        validate: (value) =>
+                          value === password || "รหัสผ่านไม่ตรงกัน",
+                      })}
+                    />
+                    {errors.confirmPassword && (
+                      <div className="invalid-feedback">
+                        {errors.confirmPassword.message}
+                      </div>
+                    )}
+                  </div>
+
 
                   {/* <div className="col-md-6">
                     <label className="form-label">Email</label>
@@ -213,18 +240,18 @@ export default function AccountCreateModal({
 
                 <hr className="my-3" />
                 <h6 className="mb-2">
-                  มอบหมายวิชาและข้อให้ผู้ตรวจในแต่ละรอบสอบ (Session)
+                  มอบหมายวิชาและข้อให้ผู้ตรวจในแต่ละวันที่สอบ
                 </h6>
 
                 {sessions.length === 0 && (
                   <p className="text-muted small mb-0">
-                    ยังไม่มีรอบสอบในแคมเปญนี้
+                    ยังไม่มีวันที่สอบในรอบสอบนี้
                   </p>
                 )}
 
                 {/* 1) เลือก Session */}
                 <div className="mt-2">
-                  <label className="form-label">รอบสอบ (Session)</label>
+                  <label className="form-label">วันที่สอบ </label>
                   <select
                     className="form-select"
                     {...register("assignments.sessionId", {
@@ -239,7 +266,7 @@ export default function AccountCreateModal({
                     })}
                   >
 
-                    <option value={0}>-- เลือกรอบสอบ --</option>
+                    <option value={0}>-- เลือกวันที่สอบ --</option>
                     {sessions.map((s) => (
                       <option key={s.id} value={Number(s.id)}>
                         {s.label}

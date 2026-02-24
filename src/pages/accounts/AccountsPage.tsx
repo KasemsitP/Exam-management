@@ -115,13 +115,20 @@ export default function AccountsPage() {
           role: data.role_id, // backend expects 'role'
         })
       ).unwrap();
-      toast({ title: "สร้างผู้ใช้สำเร็จ", description: data.username });
+      Swal.fire({
+        icon: "success",
+        title: "สร้างผู้ใช้สำเร็จ",
+        text: `สร้างผู้ใช้ ${data.username} สำเร็จ`,
+        timer: 1200,
+        showConfirmButton: false,
+      });
       setCreateOpen(false);
     } catch (err: any) {
-      toast({
-        title: "สร้างผู้ใช้ล้มเหลว",
-        description: err?.message ?? "ไม่สามารถสร้างบัญชีได้",
-        variant: "destructive",
+      console.log(err)
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถสร้างผู้ใช้ในระบบได้",
+        text: err?? "ไม่สามารถสร้างบัญชีได้",
       });
     }
   };
@@ -139,34 +146,48 @@ export default function AccountsPage() {
         })
       ).unwrap();
       const acc = accounts.find((a) => a.id === id);
-      toast({
-        title: "บันทึกการแก้ไขแล้ว",
-        description: acc?.username ?? "",
+      Swal.fire({
+        icon: "success",
+        title: "อัปเดตผู้ใช้สำเร็จ",
+        text: `อัปเดตผู้ใช้ ${acc?.username ?? ""} สำเร็จ`,
       });
       setEditingAccount(null);
     } catch (err: any) {
-      toast({
-        title: "อัปเดตล้มเหลว",
-        description: err?.message ?? "ไม่สามารถอัปเดตบัญชีได้",
-        variant: "destructive",
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถอัปเดตผู้ใช้ได้",
+        text: err ?? "",
       });
     }
   };
 
   const handleDelete = async (acc: Account) => {
-    if (!window.confirm(`ยืนยันการลบผู้ใช้: ${acc.username}?`)) return;
+    const ok = await Swal.fire({
+      title: "ลบผู้ใช้?",
+      text: `ต้องการลบผู้ใช้ ${acc.username} ใช่หรือไม่`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "ลบ",
+      confirmButtonColor: "#DC2626",
+    }).then((res) => res.isConfirmed);
+    if (!ok) return;
+
     try {
       await dispatch(deleteAccountThunk(acc.id)).unwrap();
-      toast({
-        title: "ลบผู้ใช้แล้ว",
-        description: acc.username,
-        variant: "destructive",
+
+      Swal.fire({
+        icon: "success",
+        title: "ลบผู้ใช้สำเร็จ",
+        text: `ลบผู้ใช้ ${acc.username}`,
+        timer: 1200,
+        showConfirmButton: false,
       });
+      setEditingAccount(null);
     } catch (err: any) {
-      toast({
-        title: "ลบล้มเหลว",
-        description: err?.message ?? "ไม่สามารถลบผู้ใช้ได้",
-        variant: "destructive",
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถลบผู้ใช้ได้",
+        text: err ?? "",
       });
     }
   };

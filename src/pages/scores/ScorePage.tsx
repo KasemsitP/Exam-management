@@ -563,14 +563,14 @@ export default function BagScoresPage() {
   // -----------------------------
   // Render
   // -----------------------------
-  
+
   // Show loading overlay while initial data is loading
   if (isInitialLoading) {
     return <OverlayLoader open={true} label="" />;
   }
 
   return (
-    <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
+    <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column gap-3">
 
       <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
         <div className="card-header bg-white">
@@ -584,64 +584,64 @@ export default function BagScoresPage() {
 
             <div className="d-grid gap-2 gap-md-1 d-md-flex flex-md-wrap justify-content-md-end flex-md-grow-1">
               {viewMode === "score" ? (
-              <>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center text-nowrap"
-                  disabled={!selectedBagId}
-                  onClick={handlePDFAllBags}
-                >
-                 ดาวน์โหลดใบคะแนนทั้งหมด
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center text-nowrap"
+                    disabled={!selectedBagId}
+                    onClick={handlePDFAllBags}
+                  >
+                    ดาวน์โหลดใบคะแนนทั้งหมด
+                  </button>
 
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center text-nowrap"
-                  disabled={!selectedBagId}
-                  onClick={handlePDFperBags}
-                >
-                  ดาวน์โหลดใบคะแนนรายถุง
-                </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center text-nowrap"
+                    disabled={!selectedBagId}
+                    onClick={handlePDFperBags}
+                  >
+                    ดาวน์โหลดใบคะแนนรายถุง
+                  </button>
 
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger d-inline-flex align-items-center justify-content-center text-nowrap"
-                  disabled={filteredBags.length === 0 || isDecrypted}
-                  onClick={openDecryptModal}
-                >
-                  ถอดรหัส
-                </button>
-              </>
-            ) :
-              <>
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center text-nowrap"
-                  disabled={!selectedBagId}
-                  onClick={handleDownloadGradersAllBags}
-                >
-                  ดาวน์โหลดรายชื่อผู้ตรวจทั้งหมด
-                </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger d-inline-flex align-items-center justify-content-center text-nowrap"
+                    disabled={filteredBags.length === 0 || isDecrypted}
+                    onClick={openDecryptModal}
+                  >
+                    ถอดรหัส
+                  </button>
+                </>
+              ) :
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center text-nowrap"
+                    disabled={!selectedBagId}
+                    onClick={handleDownloadGradersAllBags}
+                  >
+                    ดาวน์โหลดรายชื่อผู้ตรวจทั้งหมด
+                  </button>
 
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center text-nowrap"
-                  disabled={!selectedBagId}
-                  onClick={handleDownloadGradersEachBags}
-                >
-                  ดาวน์โหลดรายชื่อผู้ตรวจรายถุง
-                </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary d-inline-flex align-items-center justify-content-center text-nowrap"
+                    disabled={!selectedBagId}
+                    onClick={handleDownloadGradersEachBags}
+                  >
+                    ดาวน์โหลดรายชื่อผู้ตรวจรายถุง
+                  </button>
 
-                <button
-                  type="button"
-                  className="btn btn-sm btn-danger d-inline-flex align-items-center justify-content-center text-nowrap"
-                  disabled={filteredBags.length === 0 || isDecrypted}
-                  onClick={openDecryptModal}
-                >
-                  ถอดรหัส
-                </button>
-              </>
-            }
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger d-inline-flex align-items-center justify-content-center text-nowrap"
+                    disabled={filteredBags.length === 0 || isDecrypted}
+                    onClick={openDecryptModal}
+                  >
+                    ถอดรหัส
+                  </button>
+                </>
+              }
             </div>
           </div>
         </div>
@@ -836,18 +836,13 @@ export default function BagScoresPage() {
               bagScores.booklets.length > 0 && (
                 <div
                   className="table-responsive"
-                  style={{
-                    maxHeight: "calc(100vh - 260px)",
-                    overflowX: "auto",
-                  }}
                 >
                   <table
                     className="table table-sm mb-0"
                     style={{
                       borderCollapse: "collapse",
                       fontSize: "0.8rem",
-                      width: "max-content",
-                      minWidth: "100%",
+                      width: "100%",
                     }}
                   >
                     <thead>
@@ -880,8 +875,21 @@ export default function BagScoresPage() {
                           </th>
                         ))}
 
-
-                        <th
+                        {viewMode === "score" && (
+                          <th
+                            rowSpan={2}
+                            className="align-middle text-center"
+                            style={{
+                              border: "1px solid #dee2e6",
+                              backgroundColor: "#e5f0ff",
+                              fontWeight: 600,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            คะแนนรวม
+                          </th>
+                        )}
+                        {/* <th
                           rowSpan={2}
                           className="align-middle text-center"
                           style={{
@@ -892,7 +900,7 @@ export default function BagScoresPage() {
                           }}
                         >
                           คะแนนรวม
-                        </th>
+                        </th> */}
                       </tr>
 
                       {/* แถวที่ 2 : หัวคอลัมน์ย่อย */}
@@ -1022,15 +1030,17 @@ export default function BagScoresPage() {
                           })}
 
                           {/* คะแนนรวมทั้งเล่ม */}
-                          <td
-                            className="text-end fw-bold"
-                            style={{
-                              border: "1px solid #dee2e6",
-                              backgroundColor: "#e5f0ff",
-                            }}
-                          >
-                            {formatScore(calcTotalForBooklet(bk))}
-                          </td>
+                          {viewMode === "score" && (
+                            <td
+                              className="text-end fw-bold"
+                              style={{
+                                border: "1px solid #dee2e6",
+                                backgroundColor: "#e5f0ff",
+                              }}
+                            >
+                              {formatScore(calcTotalForBooklet(bk))}
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>

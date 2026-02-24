@@ -355,7 +355,7 @@ function AppContent() {
   }, [dispatch, authStatus]);
 
   if (isInitialLoading) {
-    return <OverlayLoader open={true} label="กำลังโหลด..." />;
+    return <OverlayLoader open={true} label="" />;
   }
 
 return (

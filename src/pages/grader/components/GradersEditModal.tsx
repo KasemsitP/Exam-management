@@ -87,7 +87,7 @@ export default function AccountEditModal({
                       <div className="invalid-feedback">{errors.full_name.message}</div>
                     )}
                   </div>
-
+{/* 
                   <div className="col-md-6">
                     <label className="form-label">Email</label>
                     <input
@@ -98,7 +98,7 @@ export default function AccountEditModal({
                     {errors.email && (
                       <div className="invalid-feedback">{errors.email.message}</div>
                     )}
-                  </div>
+                  </div> */}
 
                   <div className="col-md-6">
                     <label className="form-label">

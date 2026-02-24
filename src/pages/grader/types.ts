@@ -29,6 +29,7 @@ export type CreateAccountFormValues = {
   username: string;
   password: string;
   full_name: string;
+  confirmPassword: string;
   email?: string;
   role_id: number;
   active: boolean;

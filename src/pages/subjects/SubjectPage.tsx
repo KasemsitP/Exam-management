@@ -88,14 +88,22 @@ const SubjectPage: React.FC = () => {
       )
         .unwrap()
         .then(() => {
-          showSuccess("สำเร็จ", "สร้างวิชาเรียบร้อย");
+          showSuccess("สร้างวิชาเรียบร้อย", `สร้างวิชา ${newCode.trim()} - ${newName.trim()} สำเร็จ`);
           setNewCode("");
           setNewName("");
           setShowCreateForm(false);
           dispatch(fetchSubjectsThunk());
         })
-        .catch(() => {
-          Swal.fire("ผิดพลาด", "สร้างวิชาไม่สำเร็จ", "error");
+        .catch((err) => {
+          console.log(err);
+          if (err == "Failed to create subject") {
+            Swal.fire({
+              icon: "error",
+              title: "รหัสวิชาซ้ำ",
+              text: `รหัสวิชา ${newCode.trim()} มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น`,
+            });
+          }
+          Swal.fire("สร้างวิชาไม่สำเร็จ", "สร้างวิชาไม่สำเร็จ", "error");
         });
     });
   };
@@ -123,7 +131,7 @@ const SubjectPage: React.FC = () => {
       dispatch(deleteSubjectThunk({ id: subjectId }))
         .unwrap()
         .then(() => {
-          showSuccess("ลบสำเร็จ", "ลบวิชาเรียบร้อย");
+          showSuccess("ลบวิชาเรียบร้อย", `ลบวิชา ${subj?.code} - ${subj?.name} สำเร็จ`);
           dispatch(fetchSubjectsThunk());
           if (viewSubjectId === subjectId) closeViewSubjectModal();
         })
@@ -161,7 +169,7 @@ const SubjectPage: React.FC = () => {
     )
       .unwrap()
       .then(() => {
-        showSuccess("เพิ่มสำเร็จ", "สร้างหัวข้อแล้ว");
+        showSuccess("เพิ่มหัวข้อเรียบร้อย", `สร้างหัวข้อ ${payload.questionNo} - ${payload.label} สำเร็จ`);
         setQuestionModalOpen(false);
         dispatch(fetchSubjectsThunk());
       })
@@ -204,7 +212,7 @@ const SubjectPage: React.FC = () => {
     });
   };
 
-  
+
 
   return (
     <div className="container-fluid px-4 py-3 d-flex flex-column gap-3">
@@ -217,7 +225,7 @@ const SubjectPage: React.FC = () => {
         loading={loading}
       />
 
-      {error && <div className="alert alert-danger mb-0">เกิดข้อผิดพลาด: {error}</div>}
+      {/* {error && <div className="alert alert-danger mb-0">เกิดข้อผิดพลาด: {error}</div>} */}
 
       {/* ===================== TABLE SUBJECTS ===================== */}
       <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>

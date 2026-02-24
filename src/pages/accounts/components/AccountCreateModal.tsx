@@ -24,20 +24,23 @@ export default function AccountCreateModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<CreateAccountFormValues>();
+  const password = watch("password") ?? "";
 
-  useEffect(() => {
-    if (open) {
-      reset({
-        username: "",
-        password: "",
-        full_name: "",
-        email: "",
-        role_id: roles[0]?.id ?? 1,
-        active: true,
-      });
-    }
+useEffect(() => {
+  if (open) {
+    reset({
+      username: "",
+      password: "",
+      confirmPassword: "", // 👈 เพิ่ม
+      full_name: "",
+      email: "",
+      role_id: roles[0]?.id ?? 1,
+      active: true,
+    });
+  }
   }, [open, reset, roles]);
 
   const handleFormSubmit = handleSubmit(async (values) => {
@@ -78,20 +81,6 @@ export default function AccountCreateModal({
 
                   <div className="col-md-6">
                     <label className="form-label">
-                      Password <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="password"
-                      className={`form-control ${errors.password ? "is-invalid" : ""}`}
-                      {...register("password", { required: "จำเป็นต้องระบุ" })}
-                    />
-                    {errors.password && (
-                      <div className="invalid-feedback">{errors.password.message}</div>
-                    )}
-                  </div>
-
-                  <div className="col-md-6">
-                    <label className="form-label">
                       ชื่อ-นามสกุล <span className="text-danger">*</span>
                     </label>
                     <input
@@ -102,8 +91,48 @@ export default function AccountCreateModal({
                       <div className="invalid-feedback">{errors.full_name.message}</div>
                     )}
                   </div>
+                                    <div className="col-md-6">
+                    <label className="form-label">
+                      Password <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      className={`form-control ${errors.password ? "is-invalid" : ""}`}
+                      {...register("password", {
+                        required: "จำเป็นต้องระบุ",
+                        minLength: {
+                          value: 8,
+                          message: "รหัสผ่านต้องอย่างน้อย 8 ตัวอักษร",
+                        },
+                      })}
+                    />
+                    {errors.password && (
+                      <div className="invalid-feedback">{errors.password.message}</div>
+                    )}
+                  </div>
 
                   <div className="col-md-6">
+                    <label className="form-label">
+                      ยืนยัน Password <span className="text-danger">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      className={`form-control ${errors.confirmPassword ? "is-invalid" : ""}`}
+                      {...register("confirmPassword", {
+                        required: "จำเป็นต้องระบุ",
+                        validate: (value) =>
+                          value === password || "รหัสผ่านไม่ตรงกัน",
+                      })}
+                    />
+                    {errors.confirmPassword && (
+                      <div className="invalid-feedback">
+                        {errors.confirmPassword.message}
+                      </div>
+                    )}
+                  </div>
+
+
+                  {/* <div className="col-md-6">
                     <label className="form-label">Email</label>
                     <input
                       type="email"
@@ -113,7 +142,7 @@ export default function AccountCreateModal({
                     {errors.email && (
                       <div className="invalid-feedback">{errors.email.message}</div>
                     )}
-                  </div>
+                  </div> */}
 
                   <div className="col-md-6">
                     <label className="form-label">

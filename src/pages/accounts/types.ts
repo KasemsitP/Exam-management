@@ -19,6 +19,7 @@ export interface AccountStats {
 export interface CreateAccountFormValues {
   username: string;
   password: string;
+  confirmPassword: string;
   full_name: string;
   email: string;
   role_id: number;

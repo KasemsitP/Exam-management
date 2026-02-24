@@ -209,70 +209,92 @@ export default function AccountsPage() {
 
 
 
-  const handleCreate = async (data: CreateAccountFormValues) => {
-    try {
-      const created = await dispatch(
-        createAccountThunk({
-          username: data.username,
-          password: data.password,
-          full_name: data.full_name,
-          email: data.email,
-          role: data.role_id,
-          campaignId: Number(camp.id),
-        })
-      ).unwrap();
+const handleCreate = async (data: CreateAccountFormValues) => {
+  const a = data.assignments;
 
-      const a = data.assignments;
+  const assignments = [];
 
-      const assignments = [];
+  if (a.sessionId > 0 && a.subjectId > 0 && a.questionNo1 > 0) {
+    assignments.push({
+      campaignId: Number(camp?.id),
+      sessionId: a.sessionId,
+      subjectId: a.subjectId,
+      questionNo: a.questionNo1,
+    });
+  }
 
-      if (a.sessionId > 0 && a.subjectId > 0 && a.questionNo1 > 0) {
-        assignments.push({
-          campaignId: Number(camp?.id),
-          accountId: created.id,
-          sessionId: a.sessionId,
-          subjectId: a.subjectId,
-          questionNo: a.questionNo1,
-        });
-      }
+  if (a.sessionId > 0 && a.subjectId > 0 && a.questionNo2 > 0) {
+    assignments.push({
+      campaignId: Number(camp?.id),
+      sessionId: a.sessionId,
+      subjectId: a.subjectId,
+      questionNo: a.questionNo2,
+    });
+  }
 
-      if (a.sessionId > 0 && a.subjectId > 0 && a.questionNo2 > 0) {
-        assignments.push({
-          campaignId: Number(camp?.id),
-          accountId: created.id,
-          sessionId: a.sessionId,
-          subjectId: a.subjectId,
-          questionNo: a.questionNo2,
-        });
-      }
+  // ✅ ถ้าไม่มี assignment หยุดทันที
+  if (assignments.length === 0) {
+    await Swal.fire({
+      icon: "warning",
+      title: "กรุณากำหนดงานตรวจ",
+      text: "ต้องเลือก session, subject และอย่างน้อย 1 ข้อ",
+    });
+    return;
+  }
 
-      if (assignments.length > 0) {
-        await dispatch(
-          createGraderAssignmentsThunk({ assignments })
-        ).unwrap();
-      }
+  try {
+    // 👉 ค่อยสร้าง account หลังจากผ่านเงื่อนไขแล้ว
+    const created = await dispatch(
+      createAccountThunk({
+        username: data.username,
+        password: data.password,
+        full_name: data.full_name,
+        email: data.email,
+        role: data.role_id,
+        campaignId: Number(camp.id),
+      })
+    ).unwrap();
 
-      await dispatch(fetchAccountsThunk()).unwrap();
-      await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
-      await dispatch(fetchRolesThunk()).unwrap();
+    // ใส่ accountId หลังสร้างเสร็จ
+    const finalAssignments = assignments.map((item) => ({
+      ...item,
+      accountId: created.id,
+    }));
 
-      await Swal.fire({
-        icon: "success",
-        title: "สร้างผู้ตรวจสำเร็จ",
-        timer: 1500,
-        showConfirmButton: false,
-      });
+    await dispatch(
+      createGraderAssignmentsThunk({ assignments: finalAssignments })
+    ).unwrap();
 
-      setCreateOpen(false);
-    } catch (err: any) {
-      await Swal.fire({
-        icon: "error",
-        title: "ไม่สามารถสร้างผู้ตรวจได้",
-        text: err?.message ?? "",
-      });
-    }
-  };
+    await dispatch(fetchAccountsThunk()).unwrap();
+    await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+    await dispatch(fetchRolesThunk()).unwrap();
 
+    await Swal.fire({
+      icon: "success",
+      title: "สร้างผู้ตรวจสำเร็จ",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    setCreateOpen(false);
+  } catch (err: any) {
+    console.error("Failed to create account:", err);
+
+    const errorMessage =
+      typeof err === "string"
+        ? err
+        : err?.response?.data?.message ||
+          err?.response?.data ||
+          err?.message ||
+          "เกิดข้อผิดพลาดในการสร้างผู้ตรวจ";
+
+    await Swal.fire({
+      icon: "error",
+      title: "ไม่สามารถสร้างผู้ตรวจได้",
+      text: errorMessage,
+    });
+  }
+};
 
 
   const handleUpdate = async (id: number, data: UpdateAccountFormValues) => {
@@ -314,8 +336,8 @@ export default function AccountsPage() {
   const handleRevoke = async (acc: Account) => {
     const ok = await confirmAction({
       title: "ระงับบัญชี?",
-      text: `ต้องการ Revoke ผู้ใช้ ${acc.username} ใช่หรือไม่`,
-      confirmText: "Revoke",
+      text: `ต้องการถอดสิทธิ์ผู้ใช้ ${acc.full_name} ใช่หรือไม่`,
+      confirmText: "ถอดสิทธิ์",
       confirmColor: "#DC2626",
     });
     if (!ok) return;
@@ -325,8 +347,8 @@ export default function AccountsPage() {
 
       await Swal.fire({
         icon: "success",
-        title: "Revoke สำเร็จ",
-        text: acc.username,
+        title: "ถอดสิทธิ์สำเร็จ",
+        text: acc.full_name,
         timer: 1200,
         showConfirmButton: false,
       });
@@ -347,8 +369,8 @@ export default function AccountsPage() {
   const handleUnrevoke = async (acc: Account) => {
     const ok = await confirmAction({
       title: "คืนสิทธิ์ผู้ใช้?",
-      text: `ต้องการ Un-Revoke ผู้ใช้ ${acc.username} ใช่หรือไม่`,
-      confirmText: "Un-Revoke",
+      text: `ต้องการคืนสิทธิ์ผู้ใช้ ${acc.full_name} ใช่หรือไม่`,
+      confirmText: "คืนสิทธิ์",
     });
     if (!ok) return;
 
@@ -358,7 +380,7 @@ export default function AccountsPage() {
       await Swal.fire({
         icon: "success",
         title: "คืนสิทธิ์สำเร็จ",
-        text: acc.username,
+        text: acc.full_name,
         timer: 1200,
         showConfirmButton: false,
       });
