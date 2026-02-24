@@ -18,25 +18,25 @@ export default function ImportAlerts({
     <>
       {!supportsImport && (
         <div className="alert alert-warning" role="alert">
-          Please select an active campaign before importing.
+          โปรดเลือกรอบสอบก่อนการนำเข้าข้อมูล
         </div>
       )}
 
       {error && (
         <div className="alert alert-danger" role="alert">
-          <strong>File error:</strong> {error}
+          <strong>ข้อผิดพลาด:</strong> {error}
         </div>
       )}
 
       {importStatus === "failed" && importError && (
         <div className="alert alert-danger" role="alert">
-          <strong>Import failed:</strong> {importError}
+          <strong>นำเข้าข้อมูลไม่สำเร็จ:</strong> {importError}
         </div>
       )}
 
       {importStatus === "succeeded" && statsText && (
         <div className="alert alert-success" role="alert">
-          <strong>Last import summary:</strong> {statsText}
+          <strong>สรุปการนำเข้าล่าสุด:</strong> {statsText}
         </div>
       )}
     </>

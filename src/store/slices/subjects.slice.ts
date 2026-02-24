@@ -9,14 +9,14 @@ export interface SubjectQuestion {
   id: string;          // key ใน React
   questionNo: number;  // เลขข้อ 1,2,3,...
   label: string;       // ชื่อหัวข้อ เช่น "กฎหมายรัฐธรรมนูญ"
-  maxScore? : number
+  maxScore?: number
 }
 
 export interface Subject {
   id: number;
   code: string;
   name: string;
-  full_score : number
+  full_score: number
   questions: SubjectQuestion[];
 }
 
@@ -83,8 +83,9 @@ export const createSubjectThunk = createAsyncThunk<
   try {
     const response = await axios.post<Subject>("/api/subjects", payload);
     return response.data;
-  } catch (error: unknown) {
-    return rejectWithValue("Failed to create subject");
+  } catch (error: any) {
+    console.log(error)
+    return rejectWithValue(error);
   }
 });
 
@@ -120,18 +121,18 @@ export const deleteSubjectThunk = createAsyncThunk<
 });
 export const addQuestionToSubjectThunk = createAsyncThunk<
   Subject,
-  { subjectId: number; label: string; questionNo: number, maxScore : number },
+  { subjectId: number; label: string; questionNo: number, maxScore: number },
   { rejectValue: string }
 >(
   "subjects/addQuestionToSubject",
-  async ({ subjectId, label, questionNo ,maxScore}, { rejectWithValue }) => {
+  async ({ subjectId, label, questionNo, maxScore }, { rejectWithValue }) => {
     try {
-    
+
       //console.log(questionNo)
-      console.log(subjectId, label, questionNo ,maxScore)
+      console.log(subjectId, label, questionNo, maxScore)
       const { data } = await axios.post<Subject>(
         `/api/subjects/${subjectId}/questions`,
-        { label, questionNo, maxScore}
+        { label, questionNo, maxScore }
       );
       return data;
     } catch (err) {
@@ -176,7 +177,7 @@ const subjectsSlice = createSlice({
         code,
         name,
         questions: [],
-        full_score : 0
+        full_score: 0
       };
 
       state.items.push(newSubject);
@@ -417,8 +418,8 @@ export const selectSubjectsError = (state: RootState) => state.subjects.error;
 
 export const selectQuestionsBySubjectId =
   (subjectId: number) =>
-  (state: RootState) =>
-    state.subjects.sessionQuestions[subjectId] ?? [];
+    (state: RootState) =>
+      state.subjects.sessionQuestions[subjectId] ?? [];
 
 
 export { subjectsSlice };

@@ -60,8 +60,8 @@ export default function BagsTable({
             <tbody>
               {sortedBags.map((bag) => (
                 <tr key={bag.id} className="text-sm">
-                  <td className="fw-semibold">
-                    {String(bag.bag_no).padStart(3, "0")}
+                  <td className="fw-semibold text-start">
+                  &nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{String(bag.bag_no)}
                   </td>
                   <td>{bag.sessionLabel}</td>
                   <td className="text-center">{bag.capacity}</td>

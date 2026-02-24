@@ -81,6 +81,7 @@ export const useUserImport = () => {
     setExcelBuffer(null);
     setExcelSheetNames([]);
     setExcelSelectedSheet("");
+
   };
 
   // เมื่อเปลี่ยน campaign ให้เคลียร์ preview เพื่อลดความสับสน
@@ -89,8 +90,10 @@ export const useUserImport = () => {
   }, [activeCampaign?.id]);
 
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
     const file = event.target.files?.[0];
     if (!file) return;
+    resetState(); // reset React state ก่อน
 
     if (!supportsImport) {
       Swal.fire({
@@ -100,6 +103,7 @@ export const useUserImport = () => {
         confirmButtonText: "ตกลง",
       });
       event.target.value = "";
+      input.value = ""; // 🔥 reset input
       return;
     }
 
@@ -190,7 +194,7 @@ export const useUserImport = () => {
     }
   }, [excelBuffer, excelSelectedSheet]);
 
-const handleConfirm = async () => {
+  const handleConfirm = async () => {
     if (!parsed || !activeCampaign) return;
 
     // --- 1. เช็คสถิตินามสกุลซ้ำ ---
@@ -200,7 +204,7 @@ const handleConfirm = async () => {
     parsed.rows.forEach(row => {
       const firstName = row.firstname ?? row.first_name ?? row.firstName ?? row["ชื่อ"] ?? row["first name"];
       const lastName = row.lastname ?? row.last_name ?? row.lastName ?? row["นามสกุล"] ?? row["last name"];
-      
+
       if (firstName || lastName) {
         totalValidUsers++;
         if (lastName) {
@@ -225,7 +229,7 @@ const handleConfirm = async () => {
         .map(([ln, count]) => `<li>นามสกุล <b>${ln}</b> : ${count} คน</li>`)
         .join("");
       const moreText = duplicateLastNames.length > 5 ? `<li>...และอื่นๆ อีก ${duplicateLastNames.length - 5} นามสกุล</li>` : "";
-confirmHtml += `
+      confirmHtml += `
 <br><br>
 <div style="
   background-color: #fff3cd; 

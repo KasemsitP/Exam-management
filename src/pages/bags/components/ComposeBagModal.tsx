@@ -111,7 +111,7 @@ export default function ComposeBagModal({
                         <tbody>
                           {scannedCount === 0 ? (
                             <tr>
-                              <td colSpan={isSealed ? 3 : 4} className="text-center text-muted py-5">
+                              <td colSpan={isSealed ? 4 : 5} className="text-center text-muted py-5">
                                 ยังไม่มีรายการสแกน
                               </td>
                             </tr>

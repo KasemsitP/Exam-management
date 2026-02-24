@@ -95,15 +95,8 @@ const SubjectPage: React.FC = () => {
           dispatch(fetchSubjectsThunk());
         })
         .catch((err) => {
-          console.log(err);
-          if (err == "Failed to create subject") {
-            Swal.fire({
-              icon: "error",
-              title: "รหัสวิชาซ้ำ",
-              text: `รหัสวิชา ${newCode.trim()} มีอยู่ในระบบแล้ว กรุณาใช้รหัสอื่น`,
-            });
-          }
-          Swal.fire("สร้างวิชาไม่สำเร็จ", "สร้างวิชาไม่สำเร็จ", "error");
+          console.log(err.response.data.message);
+          Swal.fire("สร้างวิชาไม่สำเร็จ", err.response.data.message, "error");
         });
     });
   };

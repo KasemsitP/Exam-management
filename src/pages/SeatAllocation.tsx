@@ -465,7 +465,7 @@ export default function SeatAllocationPage() {
       await Swal.fire({
         icon: "error",
         title: "ลบล้มเหลว",
-        text: error?.message ?? "API Error",
+        text: error ?? "API Error",
       });
     }
   };
@@ -507,7 +507,7 @@ export default function SeatAllocationPage() {
       if (campaign?.id) dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
       closeDialog();
     } catch (error: any) {
-      await Swal.fire({ icon: "error", title: "บันทึกล้มเหลว", text: error?.message ?? "API Error" });
+      await Swal.fire({ icon: "error", title: "บันทึกล้มเหลว", text: error ?? "API Error" });
     }
   };
 

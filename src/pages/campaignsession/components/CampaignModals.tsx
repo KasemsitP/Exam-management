@@ -519,7 +519,7 @@ export function SessionFormModal({
 
                 <div className="mb-4">
                   <label className="form-label">
-                    รอบสอบ <span className="text-danger">*</span>
+                    วันที่สอบ <span className="text-danger">*</span>
                   </label>
                   <select
                     className="form-select"

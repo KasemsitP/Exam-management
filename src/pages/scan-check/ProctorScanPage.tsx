@@ -226,6 +226,7 @@ export default function ProctorScanPage() {
                   <span className="fw-semibold">กล้องสแกน QR</span>
                 </div>
                 <div className="small text-muted">
+                  
                   สถานะกล้อง:{" "}
                   <span
                     className={`badge ${scannerEnabled ? "bg-success" : "bg-secondary"}`}
@@ -237,17 +238,21 @@ export default function ProctorScanPage() {
 
               <div className="card-body">
 
-                {/* 🎯 เรียกใช้ CustomQrScanner (ในตัวมันมี Overlay และกรอบล็อคขนาดให้อยู่แล้ว) */}
-                <CustomQrScanner
-                  onResult={onScannerResult}
-                  isPaused={!scannerEnabled || pause}
-                  facingMode={facingMode}
-                  cooldownMs={cooldownMs}
-                  allowMultipleScans={true}
-                  aspectRatio="1/1" 
-                  minHeight={350}  
-                  qrActive={QRActive}
-                />
+                {/*  Scanner - จำกัดความกว้างให้พอดีจอ PC */}
+                <div className="d-flex justify-content-center w-100">
+                  <div className="w-100" style={{ maxWidth: "500px" }}>
+                    <CustomQrScanner
+                      onResult={onScannerResult}
+                      isPaused={!scannerEnabled || pause}
+                      facingMode={facingMode}
+                      cooldownMs={cooldownMs}
+                      allowMultipleScans={true}
+                      aspectRatio="1/1" 
+                      minHeight={300}  
+                      qrActive={QRActive}
+                    />
+                  </div>
+                </div>
 
                 {/* Manual input */}
                 <div className="mt-4">

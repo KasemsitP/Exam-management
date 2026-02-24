@@ -195,7 +195,7 @@ export default function AccountsPage() {
   const handleRevoke = async (acc: Account) => {
     const ok = await confirmAction({
       title: "ระงับบัญชี?",
-      text: `ต้องการ Revoke ผู้ใช้ ${acc.username} ใช่หรือไม่`,
+      text: `ต้องการถอนสิทธิ์ผู้ใช้ ${acc.username} ใช่หรือไม่`,
       confirmText: "Revoke",
       confirmColor: "#DC2626",
     });
@@ -206,8 +206,8 @@ export default function AccountsPage() {
 
       await Swal.fire({
         icon: "success",
-        title: "Revoke สำเร็จ",
-        text: acc.username,
+        title: "ระงับบัญชีสำเร็จ",
+        text: `ถอนสิทธิ์ผู้ใช้ ${acc.username} สำเร็จ`,
         timer: 1200,
         showConfirmButton: false,
       });
@@ -227,8 +227,8 @@ export default function AccountsPage() {
   const handleUnrevoke = async (acc: Account) => {
     const ok = await confirmAction({
       title: "คืนสิทธิ์ผู้ใช้?",
-      text: `ต้องการ Un-Revoke ผู้ใช้ ${acc.username} ใช่หรือไม่`,
-      confirmText: "Un-Revoke",
+      text: `ต้องการคืนสิทธิ์ผู้ใช้ ${acc.username} ใช่หรือไม่`,
+      confirmText: "คืนสิทธิ์",
     });
     if (!ok) return;
 
@@ -238,7 +238,7 @@ export default function AccountsPage() {
       await Swal.fire({
         icon: "success",
         title: "คืนสิทธิ์สำเร็จ",
-        text: acc.username,
+        text: `คืนสิทธิ์ผู้ใช้ ${acc.username} สำเร็จ`,
         timer: 1200,
         showConfirmButton: false,
       });

@@ -305,6 +305,7 @@ export const createSessionThunk = createAsyncThunk<
   { rejectValue: string }
 >("examData/createSession", async (payload, { rejectWithValue }) => {
   try {
+    console.log(payload)
     const response = await axios.post<ApiSession>("/api/sessions", {
       campaign_id: parseCampaignId(payload.campaignId),
       session_code: payload.label,
@@ -357,13 +358,14 @@ export const createSubjectThunk = createAsyncThunk<
 >("examData/createSubject", async (payload, { rejectWithValue }) => {
   console.log(payload.questions)
   try {
+    console.log(payload.startTime , payload.endTime)
     const response = await axios.post<ApiSubject>("/api/session-subjects", {
       session_id: parseSessionId(payload.sessionId),
       subject_id: payload.subjectId,
       code: payload.code,
       name: payload.name,
-      start_at: toDateTime(payload.sessionDate, payload.startTime),
-      end_at: toDateTime(payload.sessionDate, payload.endTime),
+      start_at: payload.startTime,
+      end_at: payload.endTime,
       question_count: payload.questions,
       question_range: payload.bookletRange,
       order_no: payload.orderNo ?? 1,

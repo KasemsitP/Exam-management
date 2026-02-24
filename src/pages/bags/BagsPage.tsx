@@ -272,30 +272,40 @@ export default function BagsPage() {
 
 
   const playBeep = () => {
-  try {
-    const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = context.createOscillator();
-    const gainNode = context.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(context.destination);
-    
-    oscillator.type = 'sine'; // ชนิดของเสียง (sine, square, sawtooth, triangle)
-    oscillator.frequency.value = 800; // ความถี่เสียง (Hz) - 800 จะคล้ายๆ เสียงเครื่องสแกน
-    gainNode.gain.setValueAtTime(0.1, context.currentTime); // ความดัง (0.0 ถึง 1.0)
-    
-    oscillator.start(context.currentTime);
-    oscillator.stop(context.currentTime + 0.1); // ให้ดังแค่ 0.1 วินาที (สั้นๆ ไม่น่ารำคาญ)
-  } catch (err) {
-    console.log("Audio not supported or disabled");
-  }
-};
+    try {
+      const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+
+      oscillator.type = 'sine'; // ชนิดของเสียง (sine, square, sawtooth, triangle)
+      oscillator.frequency.value = 800; // ความถี่เสียง (Hz) - 800 จะคล้ายๆ เสียงเครื่องสแกน
+      gainNode.gain.setValueAtTime(0.1, context.currentTime); // ความดัง (0.0 ถึง 1.0)
+
+      oscillator.start(context.currentTime);
+      oscillator.stop(context.currentTime + 0.1); // ให้ดังแค่ 0.1 วินาที (สั้นๆ ไม่น่ารำคาญ)
+    } catch (err) {
+      console.log("Audio not supported or disabled");
+    }
+  };
   // ------------------------------
   // Scan logic
   // ------------------------------
 
   const handleScan = useCallback((raw: string) => {
     if (!activeCampaign || !scannerEnabled) return;
+    if (qrPayloads.length >= 30) {
+      Swal.fire({
+        icon: "error",
+        title: "จำนวนสมุดข้อสอบมากกว่า 30 เล่ม",
+        text: "ไม่สามารถสแกนเพิ่มได้กรุณาตรวจสอบเล่มข้อสอบ",
+        timer: 1500,
+        showConfirmButton: false
+      });
+      return;
+    }
     const data = normalizePayload(raw);
     const dateTime = new Date();
 
@@ -351,6 +361,7 @@ export default function BagsPage() {
           text: "ไม่สามารถปิดถุงนำส่งได้กรุณาตรวจสอบเล่มข้อสอบ",
         }
       )
+      return;
     }
 
     if (numberofBag < 30) {
@@ -368,6 +379,13 @@ export default function BagsPage() {
       }
     }
     try {
+      Swal.fire({
+        title: "กำลังตรวจสอบข้อมูล...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
       // ==============================
       // 1️⃣ CHECK SUBJECTS
       // ==============================
@@ -376,6 +394,9 @@ export default function BagsPage() {
         payload: qrPayloads,
         datetime: DatePayloads,
       });
+      Swal.close();
+      console.log("Check subjects response:", data);
+     
 
       if (!data.success) {
         await Swal.fire({
@@ -385,6 +406,7 @@ export default function BagsPage() {
         });
         return;
       }
+       
 
       // ==============================
       // 2️⃣ CONFIRM
@@ -404,6 +426,16 @@ export default function BagsPage() {
 
       if (!confirm.isConfirmed) return;
 
+      Swal.fire({
+        title: "กำลังสร้างถุงข้อสอบ...",
+        html: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
       // ==============================
       // 3️⃣ CREATE BAG (Redux Thunk)
       // ==============================
@@ -412,8 +444,11 @@ export default function BagsPage() {
           campaignId: Number(activeCampaign.id),
           payload: qrPayloads,
           datetime: DatePayloads,
+          bagNo:data.bagNo,
         })
       ).unwrap();
+
+      Swal.close();
 
       await Swal.fire({
         icon: "success",
@@ -527,9 +562,9 @@ export default function BagsPage() {
       await Swal.fire({
         icon: "success",
         title: "ลบถุงแล้ว",
-        text: bagId,
+        text: `ลบถุงหมายเลข ${bagData?.bag_no} วิชา ${bagData?.sessionLabel} เรียบร้อยแล้ว`,
         timer: 1500,
-        showConfirmButton: false,
+        showConfirmButton: true,
       });
       await dispatch(fetchBagsForCampaignThunk(activeCampaign.id));
     } catch (error: any) {

@@ -424,11 +424,21 @@ export default function BagScoresPage() {
       })
     }
     try {
+            Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
       const res = await axios.get(`/api/reports/bags/${selectedBagId}/scores/pdf`,
         {
           responseType: "blob",
         }
       )
+      Swal.close();
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -460,12 +470,22 @@ export default function BagScoresPage() {
         text: "กรุณาเลือกถุงก่อน"
       })
     }
+          Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
     try {
       const res = await axios.get(`/api/reports/campaigns/${activeCampaign.id}/scoreall/pdf`,
         {
           responseType: "blob",
         }
       )
+      Swal.close();
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");

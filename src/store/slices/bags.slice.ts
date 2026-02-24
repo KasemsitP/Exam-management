@@ -209,17 +209,18 @@ export const deleteBagThunk = createAsyncThunk<
 
 export const CreateBagAndAddQrPayload = createAsyncThunk<
     { bagId: number; campaignId: number; bagNo: number },
-    { campaignId: number; payload: string[] , datetime : Date[]},
+    { campaignId: number; payload: string[] , datetime : Date[], bagNo : number},
     { rejectValue: string }
 >(
     "bags/createAndAddQrPayload",
-    async ({ campaignId, payload , datetime }, { rejectWithValue }) => {
+    async ({ campaignId, payload , datetime , bagNo }, { rejectWithValue }) => {
         try {
-            console.log(campaignId, payload , "date" , datetime);
+            console.log(campaignId, payload , "date" , datetime , bagNo);
             const res = await axios.post("/api/bags/create-insert", {
                 campaignId,
                 payload,
-                datetime
+                datetime,
+                bagNo
             });
             console.log("API RESULT", res.data);
 

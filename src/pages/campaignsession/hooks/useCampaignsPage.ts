@@ -112,23 +112,23 @@ export function useCampaignsPage() {
     null
   );
   const [sessionsModalOpen, setSessionsModalOpen] = useState(false);
- // const [sessionsCampaign, setSessionsCampaign] = useState<ExamCampaign | null>(null);
+  // const [sessionsCampaign, setSessionsCampaign] = useState<ExamCampaign | null>(null);
 
-const [sessionsCampaignId, setSessionsCampaignId] = useState<string | null>(null);
+  const [sessionsCampaignId, setSessionsCampaignId] = useState<string | null>(null);
 
-const openSessionsModal = (campaign: ExamCampaign) => {
-  setSessionsCampaignId(campaign.id);
-  setSessionsModalOpen(true);
-};
+  const openSessionsModal = (campaign: ExamCampaign) => {
+    setSessionsCampaignId(campaign.id);
+    setSessionsModalOpen(true);
+  };
 
-const closeSessionsModal = () => {
-  setSessionsModalOpen(false);
-  setSessionsCampaignId(null);
-};
-const sessionsCampaign = useMemo(() => {
-  if (!sessionsCampaignId) return null;
-  return campaigns.find(c => c.id === sessionsCampaignId) ?? null;
-}, [campaigns, sessionsCampaignId]);
+  const closeSessionsModal = () => {
+    setSessionsModalOpen(false);
+    setSessionsCampaignId(null);
+  };
+  const sessionsCampaign = useMemo(() => {
+    if (!sessionsCampaignId) return null;
+    return campaigns.find(c => c.id === sessionsCampaignId) ?? null;
+  }, [campaigns, sessionsCampaignId]);
   const [sessionContext, setSessionContext] = useState<{
     campaignId: string;
     session: CampaignSession | null;
@@ -172,8 +172,8 @@ const sessionsCampaign = useMemo(() => {
       subjectId: "",
       code: "",
       name: "",
-      startTime: "14:00",
-      endTime: "18:00",
+      startTime: "",
+      endTime: "",
       questions: 0,
     },
   });
@@ -269,70 +269,70 @@ const sessionsCampaign = useMemo(() => {
   /* ------------------------------ Filtering logic -------------------------- */
 
   const sizeOrder: Record<string, number> = {
-  "สนามใหญ่": 1,
-  "สนามเล็ก": 2,
-  "สนามจิ๋ว": 3,
-};
+    "สนามใหญ่": 1,
+    "สนามเล็ก": 2,
+    "สนามจิ๋ว": 3,
+  };
 
-const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
-  const keyword = textFilter.trim().toLowerCase();
+  const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
+    const keyword = textFilter.trim().toLowerCase();
 
-  return [...campaigns] // สำคัญ: clone ก่อน sort
-    .sort((a, b) => {
-      // 🔹 1. sort ตาม campaign_size
-      const sizeCompare =
-        (sizeOrder[a.campaign_size] ?? 99) -
-        (sizeOrder[b.campaign_size] ?? 99);
+    return [...campaigns] // สำคัญ: clone ก่อน sort
+      .sort((a, b) => {
+        // 🔹 1. sort ตาม campaign_size
+        const sizeCompare =
+          (sizeOrder[a.campaign_size] ?? 99) -
+          (sizeOrder[b.campaign_size] ?? 99);
 
-      if (sizeCompare !== 0) return sizeCompare;
+        if (sizeCompare !== 0) return sizeCompare;
 
-      // 🔹 2. sort ตาม year_be (มาก → น้อย)
-      return Number(b.year_be) - Number(a.year_be);
-    })
-    .map<VisibleCampaign | null>((campaign) => {
-      const campaignMatches = keyword
-        ? campaign.name.toLowerCase().includes(keyword)
-        : true;
-
-      const sessions = campaign.sessions.filter((session) => {
-        const dateMatch = dateFilter ? session.examDate === dateFilter : true;
-
-        const textTargets = [
-          session.label,
-          session.note ?? "",
-          ...session.subjects.flatMap((subject) => [
-            subject.code,
-            subject.name,
-          ]),
-        ].map((entry) => entry.toLowerCase());
-
-        const sessionMatches = keyword
-          ? textTargets.some((value) => value.includes(keyword))
+        // 🔹 2. sort ตาม year_be (มาก → น้อย)
+        return Number(b.year_be) - Number(a.year_be);
+      })
+      .map<VisibleCampaign | null>((campaign) => {
+        const campaignMatches = keyword
+          ? campaign.name.toLowerCase().includes(keyword)
           : true;
 
-        return dateMatch && sessionMatches;
-      });
+        const sessions = campaign.sessions.filter((session) => {
+          const dateMatch = dateFilter ? session.examDate === dateFilter : true;
 
-      if (!keyword && !dateFilter) {
-        return {
-          campaign,
-          sessions: campaign.sessions,
-          matchesCampaignOnly: false,
-        };
-      }
+          const textTargets = [
+            session.label,
+            session.note ?? "",
+            ...session.subjects.flatMap((subject) => [
+              subject.code,
+              subject.name,
+            ]),
+          ].map((entry) => entry.toLowerCase());
 
-      if (sessions.length > 0) {
-        return { campaign, sessions, matchesCampaignOnly: false };
-      }
+          const sessionMatches = keyword
+            ? textTargets.some((value) => value.includes(keyword))
+            : true;
 
-      if (campaignMatches) {
-        return { campaign, sessions: [], matchesCampaignOnly: true };
-      }
+          return dateMatch && sessionMatches;
+        });
 
-      return null;
-    })
-    .filter((item): item is VisibleCampaign => item !== null);
-}, [campaigns, textFilter, dateFilter]);
+        if (!keyword && !dateFilter) {
+          return {
+            campaign,
+            sessions: campaign.sessions,
+            matchesCampaignOnly: false,
+          };
+        }
+
+        if (sessions.length > 0) {
+          return { campaign, sessions, matchesCampaignOnly: false };
+        }
+
+        if (campaignMatches) {
+          return { campaign, sessions: [], matchesCampaignOnly: true };
+        }
+
+        return null;
+      })
+      .filter((item): item is VisibleCampaign => item !== null);
+  }, [campaigns, textFilter, dateFilter]);
 
   const sessionCount = useMemo(
     () => visibleCampaigns.reduce((total, item) => total + item.sessions.length, 0),
@@ -407,6 +407,9 @@ const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
 
   const handleSessionSubmit = async (values: SessionFormValues) => {
     if (!sessionContext) return;
+    
+    console.log(values)
+
 
     if (sessionContext.session) {
       dispatch(
@@ -431,22 +434,22 @@ const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
     }
 
     try {
-      const parentCampaign = campaigns.find(
-        (c) => c.id === sessionContext.campaignId
-      );
+      const day_no = values.label.split("วันที่ ")[1]?.trim() ?? "";
+      console.log(day_no)
+   //   console.log(parentCampaign.sessions)
       await dispatch(
         createSessionThunk({
           campaignId: sessionContext.campaignId,
           label: values.label,
           examDate: values.examDate,
           note: values.note,
-          dayNo: (parentCampaign?.sessions.length ?? 0) + 1,
+          dayNo: Number(day_no),
         })
       ).unwrap();
 
       Swal.fire({
         icon: "success",
-        title: "สร้างเซสชันใหม่เรียบร้อย",
+        title: "สร้างวันที่สอบเรียบร้อย",
         text: values.label,
         confirmButtonText: "ตกลง",
       });
@@ -456,7 +459,7 @@ const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
       setSessionDialogOpen(false);
       Swal.fire({
         icon: "error",
-        title: "ไม่สามารถสร้างเซสชันได้",
+        title: "ไม่สามารถสร้างวันที่สอบได้",
         text: getErrorMessage(error),
         confirmButtonText: "ตกลง",
         confirmButtonColor: "#dc2626",
@@ -465,6 +468,7 @@ const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
   };
 
   const handleSubjectSubmit = async (values: SubjectFormValues) => {
+    console.log(values.startTime)
     if (!subjectContext) return;
 
     if (subjectContext.subject) {
@@ -483,6 +487,7 @@ const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
         })
       );
 
+      console.log(values.startTime)
 
       Swal.fire({
         icon: "success",
@@ -504,6 +509,11 @@ const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
       );
       const sessionDate =
         parentSession?.examDate ?? new Date().toISOString().slice(0, 10);
+
+        values.startTime = values.startTime;
+        values.endTime = values.endTime;
+        console.log("TEST",values.startTime)
+
 
       await dispatch(
         createSubjectThunk({
@@ -578,7 +588,7 @@ const visibleCampaigns: VisibleCampaign[] = useMemo(() => {
   ) => {
     const result = await Swal.fire({
       title: "คำเตือน",
-      text: `ต้องการลบเซสชั่น "${session.label}" ใช่หรือไม่?`,
+      text: `ต้องการลบ "${session.label}" ใช่หรือไม่?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "ลบเลย",
