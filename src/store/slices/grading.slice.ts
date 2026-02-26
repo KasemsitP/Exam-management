@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, createSelector } from "@reduxjs/toolkit"
 import axios from "axios";
 import { RootState } from "../index";
 import { clear } from "console";
+import { logout } from "./auth.slice";
 
 export interface PayloadScore {
   qrPayload: string;
@@ -134,6 +135,7 @@ const gradingSlice = createSlice({
       state.verifying = false;
       state.lastSlotId = null;
       state.bagNo = null;
+      state.records = [];
     }
   },
   extraReducers: (builder) => {
@@ -174,6 +176,15 @@ const gradingSlice = createSlice({
       .addCase(fetchRecordThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(logout.pending, (state) => {
+        state.records = [];
+        state.loading = false;
+        state.error = null;
+        state.lastScore = null;
+        state.verifying = false;
+        state.lastSlotId = null;
+        state.bagNo = null;
       });
 
   },

@@ -171,16 +171,18 @@ export default function BagsPage() {
   // useEffect(()=>{
   //   console.log(composeBag)
   // },[composeBag])
-
   // ฟิลเตอร์ + ค้นหา
   const filteredBags = useMemo(() => {
     const term = searchText.trim().toLowerCase();
+    console.log(sessions)
+    const filterdays = sessions.map(row=> row.label.split("วันที่ 1")[1])
     const sessionFiltered =
       filterSessionId === "all"
         ? bags
         : bags.filter(
           (bag) => String(bag.sessionId) === filterSessionId
         );
+
 
     if (!term) return sessionFiltered;
 

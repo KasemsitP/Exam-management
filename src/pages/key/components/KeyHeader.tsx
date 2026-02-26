@@ -39,6 +39,7 @@ export default function RoomsHeader({ activeCampaign,
   }
 
   const { totalSessions, importedSessions, encryptedSessions } = headerSummary;
+  console.log("Header Summary:", headerSummary);
 
   return (
     <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>

@@ -196,6 +196,15 @@ interface SeatAssignmentStatus {
 
 }
 
+// สำหรับข้อมูลคะแนนเฉลี่ยต่อข้อ
+interface RawAverageQuestionScoreItem {
+  question_no: number;
+  label: string;
+  final_avg: number;
+}
+
+type RawAverageQuestionScore = Record<string, RawAverageQuestionScoreItem[]>;
+
 
 interface DashboardApiResponse {
   summary: SummaryAPI;
@@ -207,6 +216,7 @@ interface DashboardApiResponse {
   rawBookletsCount?: number;
   rawBookletsBySession?: RawBookletsBySessionItem[];
   seatAssignmentStatus?: SeatAssignmentStatus[];
+  rawAverageQuestionScore?: RawAverageQuestionScore;
 }
 
 /* ---------- Types ฝั่ง UI (สำหรับกราฟและการแสดงผล) ---------- */
@@ -279,6 +289,7 @@ export default function Dashboard() {
     { range: string; count: number }[]
   >([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [selectedAvgSessionId, setSelectedAvgSessionId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -635,6 +646,40 @@ export default function Dashboard() {
     });
   }, [dashboardData?.subjectQuestions, sessionsBySubjectName]);
 
+  // Session options สำหรับ dropdown คะแนนเฉลี่ยรายข้อ
+  const avgScoreSessionOptions = useMemo(() => {
+    if (!dashboardData?.rawAverageQuestionScore || !dashboardData?.sessions) return [];
+    
+    return Object.keys(dashboardData.rawAverageQuestionScore).map((sessionId) => {
+      const session = Object.values(dashboardData.sessions).find(
+        (s) => String(s.sessionId) === sessionId
+      );
+      return {
+        sessionId,
+        label: session ? `${session.sessionCode} - ${session.subject_name}` : `Session ${sessionId}`,
+      };
+    });
+  }, [dashboardData?.rawAverageQuestionScore, dashboardData?.sessions]);
+
+  // Auto-select first session when data loads
+  useEffect(() => {
+    if (avgScoreSessionOptions.length > 0 && !selectedAvgSessionId) {
+      setSelectedAvgSessionId(avgScoreSessionOptions[0].sessionId);
+    }
+  }, [avgScoreSessionOptions, selectedAvgSessionId]);
+
+  // Chart data สำหรับคะแนนเฉลี่ยรายข้อตาม session ที่เลือก
+  const avgQuestionChartData = useMemo(() => {
+    if (!dashboardData?.rawAverageQuestionScore || !selectedAvgSessionId) return [];
+    
+    const items = dashboardData.rawAverageQuestionScore[selectedAvgSessionId] ?? [];
+    return items.map((item) => ({
+      questionNo: item.question_no,
+      label: `ข้อ ${item.question_no}`,
+      fullLabel: item.label,
+      avgScore: Number(item.final_avg?.toFixed(2) ?? 0),
+    }));
+  }, [dashboardData?.rawAverageQuestionScore, selectedAvgSessionId]);
 
   /* ---------- Render ---------- */
 
@@ -1401,6 +1446,151 @@ export default function Dashboard() {
 
 
           </section>
+
+          {/* คะแนนเฉลี่ยรายข้อตาม Session */}
+          {dashboardData?.rawAverageQuestionScore && Object.keys(dashboardData.rawAverageQuestionScore).length > 0 && (
+            <section className="row g-3 g-md-4">
+              <div className="col-12">
+                <div className="card shadow-sm" style={{ background: surface, borderTop: "3px solid #0EA5E9" }}>
+                  <div className="card-header bg-white py-3 py-sm-4">
+                    <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                      <div>
+                        <h6 className="mb-1 fw-bold">คะแนนเฉลี่ยรายข้อ</h6>
+                        <small style={{ color: muted }}>
+                          กราฟแสดงคะแนนเฉลี่ยของแต่ละข้อตามรอบสอบที่เลือก
+                        </small>
+                      </div>
+                      <div className="d-flex align-items-center gap-2">
+                        <label className="small text-muted mb-0">เลือกรอบสอบ:</label>
+                        <select
+                          className="form-select form-select-sm"
+                          style={{ minWidth: 200 }}
+                          value={selectedAvgSessionId ?? ""}
+                          onChange={(e) => setSelectedAvgSessionId(e.target.value || null)}
+                        >
+                          {avgScoreSessionOptions.map((opt) => (
+                            <option key={opt.sessionId} value={opt.sessionId}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card-body p-3 p-sm-4" style={{ minHeight: 400 }}>
+                    {avgQuestionChartData.length === 0 ? (
+                      <div className="h-100 d-flex align-items-center justify-content-center text-muted">
+                        ยังไม่มีข้อมูลคะแนนเฉลี่ยสำหรับรอบสอบนี้
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={350}>
+                        <BarChart 
+                          data={avgQuestionChartData} 
+                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                        >
+                          <defs>
+                            <linearGradient id="avgScoreGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#0EA5E9" stopOpacity={1} />
+                              <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.8} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid stroke={grid} strokeDasharray="3 3" vertical={false} />
+                          <XAxis 
+                            dataKey="fullLabel"
+                            tick={{ fontSize: 10, fill: primary }}
+                            angle={-35}
+                            textAnchor="end"
+                            height={80}
+                            interval={0}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 11, fill: muted }} 
+                            domain={[0, 'auto']}
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip
+                            cursor={{ fill: 'rgba(14, 165, 233, 0.1)' }}
+                            formatter={(value: number) => [
+                              `${Number(value).toFixed(2)} คะแนน`,
+                              'คะแนนเฉลี่ย'
+                            ]}
+                            contentStyle={{
+                              background: "rgba(255, 255, 255, 0.98)",
+                              border: "none",
+                              borderRadius: 12,
+                              boxShadow: "0 8px 24px rgba(0, 0, 0, 0.15)",
+                              padding: "12px 16px",
+                            }}
+                            labelStyle={{ fontWeight: 600, color: primary, marginBottom: 4 }}
+                          />
+                          <Bar 
+                            dataKey="avgScore" 
+                            fill="url(#avgScoreGradient)" 
+                            radius={[8, 8, 0, 0]}
+                            maxBarSize={60}
+                            label={{
+                              position: 'top',
+                              fill: '#0EA5E9',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              formatter: (value: number) => value.toFixed(1)
+                            }}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                    
+                    {/* ตารางรายละเอียด */}
+                    {avgQuestionChartData.length > 0 && (
+                      <div className="mt-4 pt-4 border-top">
+                        <h6 className="small fw-bold mb-3" style={{ color: primary }}>รายละเอียดคะแนนเฉลี่ยแต่ละข้อ</h6>
+                        <div className="row g-3">
+                          {avgQuestionChartData.map((item) => (
+                            <div key={item.questionNo} className="col-12 col-sm-6 col-lg-4">
+                              <div 
+                                className="p-3 rounded-3 h-100"
+                                style={{ 
+                                  background: '#f8f9fa',
+                                  border: '1px solid #dee2e6',
+                                }}
+                              >
+                                <div className="d-flex justify-content-between align-items-start mb-2">
+                                  <span 
+                                    className="badge rounded-pill"
+                                    style={{ 
+                                      background: '#212529',
+                                      color: '#fff',
+                                      fontSize: '0.7rem',
+                                      padding: '4px 10px'
+                                    }}
+                                  >
+                                    ข้อ {item.questionNo}
+                                  </span>
+                                  <span 
+                                    className="fw-bold"
+                                    style={{ 
+                                      color: '#212529',
+                                      fontSize: '1.25rem'
+                                    }}
+                                  >
+                                    {item.avgScore.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="small" style={{ color: '#495057', lineHeight: 1.4 }}>
+                                  {item.fullLabel}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* PieChart ตามรอบสอบ (UI เดิมที่มีอยู่แล้ว) */}
           {/* {bagCounts.length > 0 && (

@@ -17,7 +17,7 @@ export interface Account {
   role_id: number;
   role_name?: string; // จาก JOIN
   role_code?: string; // จาก JOIN
-  campaign_id? : number
+  campaign_id?: number
 }
 
 interface AccountsState {
@@ -92,7 +92,7 @@ interface CreateAccountPayload {
   full_name: string;
   email: string;
   role: number; // role_id
-  campaignId? : number
+  campaignId?: number
 }
 
 export const createAccountThunk = createAsyncThunk<
@@ -101,6 +101,17 @@ export const createAccountThunk = createAsyncThunk<
   { rejectValue: string }
 >("accounts/create", async (payload, { rejectWithValue }) => {
   try {
+
+
+    const username = payload.username.trim();
+
+    const usernameRegex = /^[a-zA-Z0-9]{4,20}$/;
+
+    if (!usernameRegex.test(username)) {
+      return rejectWithValue(
+        "Username ต้องมีเฉพาะตัวอักษรอังกฤษและตัวเลข (4-20 ตัว)"
+      );
+    }
     const response = await axios.post("/api/auth/register", payload);
     const newId = response.data.id;
 
@@ -125,10 +136,10 @@ export const createAccountThunk = createAsyncThunk<
 
 export const RevokeAccountThunk = createAsyncThunk<
   Account,
-  number,                  
+  number,
   { rejectValue: string }
 >(
-  "accounts/revoke",          
+  "accounts/revoke",
   async (accountId, { rejectWithValue }) => {
     try {
       const response = await axios.patch(`/api/auth/accounts/${accountId}/revoke`);

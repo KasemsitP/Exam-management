@@ -154,11 +154,6 @@ export const useGradingStation = () => {
   // --- 6. Error -> toast ---
   useEffect(() => {
     if (gradingError) {
-      toast({
-        title: "เกิดข้อผิดพลาด",
-        description: gradingError,
-        variant: "destructive",
-      });
       dispatch(clearGradingError());
     }
   }, [gradingError, dispatch, toast]);
@@ -411,7 +406,7 @@ html: `
       setScore("");
 
 
-      dispatch(fetchRecordThunk(activeAssignment.grader_id))
+      await dispatch(fetchRecordThunk(activeAssignment.grader_id)).unwrap();
 
       await Swal.fire({
         icon: "success",
@@ -434,7 +429,7 @@ html: `
         setScannerEnabled(true);
       }
 
-      handleClear();
+   //   handleClear();
     } catch (error: any) {
       console.error("Failed to save score:", error);
       await Swal.fire({

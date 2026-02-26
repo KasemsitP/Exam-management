@@ -265,7 +265,7 @@ export const useUserImport = () => {
     if (!result.isConfirmed) return;
 
     // --- 2. สับเปลี่ยนข้อมูล (Shuffle) ก่อนส่งไป Backend ---
-    const shuffledRows = shuffle(parsed.rows);
+    const shuffledRows = parsed.rows;
 
     Swal.fire({
       title: "กำลังนำเข้าข้อมูล",

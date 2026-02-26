@@ -31,7 +31,7 @@ export const OverlayLoader: React.FC<OverlayLoaderProps> = ({
   label = "Loading...",
   spinner = "border",
   zIndex = 2000,
-  backdropOpacity = 0.25,
+  backdropOpacity = 0,
   blur = false,
   lockScroll = true,
   onOpenChange,

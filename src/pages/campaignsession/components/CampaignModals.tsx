@@ -19,8 +19,11 @@ import {
 type MasterSubject = { id: number; code: string; name: string };
 
 const currentYear = new Date().getFullYear() + 543;
-const years = [currentYear - 1, currentYear, currentYear + 1];
-
+// const years = [currentYear - 1, currentYear, currentYear + 1];
+const years = Array.from(
+  { length: 11 },        // -5 ถึง +5 = 11 ค่า
+  (_, i) => currentYear - 5 + i
+);
 const formatDateDisplay = (date: string) => {
   if (!date) return "-";
   try {

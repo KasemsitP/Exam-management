@@ -112,6 +112,8 @@ export const useKeyManagement = () => {
         ? EncryptedStatus.filter((s) => s.encryption_status === "ENCRYPTED_ALL").length
         : 0;
 
+      console.log(encryptedSessions, "encryptedSessions in useKeyManagement")
+
       return { totalSessions, importedSessions, EncryptedStatus, encryptedSessions, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo, keyStatus };;
     },
     [ImportStatus, EncryptedStatus, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo, keyStatus]
@@ -463,6 +465,11 @@ export const useKeyManagement = () => {
     }
 
     if (result.meta.requestStatus === "fulfilled") {
+      await Promise.all([
+        dispatch(fetchDashboardStatus(numericCampaignId)),
+        dispatch(checkEncryptionPrerequisites(numericCampaignId)),
+        dispatch(fetchKeysForCampaign(numericCampaignId)),
+      ]);
       await Swal.fire({
         icon: "success",
         title: "เข้ารหัสสำเร็จ!",
