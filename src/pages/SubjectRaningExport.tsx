@@ -106,14 +106,14 @@ const buttonData = [
   {
     id: 1,
     title: "ดาวน์โหลดใบคะแนนรายถุงทั้งหมด",
-    desc: "คลิกเพื่อสร้างรายงานสรุปผลการสอบ",
+    desc: "",
     theme: "primary", // สีฟ้า
     icon: "📄"
   },
   {
     id: 2,
     title: "ดาวน์โหลดใบรายชื่อผู้ตรวจในแต่ละถุง",
-    desc: "แสดงกราฟและผลการวิเคราะห์",
+    desc: "",
     theme: "info", // สีฟ้าอ่อน
     icon: "📊"
   },
@@ -127,7 +127,7 @@ const buttonData = [
   {
     id: 4,
     title: "ดาวน์โหลดผังที่นั่งสอบ",
-    desc: "แสดงกราฟและผลการวิเคราะห์",
+    desc: "",
     theme: "info", // สีฟ้าอ่อน
     icon: "📊"
   },
@@ -595,11 +595,23 @@ export default function SubjectRankingExportPage() {
       return;
     }
     try {
+      Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+
       const res = await axios.get(`/api/reports/campaigns/${activeCampaign.id}/scoreall/pdf`,
         {
           responseType: "blob",
         }
       )
+      Swal.close();
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -672,15 +684,16 @@ export default function SubjectRankingExportPage() {
         break;
 
       case 2:
+        handleDownloadGradersBags()
+        break;
+
+
+      case 3:
         handleDownloadSeatPlanNameList();
         break;
 
-      case 3:
-        handleDownloadSeatPlan();
-        break;
-
       case 4:
-        handleDownloadGradersBags();
+        handleDownloadSeatPlan();
         break;
 
       default:
@@ -693,34 +706,34 @@ export default function SubjectRankingExportPage() {
     return <OverlayLoader open={true} label="" />;
   }
 
-return (
-  <>
-    <ShowIfCan permission="manage_grading">
-         <div className="container-fluid px-2 px-sm-3 px-md-4 py-2 py-sm-3">
-      <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
-        <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
-          <div>
-            <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
-              สร้างบัญชีรายชื่อผู้สอบผ่าน
-            </h5>
-            <small className="text-muted d-block">
-              คำนวณคะแนนรวมจากทุกรายวิชาที่มีใน {activeCampaign?.name} และจัดอันดับผู้เข้าสอบตามคะแนนรวม
-            </small>
-          </div>
+  return (
+    <>
+      <ShowIfCan permission="manage_grading">
+        <div className="container-fluid px-2 px-sm-3 px-md-4 py-2 py-sm-3">
+          <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
+            <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
+              <div>
+                <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
+                  สร้างบัญชีรายชื่อผู้สอบผ่าน
+                </h5>
+                <small className="text-muted d-block">
+                  คำนวณคะแนนรวมจากทุกรายวิชาที่มีใน {activeCampaign?.name} และจัดอันดับผู้เข้าสอบตามคะแนนรวม
+                </small>
+              </div>
 
-          <div className="d-flex gap-2 flex-shrink-0 align-self-start align-self-lg-center">
-            <button
-              type="button"
-              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 text-nowrap"
-              onClick={() => setShowGroupModal(true)}
-              disabled={selectedSubjectIds.length === 0}
-            >
-              <Layers size={14} />
-              <span className="d-none d-sm-inline">จัดกลุ่มวิชาสอบ</span>
-              <span className="d-sm-none">กลุ่ม</span>
-            </button>
+              <div className="d-flex gap-2 flex-shrink-0 align-self-start align-self-lg-center">
+                <button
+                  type="button"
+                  className="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 text-nowrap"
+                  onClick={() => setShowGroupModal(true)}
+                  disabled={selectedSubjectIds.length === 0}
+                >
+                  <Layers size={14} />
+                  <span className="d-none d-sm-inline">จัดกลุ่มวิชาสอบ</span>
+                  <span className="d-sm-none">กลุ่ม</span>
+                </button>
 
-            {/* <button
+                {/* <button
               type="button"
               className="btn btn-primary btn-lg d-flex align-items-center gap-2"
               onClick={handleExport}
@@ -738,76 +751,76 @@ return (
                 </>
               )}
             </button> */}
-          </div>
-        </div>
-
-        <div className="card-body">
-          <div className="row g-3">
-            {/* Left: Subjects List (Read Only) */}
-            <div className="col-12 col-lg-6">
-              <div className="border rounded-3 p-2 p-sm-3 h-100 bg-light-subtle">
-                <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                  <div className="small text-muted d-flex align-items-center gap-1">
-                    {/* <Settings size={14} /> */}
-                    <span className="text-nowrap">รายวิชาที่สามารถเลือกได้</span>
-                  </div>
-                  <span className="badge bg-success border border-success-subtle flex-shrink-0">
-                    {selectedSubjectIds.length} วิชา
-                  </span>
-                </div>
-
-                <div
-                  className="mt-2 border rounded-3 p-2 bg-white"
-                  style={{ maxHeight: "220px", overflowY: "auto" }}
-                >
-                  {loadingRows ? (
-                    <div className="text-center text-muted small py-2 py-sm-3">กำลังโหลด...</div>
-                  ) : groupedSubjects.length === 0 ? (
-                    <div className="text-center text-muted small py-2 py-sm-3">ไม่พบข้อมูลรายวิชา</div>
-                  ) : (
-                    <div className="d-flex flex-column gap-2">
-                      {groupedSubjects.map((s) => (
-                        <div
-                          key={s.subjectId}
-                          className="d-flex align-items-center gap-1 px-2 py-2 rounded border border-light-subtle"
-                        >
-                          {/* เปลี่ยนจาก checkbox เป็น icon ติ๊กถูกสีเขียว */}
-                          {/* <CheckCircle2 size={18} className="text-success flex-shrink-0" /> */}
-
-                          <div className="flex-grow-1 overflow-hidden">
-                            <div className="fw-semibold text-truncate small"><span>{s.subjectName}</span></div>
-                            <div className="small text-muted d-flex gap-1 text-nowrap">
-                              <span>{s.questions.length} ข้อ</span>
-                              <span>•</span>
-                              {/* <span className="text-truncate">Session: {s.sessionIds.join(", ")}</span> */}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
 
-            {/* Right: Options & Tie-break */}
-            <div className="col-12 col-lg-6">
-              <div className="border rounded-3 p-2 p-sm-3 h-100">
-                <div className="small text-muted d-flex align-items-center gap-2 text-nowrap">
-                  <span>กรอกจำนวนผู้สอบผ่าน</span>
+            <div className="card-body">
+              <div className="row g-3">
+                {/* Left: Subjects List (Read Only) */}
+                <div className="col-12 col-lg-6">
+                  <div className="border rounded-3 p-2 p-sm-3 h-100 bg-light-subtle">
+                    <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                      <div className="small text-muted d-flex align-items-center gap-1">
+                        {/* <Settings size={14} /> */}
+                        <span className="text-nowrap">รายวิชาที่สามารถเลือกได้</span>
+                      </div>
+                      <span className="badge bg-success border border-success-subtle flex-shrink-0">
+                        {selectedSubjectIds.length} วิชา
+                      </span>
+                    </div>
+
+                    <div
+                      className="mt-2 border rounded-3 p-2 bg-white"
+                      style={{ maxHeight: "220px", overflowY: "auto" }}
+                    >
+                      {loadingRows ? (
+                        <div className="text-center text-muted small py-2 py-sm-3">กำลังโหลด...</div>
+                      ) : groupedSubjects.length === 0 ? (
+                        <div className="text-center text-muted small py-2 py-sm-3">ไม่พบข้อมูลรายวิชา</div>
+                      ) : (
+                        <div className="d-flex flex-column gap-2">
+                          {groupedSubjects.map((s) => (
+                            <div
+                              key={s.subjectId}
+                              className="d-flex align-items-center gap-1 px-2 py-2 rounded border border-light-subtle"
+                            >
+                              {/* เปลี่ยนจาก checkbox เป็น icon ติ๊กถูกสีเขียว */}
+                              {/* <CheckCircle2 size={18} className="text-success flex-shrink-0" /> */}
+
+                              <div className="flex-grow-1 overflow-hidden">
+                                <div className="fw-semibold text-truncate small"><span>{s.subjectName}</span></div>
+                                <div className="small text-muted d-flex gap-1 text-nowrap">
+                                  <span>{s.questions.length} ข้อ</span>
+                                  <span>•</span>
+                                  {/* <span className="text-truncate">Session: {s.sessionIds.join(", ")}</span> */}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <input
-                    type="number"
-                    className="form-control form-control-sm"
-                    value={passCount}
-                    min={1}
-                    onChange={(e) => setPassCount(e.target.value)}
-                    placeholder="เช่น 50 คน"
-                  />
+                {/* Right: Options & Tie-break */}
+                <div className="col-12 col-lg-6">
+                  <div className="border rounded-3 p-2 p-sm-3 h-100">
+                    <div className="small text-muted d-flex align-items-center gap-2 text-nowrap">
+                      <span>กรอกจำนวนผู้สอบผ่าน</span>
+                    </div>
 
-                  {/* <button
+                    <div>
+                      <input
+                        type="number"
+                        className="form-control form-control-sm"
+                        value={passCount}
+                        min={1}
+                        onChange={(e) => setPassCount(e.target.value)}
+                        placeholder="เช่น 50 คน"
+                      />
+
+                      {/* <button
                     type="button"
                     className="btn btn-primary mt-2"
                     onClick={handleSubmit}
@@ -816,10 +829,10 @@ return (
                     บันทึก
                   </button> */}
 
-                </div>
+                    </div>
 
 
-                {/* <select
+                    {/* <select
                                     className="form-select mt-2"
                                     value={sortBy}
                                     onChange={(e) => setSortBy(e.target.value as SortBy)}
@@ -932,25 +945,25 @@ return (
                                         * หากไม่มีกลุ่ม Tie-break ระบบจะใช้ "รหัสประจำตัว" ตัดสินกรณีคะแนนรวมเท่ากัน
                                     </div>
                                 )} */}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-      <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
-        <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
-          <div>
-            <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
-              สร้างเอกสารอื่น
-            </h5>
-            <small className="text-muted d-block">
-              เลือกเอกสารที่ต้องการสร้างจากปุ่มด้านล่างนี้
-            </small>
-          </div>
+          <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
+            <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between gap-2 gap-md-3">
+              <div>
+                <h5 className="mb-1 d-flex align-items-center gap-2 text-nowrap">
+                  สร้างเอกสารอื่น
+                </h5>
+                <small className="text-muted d-block">
+                  เลือกเอกสารที่ต้องการสร้างจากปุ่มด้านล่างนี้
+                </small>
+              </div>
 
-          <div className="d-flex gap-2">
+              <div className="d-flex gap-2">
 
-            {/* <button
+                {/* <button
               type="button"
               className="btn btn-primary btn-lg d-flex align-items-center gap-2"
               onClick={handleExport}
@@ -968,248 +981,248 @@ return (
                 </>
               )}
             </button> */}
-          </div>
-        </div>
-
-        <div className="card-body">
-          <div className="row g-3">
-            {buttonData.map((btn) => (
-              // จัดเลย์เอาต์เป็น 2x2 บนหน้าจอขนาดกลางขึ้นไป
-              <div key={btn.id} className="col-12 col-sm-6 col-md-6">
-                <div
-                  key={btn.id}
-                  role="button"
-                  onClick={() => handleButtonClick(btn.id)}
-                  onMouseEnter={() => setHoveredId(btn.id)}
-                  onMouseLeave={() => setHoveredId(null)}
-                  className="h-100 p-3 p-sm-4 d-flex flex-column justify-content-center align-items-center rounded-3 border bg-white"
-                  style={{
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    transform: hoveredId === btn.id ? "translateY(-5px)" : "translateY(0)",
-                    boxShadow: hoveredId === btn.id
-                      ? "0 10px 20px rgba(0,0,0,0.1)"
-                      : "0 2px 5px rgba(0,0,0,0.05)",
-                    borderColor: hoveredId === btn.id
-                      ? `var(--bs-${btn.theme})`
-                      : "#dee2e6"
-                  }}
-                >
-                  {/* ไอคอน */}
-                  <div
-                    className={`mb-2 mb-sm-3 d-flex justify-content-center align-items-center rounded-circle bg-${btn.theme} bg-opacity-10 text-${btn.theme}`}
-                    style={{ width: "50px", height: "50px", fontSize: "1.25rem" }}
-                  >
-                    {btn.icon}
-                  </div>
-
-                  {/* ข้อความ */}
-                  <div className={`fw-bold fs-6 fs-sm-5 mb-1 text-center text-${btn.theme === 'warning' ? 'dark' : btn.theme}`}>
-                    {btn.title}
-                  </div>
-                  <div className="small text-muted text-center">
-                    {btn.desc}
-                  </div>
-                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            </div>
 
-      {/* =========================
+            <div className="card-body">
+              <div className="row g-3">
+                {buttonData.map((btn) => (
+                  // จัดเลย์เอาต์เป็น 2x2 บนหน้าจอขนาดกลางขึ้นไป
+                  <div key={btn.id} className="col-12 col-sm-6 col-md-6">
+                    <div
+                      key={btn.id}
+                      role="button"
+                      onClick={() => handleButtonClick(btn.id)}
+                      onMouseEnter={() => setHoveredId(btn.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                      className="h-100 p-3 p-sm-4 d-flex flex-column justify-content-center align-items-center rounded-3 border bg-white"
+                      style={{
+                        cursor: "pointer",
+                        transition: "all 0.3s ease",
+                        transform: hoveredId === btn.id ? "translateY(-5px)" : "translateY(0)",
+                        boxShadow: hoveredId === btn.id
+                          ? "0 10px 20px rgba(0,0,0,0.1)"
+                          : "0 2px 5px rgba(0,0,0,0.05)",
+                        borderColor: hoveredId === btn.id
+                          ? `var(--bs-${btn.theme})`
+                          : "#dee2e6"
+                      }}
+                    >
+                      {/* ไอคอน */}
+                      <div
+                        className={`mb-2 mb-sm-3 d-flex justify-content-center align-items-center rounded-circle bg-${btn.theme} bg-opacity-10 text-${btn.theme}`}
+                        style={{ width: "50px", height: "50px", fontSize: "1.25rem" }}
+                      >
+                        {btn.icon}
+                      </div>
+
+                      {/* ข้อความ */}
+                      <div className={`fw-bold fs-6 fs-sm-5 mb-1 text-center text-${btn.theme === 'warning' ? 'dark' : btn.theme}`}>
+                        {btn.title}
+                      </div>
+                      <div className="small text-muted text-center">
+                        {btn.desc}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* =========================
        * Group Modal (คงเดิม Logic เดิม)
        * ========================= */}
-      {showGroupModal && (
-        <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-          <div className="modal-dialog modal-xl modal-dialog-centered"> {/* เอา modal-dialog-scrollable ออก แล้วจัดการ scroll เอง */}
-            <div className="modal-content" style={{ maxHeight: '90vh' }}> {/* กำหนด Max Height ของ Modal */}
+          {showGroupModal && (
+            <div className="modal show d-block" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+              <div className="modal-dialog modal-xl modal-dialog-centered"> {/* เอา modal-dialog-scrollable ออก แล้วจัดการ scroll เอง */}
+                <div className="modal-content" style={{ maxHeight: '90vh' }}> {/* กำหนด Max Height ของ Modal */}
 
-              {/* --- Header --- */}
-              <div className="modal-header">
-                <div>
-                  <h5 className="modal-title mb-0">จัดกลุ่มคะแนนหัวข้อสอบ</h5>
-                  <div className="small text-muted">
-                    สร้างกลุ่มเพื่อใช้เป็นเงื่อนไขในการตัดสินกรณีคะแนนรวมเท่ากัน
-                  </div>
-                </div>
-                <button type="button" className="btn-close" onClick={() => setShowGroupModal(false)} />
-              </div>
-
-              {/* --- Body (Fixed Height Container) --- */}
-              <div className="modal-body p-0">
-                <div className="row g-0" style={{ height: '70vh' }}> {/* ✅ Fix ความสูงตรงนี้ (ปรับเลขได้ตามต้องการ) */}
-
-                  {/* ================= Left: Pick Questions (Scrollable) ================= */}
-                  <div className="col-lg-7 border-end bg-light d-flex flex-column h-100">
-
-                    {/* Left Header (Fixed) */}
-                    <div className="p-3 bg-white border-bottom d-flex justify-content-between align-items-center flex-shrink-0">
-                      <div className="fw-semibold d-flex align-items-center gap-2">
-                        <CheckSquare size={16} />
-                        เลือกข้อ ({pickedKeys.length})
+                  {/* --- Header --- */}
+                  <div className="modal-header">
+                    <div>
+                      <h5 className="modal-title mb-0">จัดกลุ่มคะแนนหัวข้อสอบ</h5>
+                      <div className="small text-muted">
+                        สร้างกลุ่มเพื่อใช้เป็นเงื่อนไขในการตัดสินกรณีคะแนนรวมเท่ากัน
                       </div>
-                      <button
-                        className="btn btn-primary btn-sm d-flex align-items-center gap-2"
-                        disabled={pickedKeys.length === 0}
-                        onClick={createGroupFromPicked}
-                      >
-                        <Plus size={16} />
-                        สร้างกลุ่ม
-                      </button>
                     </div>
+                    <button type="button" className="btn-close" onClick={() => setShowGroupModal(false)} />
+                  </div>
 
-                    {/* Left List (Scrollable Area) */}
-                    <div className="p-3 flex-grow-1 overflow-auto"> {/* ✅ Scrollbar จะขึ้นตรงนี้ */}
-                      {sessionBlocks.map((block) => (
-                        <div key={block.sessionId} className="mb-4">
-                          {/* แสดง Session Header */}
-                          {/* <div className="fw-semibold mb-2 text-dark border-bottom pb-1 sticky-top bg-light" style={{top: -16, zIndex: 5}}>
+                  {/* --- Body (Fixed Height Container) --- */}
+                  <div className="modal-body p-0">
+                    <div className="row g-0" style={{ height: '70vh' }}> {/* ✅ Fix ความสูงตรงนี้ (ปรับเลขได้ตามต้องการ) */}
+
+                      {/* ================= Left: Pick Questions (Scrollable) ================= */}
+                      <div className="col-lg-7 border-end bg-light d-flex flex-column h-100">
+
+                        {/* Left Header (Fixed) */}
+                        <div className="p-3 bg-white border-bottom d-flex justify-content-between align-items-center flex-shrink-0">
+                          <div className="fw-semibold d-flex align-items-center gap-2">
+                            <CheckSquare size={16} />
+                            เลือกข้อ ({pickedKeys.length})
+                          </div>
+                          <button
+                            className="btn btn-primary btn-sm d-flex align-items-center gap-2"
+                            disabled={pickedKeys.length === 0}
+                            onClick={createGroupFromPicked}
+                          >
+                            <Plus size={16} />
+                            สร้างกลุ่ม
+                          </button>
+                        </div>
+
+                        {/* Left List (Scrollable Area) */}
+                        <div className="p-3 flex-grow-1 overflow-auto"> {/* ✅ Scrollbar จะขึ้นตรงนี้ */}
+                          {sessionBlocks.map((block) => (
+                            <div key={block.sessionId} className="mb-4">
+                              {/* แสดง Session Header */}
+                              {/* <div className="fw-semibold mb-2 text-dark border-bottom pb-1 sticky-top bg-light" style={{top: -16, zIndex: 5}}>
                       Session {block.sessionId}
                     </div> */}
 
-                          {block.subjects.map((subj) => {
-                            const available = subj.questions
-                              .map((q) => ({
-                                sessionId: block.sessionId,
-                                subjectId: subj.subjectId,
-                                subjectName: subj.subjectName,
-                                questionNo: q.questionNo,
-                                label: q.label,
-                                key: qKey(block.sessionId, subj.subjectId, q.questionNo),
-                              }))
-                              .filter((x) => !usedSet.has(x.key));
+                              {block.subjects.map((subj) => {
+                                const available = subj.questions
+                                  .map((q) => ({
+                                    sessionId: block.sessionId,
+                                    subjectId: subj.subjectId,
+                                    subjectName: subj.subjectName,
+                                    questionNo: q.questionNo,
+                                    label: q.label,
+                                    key: qKey(block.sessionId, subj.subjectId, q.questionNo),
+                                  }))
+                                  .filter((x) => !usedSet.has(x.key));
 
-                            if (available.length === 0) return null;
+                                if (available.length === 0) return null;
 
-                            return (
-                              <div key={`${block.sessionId}-${subj.subjectId}`} className="mb-3 ps-2">
-                                <div className="fw-semibold text-primary mb-2 small">
-                                  {subj.subjectName}
-                                </div>
-                                <div className="row g-2">
-                                  {available.map((q) => {
-                                    const checked = pickedKeys.includes(q.key);
-                                    return (
-                                      <div key={q.key} className="col-12 col-md-6 col-xl-4">
-                                        <label
-                                          className={`border rounded bg-white p-2 d-flex gap-2 align-items-start cursor-pointer h-100 ${checked ? "border-primary" : ""
-                                            }`}
-                                          style={checked ? { boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)' } : undefined}
-                                        >
-                                          <input
-                                            type="checkbox"
-                                            className="form-check-input mt-1"
-                                            checked={checked}
-                                            onChange={() => togglePick(q.key)}
-                                          />
-                                          <div className="overflow-hidden">
-                                            <div className="fw-semibold small">ข้อ {q.questionNo}</div>
-                                            <div className="text-muted text-truncate" style={{ fontSize: "0.75rem" }} title={q.label || "-"}>
-                                              {q.label || "-"}
-                                            </div>
-                                          </div>
-                                        </label>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* ================= Right: Groups List (Scrollable) ================= */}
-                  <div className="col-lg-5 bg-white d-flex flex-column h-100">
-
-                    {/* Right Header (Fixed) */}
-                    <div className="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-shrink-0">
-                      <div className="fw-semibold d-flex align-items-center gap-2">
-                        <Layers size={16} />
-                        กลุ่มที่สร้างแล้ว ({groups.length})
-                      </div>
-                      <button
-                        className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2"
-                        onClick={() => { setGroups([]); setPickedKeys([]); }}
-                        disabled={groups.length === 0}
-                      >
-                        <Trash2 size={14} />
-                        ล้างทั้งหมด
-                      </button>
-                    </div>
-
-                    {/* Right List (Scrollable Area) */}
-                    <div className="p-3 flex-grow-1 overflow-auto"> {/* ✅ Scrollbar จะขึ้นตรงนี้ */}
-                      {groups.length === 0 ? (
-                        <div className="text-center text-muted py-5 h-100 d-flex flex-column justify-content-center">
-                          <div>ยังไม่มีกลุ่ม</div>
-                          <div className="small">เลือกข้อฝั่งซ้าย แล้วกด “สร้างกลุ่ม”</div>
-                        </div>
-                      ) : (
-                        <div className="d-flex flex-column gap-3">
-                          <small>
-                            หากคะแนนรวมเท่ากัน ระบบจะดูคะแนนจากหัวข้อเหล่านี้เป็นอันดับแรกในการตัดสิน
-                          </small>
-                          {groups.map((g, idx) => (
-                            <div key={g.id} className="card bg-light-subtle" style={{ boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)' }}>
-                              <div className="card-body p-2">
-                                <div className="d-flex align-items-start gap-2">
-                                  <span className="badge bg-dark rounded-pill mt-1 flex-shrink-0">{idx + 1}</span>
-                                  <div className="flex-grow-1" style={{ minWidth: 0 }}> {/* minWidth fix flex overflow */}
-                                    <input
-                                      className="form-control form-control-sm fw-bold mb-2"
-                                      value={g.title}
-                                      onChange={(e) => updateGroupTitle(g.id, e.target.value)}
-                                    />
-
-                                    <div className="d-flex flex-wrap gap-1">
-                                      {g.items.map((it) => {
-                                        const key = qKey(it.sessionId, it.subjectId, it.questionNo);
-
-                                        // Logic หาชื่อมาแสดง
-                                        const rowData = rows.find(
-                                          (r) =>
-                                            Number(r.session_id) === it.sessionId &&
-                                            Number(r.subject_id) === it.subjectId &&
-                                            Number(r.question_no) === it.questionNo
-                                        );
-                                        const subjName = rowData?.subject_name || `วิชา ${it.subjectId}`;
-                                        const qLabel = rowData?.label ? rowData.label : `ข้อ ${it.questionNo}`;
-                                        const shortSubj = subjName.length > 15 ? subjName.substring(0, 15) + ".." : subjName;
-                                        // const displayText = `${shortSubj}: ${qLabel}`;
-                                        const displayText = `${qLabel}`;
-                                        const fullTooltip = `${subjName} - ข้อ ${it.questionNo} (${rowData?.label || '-'})`;
-
+                                return (
+                                  <div key={`${block.sessionId}-${subj.subjectId}`} className="mb-3 ps-2">
+                                    <div className="fw-semibold text-primary mb-2 small">
+                                      {subj.subjectName}
+                                    </div>
+                                    <div className="row g-2">
+                                      {available.map((q) => {
+                                        const checked = pickedKeys.includes(q.key);
                                         return (
-                                          <span
-                                            key={key}
-                                            className="badge bg-white text-dark border d-inline-flex align-items-center gap-1"
-                                            title={fullTooltip}
-                                            style={{ maxWidth: "100%", whiteSpace: "normal", textAlign: "left" }}
-                                          >
-                                            <span className="text-truncate" style={{ fontSize: "0.8rem", maxWidth: "180px", display: "inline-block" }}>
-                                              {displayText}
-                                            </span>
-                                            <button
-                                              type="button"
-                                              className="btn btn-sm p-0 ms-1 text-danger"
-                                              onClick={() =>
-                                                removeItemFromGroup(g.id, key)
-                                              }
+                                          <div key={q.key} className="col-12 col-md-6 col-xl-4">
+                                            <label
+                                              className={`border rounded bg-white p-2 d-flex gap-2 align-items-start cursor-pointer h-100 ${checked ? "border-primary" : ""
+                                                }`}
+                                              style={checked ? { boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)' } : undefined}
                                             >
-                                              <X size={14} />
-                                            </button>
-                                          </span>
+                                              <input
+                                                type="checkbox"
+                                                className="form-check-input mt-1"
+                                                checked={checked}
+                                                onChange={() => togglePick(q.key)}
+                                              />
+                                              <div className="overflow-hidden">
+                                                <div className="fw-semibold small">ข้อ {q.questionNo}</div>
+                                                <div className="text-muted text-truncate" style={{ fontSize: "0.75rem" }} title={q.label || "-"}>
+                                                  {q.label || "-"}
+                                                </div>
+                                              </div>
+                                            </label>
+                                          </div>
                                         );
                                       })}
                                     </div>
                                   </div>
+                                );
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
 
-                                  {/* Buttons */}
-                                  {/* <div className="d-flex flex-column gap-1 flex-shrink-0">
+                      {/* ================= Right: Groups List (Scrollable) ================= */}
+                      <div className="col-lg-5 bg-white d-flex flex-column h-100">
+
+                        {/* Right Header (Fixed) */}
+                        <div className="p-3 bg-light border-bottom d-flex justify-content-between align-items-center flex-shrink-0">
+                          <div className="fw-semibold d-flex align-items-center gap-2">
+                            <Layers size={16} />
+                            กลุ่มที่สร้างแล้ว ({groups.length})
+                          </div>
+                          <button
+                            className="btn btn-outline-danger btn-sm d-flex align-items-center gap-2"
+                            onClick={() => { setGroups([]); setPickedKeys([]); }}
+                            disabled={groups.length === 0}
+                          >
+                            <Trash2 size={14} />
+                            ล้างทั้งหมด
+                          </button>
+                        </div>
+
+                        {/* Right List (Scrollable Area) */}
+                        <div className="p-3 flex-grow-1 overflow-auto"> {/* ✅ Scrollbar จะขึ้นตรงนี้ */}
+                          {groups.length === 0 ? (
+                            <div className="text-center text-muted py-5 h-100 d-flex flex-column justify-content-center">
+                              <div>ยังไม่มีกลุ่ม</div>
+                              <div className="small">เลือกข้อฝั่งซ้าย แล้วกด “สร้างกลุ่ม”</div>
+                            </div>
+                          ) : (
+                            <div className="d-flex flex-column gap-3">
+                              <small>
+                                หากคะแนนรวมเท่ากัน ระบบจะดูคะแนนจากหัวข้อเหล่านี้เป็นอันดับแรกในการตัดสิน
+                              </small>
+                              {groups.map((g, idx) => (
+                                <div key={g.id} className="card bg-light-subtle" style={{ boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)' }}>
+                                  <div className="card-body p-2">
+                                    <div className="d-flex align-items-start gap-2">
+                                      <span className="badge bg-dark rounded-pill mt-1 flex-shrink-0">{idx + 1}</span>
+                                      <div className="flex-grow-1" style={{ minWidth: 0 }}> {/* minWidth fix flex overflow */}
+                                        <input
+                                          className="form-control form-control-sm fw-bold mb-2"
+                                          value={g.title}
+                                          onChange={(e) => updateGroupTitle(g.id, e.target.value)}
+                                        />
+
+                                        <div className="d-flex flex-wrap gap-1">
+                                          {g.items.map((it) => {
+                                            const key = qKey(it.sessionId, it.subjectId, it.questionNo);
+
+                                            // Logic หาชื่อมาแสดง
+                                            const rowData = rows.find(
+                                              (r) =>
+                                                Number(r.session_id) === it.sessionId &&
+                                                Number(r.subject_id) === it.subjectId &&
+                                                Number(r.question_no) === it.questionNo
+                                            );
+                                            const subjName = rowData?.subject_name || `วิชา ${it.subjectId}`;
+                                            const qLabel = rowData?.label ? rowData.label : `ข้อ ${it.questionNo}`;
+                                            const shortSubj = subjName.length > 15 ? subjName.substring(0, 15) + ".." : subjName;
+                                            // const displayText = `${shortSubj}: ${qLabel}`;
+                                            const displayText = `${qLabel}`;
+                                            const fullTooltip = `${subjName} - ข้อ ${it.questionNo} (${rowData?.label || '-'})`;
+
+                                            return (
+                                              <span
+                                                key={key}
+                                                className="badge bg-white text-dark border d-inline-flex align-items-center gap-1"
+                                                title={fullTooltip}
+                                                style={{ maxWidth: "100%", whiteSpace: "normal", textAlign: "left" }}
+                                              >
+                                                <span className="text-truncate" style={{ fontSize: "0.8rem", maxWidth: "180px", display: "inline-block" }}>
+                                                  {displayText}
+                                                </span>
+                                                <button
+                                                  type="button"
+                                                  className="btn btn-sm p-0 ms-1 text-danger"
+                                                  onClick={() =>
+                                                    removeItemFromGroup(g.id, key)
+                                                  }
+                                                >
+                                                  <X size={14} />
+                                                </button>
+                                              </span>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+
+                                      {/* Buttons */}
+                                      {/* <div className="d-flex flex-column gap-1 flex-shrink-0">
                                     <button
                                       className="btn btn-light border btn-sm"
                                       onClick={() => moveGroup(g.id, "up")}
@@ -1232,51 +1245,51 @@ return (
                                     </button>
                                   </div> */}
 
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
+                              ))}
                             </div>
-                          ))}
+                          )}
                         </div>
-                      )}
+                      </div>
+
                     </div>
+                  </div>
+
+                  {/* --- Footer --- */}
+                  <div className="modal-footer bg-light">
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-lg d-flex align-items-center gap-2"
+                      onClick={handleExport}
+                      disabled={exporting || loadingRows || !campaignId || selectedSubjectIds.length === 0}
+                    >
+                      {exporting ? (
+                        <>
+                          <Loader2 size={18} className="spin-animation" />
+                          กำลังออกเอกสาร...
+                        </>
+                      ) : (
+                        <>
+                          <Download size={18} />
+                          ดาวน์โหลด PDF
+                        </>
+                      )}
+                    </button>
                   </div>
 
                 </div>
               </div>
-
-              {/* --- Footer --- */}
-              <div className="modal-footer bg-light">
-                <button
-                  type="button"
-                  className="btn btn-primary btn-lg d-flex align-items-center gap-2"
-                  onClick={handleExport}
-                  disabled={exporting || loadingRows || !campaignId || selectedSubjectIds.length === 0}
-                >
-                  {exporting ? (
-                    <>
-                      <Loader2 size={18} className="spin-animation" />
-                      กำลังออกเอกสาร...
-                    </>
-                  ) : (
-                    <>
-                      <Download size={18} />
-                      ดาวน์โหลด PDF
-                    </>
-                  )}
-                </button>
-              </div>
-
+              <style>{`.cursor-pointer { cursor: pointer; }`}</style>
             </div>
-          </div>
-          <style>{`.cursor-pointer { cursor: pointer; }`}</style>
-        </div>
-      )}
-      <style>{`
+          )}
+          <style>{`
         .spin-animation { animation: spin 1s linear infinite; }
         @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
       `}</style>
-    </div>
-    </ShowIfCan>
-  </>
-);
+        </div>
+      </ShowIfCan>
+    </>
+  );
 }

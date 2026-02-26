@@ -55,36 +55,27 @@ export function AppSidebar({
 
       <div className="d-flex flex-column h-100 sidebar-shell " style={{ background: SB.bg }}>
         {/* Logo / Title */}
-        <div
-          className="px-4 py-4 d-flex align-items-center position-relative"
-          style={{
-            height: 150,
-            position: "sticky",
-            top: 0,
-            zIndex: 10,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
-            overflow: "hidden",
-          }}
-        >
+<div
+  className="px-4 py-4 d-flex align-items-center position-relative"
+  style={{
+    height: 150,
+    flexShrink: 0,   // ✅ สำคัญมาก
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
+    overflow: "hidden",
+  }}
+>
           {/* ✅ Striped pattern background */}
-          <div
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: `
-                repeating-linear-gradient(
-                  45deg,
-                  ${theme.color}0D,
-                  ${theme.color}0D 10px,
-                  transparent 10px,
-                  transparent 20px
-                )
-              `,
-              opacity: 0.5,
-              zIndex: 0,
-            }}
-          />
-
+{/* Base background */}
+<div
+  style={{
+    position: "absolute",
+    inset: 0,
+    background: SB.bg,
+  }}
+/>
           {/* ✅ Base background */}
           <div
             style={{

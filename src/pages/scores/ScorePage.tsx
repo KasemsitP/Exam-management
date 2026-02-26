@@ -107,23 +107,23 @@ export default function BagScoresPage() {
 
     return () => clearInterval(timer);
   }, [decryptStep, otpExpiresIn]);
+  const fetchIsUnlock = async () => {
+    try {
+      const result = await axios.get(
+        `/api/campaigns/${activeCampaign.id}/is-unlock`
+      );
+
+      console.log(result.data);
+      setIsdecrypted(result.data.isUnlock)
+      console.log(isDecrypted)
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     if (!activeCampaign?.id) return;
 
-    const fetchIsUnlock = async () => {
-      try {
-        const result = await axios.get(
-          `/api/campaigns/${activeCampaign.id}/is-unlock`
-        );
-
-        console.log(result.data);
-        setIsdecrypted(result.data.isUnlock)
-        console.log(isDecrypted)
-      } catch (err) {
-        console.error(err);
-      }
-    };
 
     fetchIsUnlock();
   }, [activeCampaign?.id]);
@@ -365,7 +365,10 @@ export default function BagScoresPage() {
 
         setopendecrypt(false);
 
+        await fetchIsUnlock();
         await loadBagsForCampaign(activeCampaign.id);
+        await dispatch(fetchBagsForCampaignThunk(String(activeCampaign.id))).unwrap();
+        
 
         const unlock = await axios.get(
           `/api/campaigns/${activeCampaign.id}/is-unlock`
@@ -424,7 +427,7 @@ export default function BagScoresPage() {
       })
     }
     try {
-            Swal.fire({
+      Swal.fire({
         title: "กำลังสร้างไฟล์ PDF...",
         text: "กรุณารอสักครู่",
         allowOutsideClick: false,
@@ -470,15 +473,15 @@ export default function BagScoresPage() {
         text: "กรุณาเลือกถุงก่อน"
       })
     }
-          Swal.fire({
-        title: "กำลังสร้างไฟล์ PDF...",
-        text: "กรุณารอสักครู่",
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => {
-          Swal.showLoading();
-        },
-      });
+    Swal.fire({
+      title: "กำลังสร้างไฟล์ PDF...",
+      text: "กรุณารอสักครู่",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
     try {
       const res = await axios.get(`/api/reports/campaigns/${activeCampaign.id}/scoreall/pdf`,
         {

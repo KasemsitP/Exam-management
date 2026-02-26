@@ -102,7 +102,7 @@ export default function ComposeBagModal({
                         <thead className="table-light sticky-top">
                           <tr>
                             <th style={{ width: 60 }} className="text-center">ลำดับ</th>
-                            <th  className="text-center">ลำดับ</th>
+                            <th  className="text-center">รหัสสอบ</th>
                             <th className="text-center">Payload</th>
                             <th style={{ width: 150 }} className="text-end pe-3">วัน-เวลา</th>
                             {!isSealed && <th style={{ width: 50 }}></th>}

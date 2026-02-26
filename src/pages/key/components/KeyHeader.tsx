@@ -89,7 +89,7 @@ export default function RoomsHeader({ activeCampaign,
                 <div className={`fw-bold mb-0 ${importedSessions === totalSessions ? "text-success" : "text-warning"}`} style={{ fontSize: "0.9rem" }}>
                   {importedSessions === totalSessions
                     ? "นำเข้าข้อมูลครบแล้ว"
-                    : `นำเข้าข้อมูลไม่ครบ (${importedSessions}/${totalSessions})`}
+                    : `นำเข้าข้อมูลไม่ครบ`}   {/* (${importedSessions}/${totalSessions}) */}
                 </div>
                 <small
                   className={
@@ -112,8 +112,8 @@ export default function RoomsHeader({ activeCampaign,
                 </div>
 
                   <div className={`fw-bold mb-0 ${encryptedSessions === totalSessions ? "text-success" : "text-warning"}`} style={{ fontSize: "0.9rem" }}>
-                    {encryptedSessions === totalSessions ? "เข้ารหัสคิวอาร์โค้ดครบแล้ว" : `ยังไม่ครบ (${encryptedSessions}/${totalSessions})`}
-                  </div>
+                    {encryptedSessions === totalSessions ? "เข้ารหัสคิวอาร์โค้ดครบแล้ว" : `ยังไม่ครบ `} {/*(${encryptedSessions}/${totalSessions}) */}
+                  </div>                   
                   {/* <span className={`badge ${encryptedSessions === totalSessions ? "bg-success" : "bg-warning"}`} style={{ fontSize: "0.75rem" }}>
                     {encryptedSessions === totalSessions
                       ? "เข้ารหัสครบแล้ว"
