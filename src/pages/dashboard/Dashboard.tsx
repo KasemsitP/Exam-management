@@ -42,56 +42,27 @@ const pieColors = [
   "#8B5CF6", // Violet
 ];
 
-/* ---------- Mock (optional) ---------- */
+/* ---------- Mock (optional) & Types ---------- */
 interface ScoreBucket {
   label: string;
   count: number;
 }
-interface ScoreDistributionAPI {
+interface DistributionData {
   totalUsers: number;
   noScore: number;
   buckets: ScoreBucket[];
 }
-const MOCK_SCORE_DISTRIBUTION: ScoreDistributionAPI = {
-  totalUsers: 1105,
-  noScore: 0,
-  buckets: [
-    { label: "1-5", count: 12 },
-    { label: "6-10", count: 8 },
-    { label: "11-15", count: 22 },
-    { label: "16-20", count: 18 },
-    { label: "21-25", count: 45 },
-    { label: "26-30", count: 38 },
-    { label: "31-35", count: 72 },
-    { label: "36-40", count: 60 },
-    { label: "41-45", count: 98 },
-    { label: "46-50", count: 110 },
-    { label: "51-55", count: 95 },
-    { label: "56-60", count: 130 },
-    { label: "61-65", count: 102 },
-    { label: "66-70", count: 115 },
-    { label: "71-75", count: 88 },
-    { label: "76-80", count: 93 },
-    { label: "81-85", count: 65 },
-    { label: "86-90", count: 58 },
-    { label: "91-95", count: 52 },
-    { label: "96-100", count: 34 },
-    { label: "101-105", count: 40 },
-    { label: "106-110", count: 18 },
-    { label: "111-115", count: 26 },
-    { label: "116-120", count: 9 },
-    { label: "121-125", count: 14 },
-    { label: "126-130", count: 4 },
-    { label: "131-135", count: 7 },
-    { label: "136-140", count: 2 },
-    { label: "141-145", count: 5 },
-    { label: "146-150", count: 1 },
-    { label: "151-155", count: 1 },
-    { label: "156-160", count: 1 },
-    { label: "161-165", count: 1 },
-    { label: "166-170", count: 1 },
-  ],
-};
+interface SessionDistributionData extends DistributionData {
+  sessionId: number;
+  sessionCode: string;
+}
+
+// 🛑 โครงสร้างใหม่ของ API ที่เพิ่งแก้ไป
+interface ScoreDistributionAPI {
+  isUnlocked: boolean;
+  totalDistribution: DistributionData | null;
+  sessionDistributions: SessionDistributionData[];
+}
 
 /* ---------- Types (Sessions/Subjects/etc.) ---------- */
 
@@ -257,35 +228,19 @@ export default function Dashboard() {
 
   const [dashboardError, setDashboardError] = useState<string | null>(null);
 
-  const [scoreChartData, setScoreChartData] = useState<{ range: string; count: number }[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedAvgSessionId, setSelectedAvgSessionId] = useState<string | null>(null);
   const [slotCoverage, setSlotCoverage] = useState<SlotCoverageResponse | null>(null);
-const [loadingSlot, setLoadingSlot] = useState(false);
+  const [loadingSlot, setLoadingSlot] = useState(false);
 
-  const USE_MOCK_SCORE = false;
+  // 🚀 เพิ่ม State ตัวนี้เข้าไป
+  const [selectedScoreTab, setSelectedScoreTab] = useState<string>("");
 
   // 1) ช่วงคะแนน 1–170 (step 5)
   const ALL_SCORE_BUCKETS: string[] = [];
   for (let start = 1; start <= 170; start += 5) {
     ALL_SCORE_BUCKETS.push(`${start}-${start + 4}`);
   }
-
-  const buildScoreChartData = (scoreDistribution: ScoreDistributionAPI) => {
-    if (!scoreDistribution) return [];
-    const { buckets, noScore } = scoreDistribution;
-
-    const bucketMap = new Map<string, number>();
-    for (const b of buckets ?? []) bucketMap.set(b.label, Number(b.count ?? 0));
-
-    const bucketData = ALL_SCORE_BUCKETS.map((label) => ({
-      range: label,
-      count: bucketMap.get(label) ?? 0,
-    }));
-
-    bucketData.push({ range: "ยังไม่มีคะแนน", count: Number(noScore ?? 0) });
-    return bucketData;
-  };
 
   // -------- fetch (NEW 2 endpoints) --------
   useEffect(() => {
@@ -373,15 +328,46 @@ interval = setInterval(() => {
     return () => clearInterval(interval);
   }, [activeCampaign?.id, dispatch]);
 
-  // build score chart
+ const scoreDistributionData = dashboardCharts?.scoreDistribution;
+
+  // ตั้งค่า Default Dropdown กราฟ
   useEffect(() => {
-    if (USE_MOCK_SCORE) {
-      setScoreChartData(buildScoreChartData(MOCK_SCORE_DISTRIBUTION));
-      return;
+    if (scoreDistributionData) {
+      if (scoreDistributionData.isUnlocked && scoreDistributionData.totalDistribution) {
+        setSelectedScoreTab("TOTAL");
+      } else if (scoreDistributionData.sessionDistributions?.length > 0) {
+        setSelectedScoreTab(String(scoreDistributionData.sessionDistributions[0].sessionId));
+      }
     }
-    if (!dashboardCharts?.scoreDistribution) return;
-    setScoreChartData(buildScoreChartData(dashboardCharts.scoreDistribution));
-  }, [dashboardCharts, USE_MOCK_SCORE]);
+  }, [scoreDistributionData]);
+
+  // 🚀 วาดกราฟตามที่ Backend ส่งมาให้เป๊ะๆ (ขยาย-หดอัตโนมัติ)
+  const scoreChartData = useMemo(() => {
+    if (!scoreDistributionData) return [];
+
+    let targetDist: any = null;
+
+    if (selectedScoreTab === "TOTAL") {
+      targetDist = scoreDistributionData.totalDistribution;
+    } else {
+      targetDist = scoreDistributionData.sessionDistributions?.find(
+        (s: any) => String(s.sessionId) === selectedScoreTab
+      );
+    }
+
+    if (!targetDist) return [];
+
+    // ดึง Array buckets จาก API มาแมปเข้ากราฟตรงๆ เลย
+    const bucketData = (targetDist.buckets || []).map((b: any) => ({
+      range: b.label,
+      count: Number(b.count)
+    }));
+
+    // เพิ่มคอลัมน์ "ยังไม่มีคะแนน" ไว้ท้ายสุด
+    bucketData.push({ range: "ยังไม่มีคะแนน", count: Number(targetDist.noScore ?? 0) });
+    
+    return bucketData;
+  }, [scoreDistributionData, selectedScoreTab]);
 
   /* ---------- Derived Data ---------- */
 
@@ -841,23 +827,54 @@ interval = setInterval(() => {
             <div className="col-lg-7">
               <div className="card shadow-sm h-100" style={{ background: surface, borderTop: "3px solid #3B82F6" }}>
                 <div className="card-header bg-white py-3 py-sm-4">
-                  <h6 className="mb-1 fw-bold">ช่วงคะแนนรวม</h6>
-                  <small className="d-none d-sm-block" style={{ color: muted }}>
-                    กราฟแสดงช่วงคะแนนรวมทั้งหมดทุกวิชา
-                  </small>
+                  <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                    <div>
+                      <h6 className="mb-1 fw-bold">การกระจายตัวของช่วงคะแนน</h6>
+                      <small className="d-none d-sm-block" style={{ color: muted }}>
+                        กราฟแสดงจำนวนผู้สอบในแต่ละช่วงคะแนน
+                      </small>
+                    </div>
+
+                    {/* 🚀 เพิ่ม Dropdown ตรงนี้ */}
+                    {scoreDistributionData && (
+                      <div className="d-flex align-items-center gap-2">
+                        <label className="small text-muted mb-0 text-nowrap">ดูคะแนน:</label>
+                        <select
+                          className="form-select form-select-sm"
+                          style={{ minWidth: 160 }}
+                          value={selectedScoreTab}
+                          onChange={(e) => setSelectedScoreTab(e.target.value)}
+                        >
+                          {scoreDistributionData.isUnlocked && (
+                            <option value="TOTAL" className="fw-bold text-primary">🏆 รวมทุกวิชา </option>
+                          )}
+                          {scoreDistributionData.sessionDistributions?.map(s => (
+                            <option key={s.sessionId} value={String(s.sessionId)}>
+                              {s.sessionCode}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="card-body p-3 p-sm-4" style={{ minHeight: 300 }}>
-                  {loadingCharts && !USE_MOCK_SCORE ? (
+                  {loadingCharts ? (
                     <div className="h-100 d-flex align-items-center justify-content-center text-muted">
                       กำลังโหลดกราฟ...
+                    </div>
+                  ) : scoreChartData.length === 0 ? (
+                    <div className="h-100 d-flex align-items-center justify-content-center text-muted">
+                      ไม่มีข้อมูลคะแนน
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={scoreChartData}>
+                        <CartesianGrid stroke={grid} strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="range" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
                         <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                        <Tooltip formatter={(value) => [`${value} คน`, "จำนวน"]} />
+                        <Tooltip formatter={(value) => [`${value} เล่ม/คน`, "จำนวน"]} />
                         <Bar dataKey="count" fill="#3B82F6" radius={[6, 6, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>

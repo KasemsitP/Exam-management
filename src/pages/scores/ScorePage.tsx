@@ -69,6 +69,7 @@ export default function BagScoresPage() {
   const [otpEmail, setOtpEmail] = useState<string | null>(null);
   const [otpExpiresIn, setOtpExpiresIn] = useState<number | null>(null); // seconds
   const [isDecrypted, setIsdecrypted] = useState<boolean>(false)
+  const [scoresReloadKey, setScoresReloadKey] = useState(0);
 
   const OTP_LENGTH = 6;
   const [otpDigits, setOtpDigits] = useState<string[]>(
@@ -243,42 +244,35 @@ export default function BagScoresPage() {
   // -----------------------------
   // 3) โหลดคะแนนของถุงที่เลือก
   // -----------------------------
-  useEffect(() => {
-    if (!selectedBagId || !activeCampaign) return;
+useEffect(() => {
+  if (!selectedBagId || !activeCampaign) return;
 
-    let cancelled = false;
+  let cancelled = false;
 
-    const fetchScores = async () => {
-      setLoadingScores(true);
-      setErrorScores(null);
+  const fetchScores = async () => {
+    setLoadingScores(true);
+    setErrorScores(null);
+    setBagScores(null);
+
+    try {
+      const res = await axios.get<BagScoresApiResponse>(
+        `/api/reports/bags/${selectedBagId}/scores`,
+        { params: { campaignId: activeCampaign.id } }
+      );
+      if (cancelled) return;
+      setBagScores(res.data);
+    } catch (err: any) {
+      if (cancelled) return;
+      setErrorScores(err?.response?.data?.message ?? "โหลดคะแนนของถุงนี้ไม่สำเร็จ");
       setBagScores(null);
+    } finally {
+      if (!cancelled) setLoadingScores(false);
+    }
+  };
 
-      try {
-        const res = await axios.get<BagScoresApiResponse>(
-          `/api/reports/bags/${selectedBagId}/scores`,
-          { params: { campaignId: activeCampaign.id } }
-        );
-        console.log(res.data)
-        if (cancelled) return;
-        setBagScores(res.data);
-      } catch (err: any) {
-        if (cancelled) return;
-        console.error(err);
-        setErrorScores(
-          err?.response?.data?.message ?? "โหลดคะแนนของถุงนี้ไม่สำเร็จ"
-        );
-        setBagScores(null);
-      } finally {
-        if (!cancelled) setLoadingScores(false);
-      }
-    };
-
-    fetchScores();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedBagId, activeCampaign?.id]);
-
+  fetchScores();
+  return () => { cancelled = true; };
+}, [selectedBagId, activeCampaign?.id, scoresReloadKey]);
   // -----------------------------
   // 4) header ข้อสอบ + helper
   // -----------------------------
@@ -367,8 +361,9 @@ export default function BagScoresPage() {
 
         await fetchIsUnlock();
         await loadBagsForCampaign(activeCampaign.id);
+        setScoresReloadKey((x) => x + 1);
         await dispatch(fetchBagsForCampaignThunk(String(activeCampaign.id))).unwrap();
-        
+
 
         const unlock = await axios.get(
           `/api/campaigns/${activeCampaign.id}/is-unlock`
@@ -456,6 +451,47 @@ export default function BagScoresPage() {
     }
 
   }
+
+    const handlePDFNameperBags = async () => {
+    console.log(selectedBagId)
+    if (!selectedBagId) {
+      Swal.fire({
+        icon: "error",
+        title: "ยังไม่ได้เลือกถุง",
+        text: "กรุณาเลือกถุงก่อน"
+      })
+    }
+    try {
+      Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+      const res = await axios.get(`/api/reports/bags/${selectedBagId}/scores/pdf/unlocked/name`,
+        {
+          responseType: "blob",
+        }
+      )
+      Swal.close();
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถ export ใบคะแนนได้",
+        text:
+          error?.response?.data?.message ||
+          "Backend error. กรุณาลองใหม่อีกครั้ง",
+      });
+    }
+
+  }
+
 
   const handlePDFAllBags = async () => {
     if (!activeCampaign.id) {
@@ -581,6 +617,12 @@ export default function BagScoresPage() {
   };
 
 
+  function truncate(text: string, maxLength: number) {
+    if (!text) return "";
+    return text.length > maxLength
+      ? text.slice(0, maxLength) + "..."
+      : text;
+  }
 
 
   // -----------------------------
@@ -608,6 +650,14 @@ export default function BagScoresPage() {
             <div className="d-grid gap-2 gap-md-1 d-md-flex flex-md-wrap justify-content-md-end flex-md-grow-1">
               {viewMode === "score" ? (
                 <>
+                                  <button
+                    type="button"
+                    className="btn btn-sm btn-secondary d-inline-flex align-items-center justify-content-center text-nowrap"
+                    disabled={!selectedBagId}
+                    onClick={handlePDFNameperBags}
+                  >
+                    ดาวน์โหลดใบคะแนนพร้อมชื่อสกุล
+                  </button>
                   <button
                     type="button"
                     className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center text-nowrap"
@@ -743,15 +793,17 @@ export default function BagScoresPage() {
                 </button>
 
                 <select
-                  className="form-select form-select-sm border-start-0 border-end-0"
-                  style={{ maxHeight: "300px" }}
+                  className="form-select form-select-sm border-start-0 border-end-0 pe-5"
                   value={selectedBagId ?? ""}
                   onChange={(e) => setSelectedBagId(Number(e.target.value))}
                   disabled={filteredBags.length === 0}
                 >
                   {filteredBags.map((b, idx) => (
                     <option key={b.bagId} value={b.bagId}>
-                      {idx + 1}. BAG{String(b.bagNo).padStart(3, "0")} – {b.sessionLabel}
+                      {truncate(
+                        `ถุงที่ ${String(b.bagNo)} - ${b.sessionLabel}`,
+                        90
+                      )}
                     </option>
                   ))}
                   {filteredBags.length === 0 && <option value="">ไม่มีถุง</option>}
@@ -820,8 +872,7 @@ export default function BagScoresPage() {
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div>
                 <h5 className="mb-0">
-                  คะแนนตามรหัสสอบ – BAG
-                  {String(selectedBag.bagNo).padStart(3, "0")}
+                  คะแนนตามรหัสสอบ ถุงที่ {String(selectedBag.bagNo)}
                 </h5>
                 <div className="text-muted small mt-1 d-flex flex-wrap gap-3">
                   <span>รอบสอบ: {selectedBag.sessionLabel}</span>

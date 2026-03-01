@@ -6,7 +6,7 @@ export default function ImportHeader() {
       {/* Card Header */}
       <div className="card-header bg-white d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
         <div>
-          <h5 className="mb-1 d-flex align-items-center gap-2">จัดการที่นั่งสอบ</h5>
+          <h5 className="mb-1 d-flex align-items-center gap-2">นำข้อมูลเข้าสู่รอบสอบ</h5>
           <small className="text-muted">
             นำข้อมูลเข้าสู่รอบสอบ
           </small>

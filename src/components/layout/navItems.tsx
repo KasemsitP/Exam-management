@@ -97,6 +97,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: PackageCheck,
     permissions: ["manage_bags"],
   },
+    {
+    to: "/sign-sheets",
+    label: "ใบบันทึกการสอบ",
+    icon: FilePenLine,
+    permissions: ["view_sessions"],
+  },
   // {
   //   to: "/bag-handover",
   //   label: "ส่งมอบถุง",
@@ -108,12 +114,6 @@ export const NAV_ITEMS: NavItem[] = [
     label: "บันทึกคะแนน",
     icon: GraduationCap,
     permissions: ["grade_exams"],
-  },
-  {
-    to: "/sign-sheets",
-    label: "ใบบันทึกการสอบ",
-    icon: FilePenLine,
-    permissions: ["view_sessions"],
   },
   //   {
   //   to: "/grading-recheck",

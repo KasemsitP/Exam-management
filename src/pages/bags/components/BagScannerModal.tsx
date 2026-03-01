@@ -141,6 +141,7 @@ export default function ComposeBagModal({
                             isLoading={bagStatus === "loading" || isLoading}
                             aspectRatio="1/1"
                             minHeight={350}
+                            cooldownMs={500}
                           />
                         ) : (
                           <div

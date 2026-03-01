@@ -25,6 +25,7 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
     // ❌ เอา setScannerEnabled(false) ออก กล้องจะได้ไม่ค้าง
 
     try {
+      console.log(code)
       const result = await axios.post("/api/verify/check-booklets-orders", {
         campaignId: activeCampaignId,
         qrPayload: code,
@@ -42,7 +43,7 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
           title: "สแกนสำเร็จ",
           html: `
             <div style="text-align:left">  
-              <div><strong>รหัสเล่มข้อสอบ:</strong> ${data.data.booklets_id}</div>
+              <div><strong>รหัสสอบ:</strong> ${data.data.booklets_id}</div>
               <div><strong>วิชา:</strong> ${data.data.subject_name}</div>
               <div><strong>หมายเลขถุง:</strong> ${data.data.bag_no}</div>
             </div>

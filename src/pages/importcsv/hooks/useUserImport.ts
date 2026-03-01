@@ -224,11 +224,16 @@ export const useUserImport = () => {
 
     // ถ้ามีนามสกุลซ้ำ เอา Top 5 มาแสดงเตือน
     if (duplicateLastNames.length > 0) {
-      const topDuplicates = duplicateLastNames.slice(0, 5);
-      const duplicateListHtml = topDuplicates
-        .map(([ln, count]) => `<li>นามสกุล <b>${ln}</b> : ${count} คน</li>`)
+      // const topDuplicates = duplicateLastNames.slice(0, 5);
+      // const duplicateListHtml = topDuplicates
+      //   .map(([ln, count]) => `<li>นามสกุล <b>${ln}</b> : ${count} คน</li>`)
+      //   .join("");
+      const duplicateListHtml = duplicateLastNames
+        .map(([ln, count]) =>
+          `<li>นามสกุล <b>${ln}</b> : ${count} คน</li>`
+        )
         .join("");
-      const moreText = duplicateLastNames.length > 5 ? `<li>...และอื่นๆ อีก ${duplicateLastNames.length - 5} นามสกุล</li>` : "";
+     // const moreText = duplicateLastNames.length > 5 ? `<li>...และอื่นๆ อีก ${duplicateLastNames.length - 5} นามสกุล</li>` : "";
       confirmHtml += `
 <br><br>
 <div style="
@@ -239,14 +244,20 @@ export const useUserImport = () => {
   border-radius: 6px; 
   text-align: left; 
   font-size: 0.9em;
-  max-height: 200px;
-  overflow-y: auto;
 ">
-  <strong>⚠️ พบผู้เข้านามสกุลซ้ำกันในรอบนี้:</strong>
-  <ul style="margin-top: 5px; margin-bottom: 0; padding-left: 20px;">
-    ${duplicateListHtml}
-    ${moreText}
-  </ul>
+  <strong>⚠️ พบผู้เข้านามสกุลซ้ำกัน:  ${duplicateLastNames.length} คน</strong>
+
+  <div style="
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
+  ">
+    <ul style="margin: 0; padding-left: 20px;">
+      ${duplicateListHtml}
+   
+    </ul>
+  </div>
+
   <div style="margin-top: 8px; font-size: 0.85em;">
     ระบบจะพยายามสลับที่นั่งให้ห่างกันโดยอัตโนมัติ
   </div>

@@ -45,8 +45,8 @@ export const CustomQrScanner = React.memo(({
   isPaused = false,
   facingMode = "environment",
   qrActive = true,   
-  cooldownMs = 300, // ✅ ให้กล้องสแกนเร็วขึ้น (ทุกๆ 300ms)
-  duplicateTimeoutMs = 1500, // ✅ โค้ดเดิมจะถูกบล็อคแค่ 1.5 วินาที
+  cooldownMs = 300, //  ให้กล้องสแกนเร็วขึ้น (ทุกๆ 300ms)
+  duplicateTimeoutMs = 1500, //  โค้ดเดิมจะถูกบล็อคแค่ 1.5 วินาที
   formats = DEFAULT_FORMATS,
   aspectRatio = "1/1", 
   minHeight = 350,  
@@ -54,7 +54,7 @@ export const CustomQrScanner = React.memo(({
 }: CustomQrScannerProps) => {
 
   const onResultRef = useRef(onResult);
-  // ✅ สร้างตัวจำโค้ดของเราเอง (ฉลาดกว่าของ Library)
+  //  สร้างตัวจำโค้ดของเราเอง 
   const lastScanRef = useRef<{ code: string; time: number } | null>(null);
 
   useEffect(() => {

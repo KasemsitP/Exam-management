@@ -67,6 +67,7 @@ export const verifyQrCodeThunk = createAsyncThunk<
     try {
       console.log(payload)
       const response = await axios.post("/api/verify/qr-payload", payload);
+      console.log("Response from QR verification API:", response.data);
       return response.data as VerifyQrResponse;
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
