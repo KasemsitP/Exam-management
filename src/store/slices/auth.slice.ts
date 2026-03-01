@@ -9,8 +9,8 @@ export interface AuthUser {
   name: string;
   username: string;
   roles: Role[];
-  avatar?: string;
   password?: string;
+  manager_order?: number; //  เพิ่ม manager_order
 }
 
 interface AuthState {
@@ -83,6 +83,7 @@ export const logout = createAsyncThunk(
     dispatch(authSlice.actions.clearAuth());
   }
 );
+
 
 const initialState: AuthState = {
   user: null,

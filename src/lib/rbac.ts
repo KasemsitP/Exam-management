@@ -28,7 +28,6 @@ const ALL_PERMISSIONS: Permission[] = [
     "manage_sessions",
     "manage_subjects",
     "manage_users",
-    "manage_keys",
     "import_subjects",
     "allocate_seats",
     "view_sessions",
@@ -51,7 +50,6 @@ const rolePermissions: Record<Role, Permission[]> = {
     "manage_sessions",
     "manage_subjects",
     "manage_users",
-    "manage_keys",
     "import_subjects",
     "allocate_seats",
     "view_sessions",
@@ -90,6 +88,9 @@ export function can(roles: Role[] | undefined | null, permission: Permission): b
 
   if (permission === "grade_exams") {
     return roles.includes("grader"); 
+  }
+  if(permission === "manage_keys"){
+    return roles.includes("manager");
   }
 
   if (roles.includes(ADMIN_ROLE)) {

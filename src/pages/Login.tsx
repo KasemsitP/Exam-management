@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { showLoginSuccessAlert, showLoginSuccessAlertWithData } from "@/components/ui/successAlert";
 import Logo from "../assets/kmutnblogo.png";
-import { EyeOff  , Eye} from "lucide-react";
+import { EyeOff, Eye } from "lucide-react";
 import {
   login,
   selectAuthError,
@@ -36,23 +36,27 @@ export default function Login() {
   const location = useLocation();
 
 
-  const onSubmit = async (values: LoginFormValues) => {
-    if (status === "loading") return;
+const onSubmit = async (values: LoginFormValues) => {
+  if (status === "loading") return;
 
-    const resultAction = await dispatch(login(values));
+  const resultAction = await dispatch(login(values));
 
-    if (login.fulfilled.match(resultAction)) {
-      showLoginSuccessAlert(resultAction.payload.name);
+  if (login.fulfilled.match(resultAction)) {
+    showLoginSuccessAlert(resultAction.payload.name);
+  }
+
+  if (login.rejected.match(resultAction)) {
+    const errorMessage =
+      resultAction.payload || "ชื่อผู้ใช้หรือรหัสผ่านผิด";
+
+    showError("ล็อคอินไม่สำเร็จ", errorMessage);
+  }
+};
+  useEffect(() => {
+    if (user) {
       navigate("/home", { replace: true });
     }
-
-    if (login.rejected.match(resultAction)) {
-      const errorMessage =
-        resultAction.payload || "ชื่อผู้ใช้หรือรหัสผ่านผิด";
-
-      showError("ล็อคอินไม่สำเร็จ", errorMessage);
-    }
-  };
+  }, [user, navigate]);
 
   const handleBypass = () => {
     const mockUser: AuthUser = {
@@ -60,7 +64,6 @@ export default function Login() {
       name: "Admin User",
       username: "admin",
       roles: ["admin"] as Role[],
-      avatar: "AU",
     };
     dispatch(setAuthenticated(mockUser));
     showLoginSuccessAlertWithData(mockUser.name, "โหมด bypass");

@@ -1,28 +1,21 @@
-// components/KeyCreateCard.tsx
-import { Lightbulb, Loader2, Minus, Plus, ShieldCheck, Key } from "lucide-react";
+import React from "react";
+import { Loader2, Minus, Plus, ShieldCheck, Key, AlertCircle } from "lucide-react";
 
 interface KeyCreateCardProps {
-  firstKey: string;
-  secondKey: string;
-  firstKeyId: number | null;
-  secondKeyId: number | null;
-  manager1: string;
-  manager2: string;
+  myKeyRef: React.RefObject<HTMLInputElement>; // รับเป็น Ref แทน String
+  myKeyId: number | null;
+  managerName: string;
+  initialKeyValue: string; 
+  manager_order: number | null;
 
-  onFirstKeyChange: (value: string) => void;
-  onSecondKeyChange: (value: string) => void;
-
-  onSaveFirstKey: () => void;
-  onSaveSecondKey: () => void;
-
-
+  onSaveKey: () => void;
   onDeleteKey: (id: number) => void;
   onForgetKey: (id: number) => void;
 
   canGenerate: boolean;
   isLoading: boolean;
   hasActiveCampaign: boolean;
-  activeKeyCount: number;
+  hasTwoKeys: boolean;
   onRunBulkEncryption: () => void;
   headerSummary: {
     keyStatus: any;
@@ -30,25 +23,20 @@ interface KeyCreateCardProps {
   };
 }
 
-
 export default function KeyCreateCard({
-  firstKey,
-  secondKey,
-  firstKeyId,
-  secondKeyId,
-  onFirstKeyChange,
-  onSecondKeyChange,
-  onSaveFirstKey,
-  onSaveSecondKey,
+  myKeyRef,
+  myKeyId,
+  onSaveKey,
   onDeleteKey,
   onForgetKey,
   isLoading,
   hasActiveCampaign,
-  activeKeyCount,
+  hasTwoKeys,
   onRunBulkEncryption,
-  manager1,
-  manager2,
-  headerSummary
+  managerName,
+  headerSummary,
+  initialKeyValue,
+  manager_order
 }: KeyCreateCardProps) {
 
   const allEncrypted =
@@ -56,47 +44,46 @@ export default function KeyCreateCard({
       (s: any) => s.encryption_status === "ENCRYPTED_ALL"
     ) ?? false;
 
+    const textitle = manager_order === 1 ? "กรุณากำหนดคีย์ลำดับที่ 1 สำหรับผู้จัดการอัยการพิเศษฝ่าย (คก.2) คณะกรรมการ 2" 
+    : "กรุณากำหนดคีย์ลำดับที่ 2 สำหรับรองอธิบดี";
+
 
   return (
     <div className="card mt-2" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
       <div className="card-header bg-white">
-        <h6 className="mb-0 text-nowrap">1. กำหนดคีย์เข้ารหัส</h6>
+        <h6 className="mb-0 text-nowrap">กำหนดคีย์เข้ารหัสของคุณ</h6>
       </div>
 
       <div className="card-body">
         <div className="row g-2 g-md-3">
-
-          {/* ===== FIRST KEY ===== */}
           <div className="col-12 col-lg-8">
             <label className="form-label d-flex align-items-center justify-content-between flex-wrap gap-2">
-              <span className="text-nowrap">คีย์สำหรับการเข้ารหัสคนที่ 1</span>
-
-              {manager1 && (
-                <span className="badge bg-light text-danger fw-normal text-nowrap" style={{ fontSize: "0.75rem" }}>
-                  {manager1}
+              <span className="text-nowrap">{textitle}</span>
+              {managerName && (
+                <span className="badge bg-light text-primary fw-normal text-nowrap" style={{ fontSize: "0.75rem" }}>
+                  {managerName}
                 </span>
               )}
             </label>
 
+            {/* ใช้ Uncontrolled input ด้วย ref */}
             <input
               type="password"
               className="form-control form-control-sm"
-              value={firstKey}
-              onChange={(e) => onFirstKeyChange(e.target.value)}
-              disabled={!!firstKeyId}
-              placeholder="อัยการพิเศษฝ่าย (คก.2) คณะกรรมการ 2"
+              ref={myKeyRef}
+              defaultValue={initialKeyValue}
+              disabled={!!myKeyId}
+              maxLength={16}
+              placeholder="กรอกคีย์ความยาว 16 ตัวอักษร"
             />
           </div>
 
           <div className="col-12 col-lg-4 d-flex align-items-end gap-1 gap-sm-2">
             <button
               className="btn btn-sm btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-1"
-              onClick={onSaveFirstKey}
-              disabled={
-                !!firstKeyId ||
-                !firstKey.trim() ||
-                !hasActiveCampaign
-              }
+              onClick={onSaveKey}
+              // เอาเงื่อนไข !myKey.trim() ออก เพราะปุ่มไม่สามารถรู้ state แบบ real-time ได้
+              disabled={!!myKeyId || !hasActiveCampaign}
               title="สร้างคีย์"
             >
               {isLoading ? <Loader2 size={14} className="spin-animation" /> : <Plus size={14} />}
@@ -105,8 +92,8 @@ export default function KeyCreateCard({
 
             <button
               className="btn btn-sm btn-danger w-100 d-inline-flex align-items-center justify-content-center gap-1"
-              onClick={() => firstKeyId && onDeleteKey(firstKeyId)}
-              disabled={!firstKeyId}
+              onClick={() => myKeyId && onDeleteKey(myKeyId)}
+              disabled={!myKeyId}
               title="ลบคีย์"
             >
               <Minus size={14} />
@@ -114,65 +101,8 @@ export default function KeyCreateCard({
             </button>
             <button
               className="btn btn-sm btn-secondary w-100 d-inline-flex align-items-center justify-content-center gap-1"
-              onClick={() => firstKeyId && onForgetKey(firstKeyId)}
-              disabled={!firstKeyId}
-              title="ลืมคีย์"
-            >
-              <Key size={14} />
-              <span className="d-none d-sm-inline">ลืมคีย์</span>
-            </button>
-          </div>
-
-          {/* ===== SECOND KEY ===== */}
-          <div className="col-12 col-lg-8">
-            <label className="form-label d-flex align-items-center justify-content-between flex-wrap gap-2">
-              <span className="text-nowrap">คีย์สำหรับการเข้ารหัสคนที่ 2</span>
-
-              {manager2 && (
-                <span className="badge bg-light text-danger fw-normal text-nowrap" style={{ fontSize: "0.75rem" }}>
-                  {manager2}
-                </span>
-              )}
-            </label>
-
-            <input
-              type="password"
-              className="form-control form-control-sm"
-              value={secondKey}
-              onChange={(e) => onSecondKeyChange(e.target.value)}
-              disabled={!!secondKeyId}
-              placeholder="รองอธิบดีอัยการ"
-            />
-          </div>
-
-          <div className="col-12 col-lg-4 d-flex align-items-end gap-1 gap-sm-2">
-            <button
-              className="btn btn-sm btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-1"
-              onClick={onSaveSecondKey}
-              disabled={
-                !hasActiveCampaign ||
-                !!secondKeyId ||
-                !secondKey.trim()
-              }
-              title="สร้างคีย์"
-            >
-              {isLoading ? <Loader2 size={14} className="spin-animation" /> : <Plus size={14} />}
-              <span className="d-none d-sm-inline">สร้าง</span>
-            </button>
-
-            <button
-              className="btn btn-sm btn-danger w-100 d-inline-flex align-items-center justify-content-center gap-1"
-              onClick={() => secondKeyId && onDeleteKey(secondKeyId)}
-              disabled={!secondKeyId}
-              title="ลบคีย์"
-            >
-              <Minus size={14} />
-              <span className="d-none d-sm-inline">ลบ</span>
-            </button>
-            <button
-              className="btn btn-sm btn-secondary w-100 d-inline-flex align-items-center justify-content-center gap-1"
-              onClick={() => secondKeyId && onForgetKey(secondKeyId)}
-              disabled={!secondKeyId}
+              onClick={() => myKeyId && onForgetKey(myKeyId)}
+              disabled={!myKeyId}
               title="ลืมคีย์"
             >
               <Key size={14} />
@@ -181,36 +111,39 @@ export default function KeyCreateCard({
           </div>
         </div>
 
-        {activeKeyCount >= 2 && (
-          <div
-            className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2 mt-3 p-2 p-sm-3 rounded border border-success bg-success bg-opacity-10"
-          >
-            <ShieldCheck size={16} className="text-success flex-shrink-0" />
-            <div>
-              {allEncrypted ? (
-                <>
-                  <div className="fw-semibold text-success small">
-                    เข้ารหัสและสร้างคิวอาร์โค้ดแล้ว
-                  </div>
-                  <div className="text-muted" style={{ fontSize: "0.8rem" }}>
-                    ระบบได้สร้างคิวอาร์โค้ดครบถ้วนแล้ว
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="fw-semibold text-primary small">
-                    ระบบพร้อมสำหรับการเข้ารหัส
-                  </div>
-                  <div className="text-muted" style={{ fontSize: "0.8rem" }}>
-                    กรุณากดปุ่ม "เริ่มการเข้ารหัส"
-                  </div>
-                </>
-              )}
+        <div className="mt-4">
+          {hasTwoKeys ? (
+            <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2 p-2 p-sm-3 rounded border border-success bg-success bg-opacity-10 mb-3">
+              <ShieldCheck size={16} className="text-success flex-shrink-0" />
+              <div>
+                {allEncrypted ? (
+                  <>
+                    <div className="fw-semibold text-success small">เข้ารหัสและสร้างคิวอาร์โค้ดแล้ว</div>
+                    <div className="text-muted" style={{ fontSize: "0.8rem" }}>ระบบได้สร้างคิวอาร์โค้ดครบถ้วนแล้ว</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="fw-semibold text-primary small">ระบบพร้อมสำหรับการเข้ารหัส (มีคีย์ครบ 2 คีย์ในระบบ)</div>
+                    <div className="text-muted" style={{ fontSize: "0.8rem" }}>คุณสามารถเริ่มทำการเข้ารหัสได้ทันที</div>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-        <div className="mt-3">
-          <button className="btn btn-sm btn-success" onClick={onRunBulkEncryption} disabled={allEncrypted}>
+          ) : (
+            <div className="d-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2 p-2 p-sm-3 rounded border border-warning bg-warning bg-opacity-10 mb-3">
+              <AlertCircle size={16} className="text-warning flex-shrink-0" />
+              <div>
+                <div className="fw-semibold text-warning small">กำลังรอคีย์จากผู้จัดการคีย์ท่านอื่น</div>
+                <div className="text-muted" style={{ fontSize: "0.8rem" }}>จำเป็นต้องมีคีย์ 2 คีย์ในระบบจึงจะเริ่มการเข้ารหัสได้</div>
+              </div>
+            </div>
+          )}
+
+          <button
+            className="btn btn-sm btn-success"
+            onClick={onRunBulkEncryption}
+            disabled={!hasTwoKeys || allEncrypted || isLoading}
+          >
             เริ่มการเข้ารหัส
           </button>
         </div>
@@ -219,4 +152,3 @@ export default function KeyCreateCard({
     </div>
   );
 }
-

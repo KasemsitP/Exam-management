@@ -113,6 +113,8 @@ export default function AccountsPage() {
           full_name: data.full_name,
           email: data.email,
           role: data.role_id, // backend expects 'role'
+          manager_order: data.managerKeyNo, // ✅ เพิ่ม manager_order
+
         })
       ).unwrap();
       Swal.fire({

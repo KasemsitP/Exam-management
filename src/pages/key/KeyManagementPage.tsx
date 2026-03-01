@@ -15,29 +15,25 @@ export default function KeyManagementPage() {
     activeCampaign,
     activeKeys,
     keyStatus,
+    
     keyManagementError,
     sessions,
     prerequisites,
     encryptionStatus,
     lastBulkEncryptionStats,
     IshasKey,
-    firstKey,
-    secondKey,
-    firstKeyId,
-    secondKeyId,
     selectedSessionId,
     headerSummary,
     isLoading,
     isInitialLoading,
     canGenerate,
+    initialKeyValue,
     isEncryptionLoading,
     canEncrypt,
-    manager1,
-    manager2,
-    setFirstKey,
-    setSecondKey,
-    handleSaveFirstKey,
-    handleSaveSecondKey,
+    myKeyRef,
+    myKeyId,
+    managerName,
+
     handleSaveKey,
     handleDeleteKey,
     handleSessionChange,
@@ -51,7 +47,8 @@ export default function KeyManagementPage() {
     setModalForgetKey,
     handleForgetKey,
     accountFullName,
-    openForgetKeyModal
+    openForgetKeyModal,
+    manager_order
 
   } = useKeyManagement();
 
@@ -71,33 +68,29 @@ export default function KeyManagementPage() {
 
 
           <KeyCreateCard
-            firstKey={firstKey}
-            secondKey={secondKey}
-            firstKeyId={firstKeyId}
-            secondKeyId={secondKeyId}
-            onFirstKeyChange={setFirstKey}
-            onSecondKeyChange={setSecondKey}
-            onSaveFirstKey={handleSaveFirstKey}
-            onSaveSecondKey={handleSaveSecondKey}
+            initialKeyValue={initialKeyValue}
+            myKeyRef={myKeyRef}
+            myKeyId={myKeyId}
+            onSaveKey={handleSaveKey}
             onDeleteKey={handleDeleteKey}
+            onForgetKey={openForgetKeyModal}
             canGenerate={canGenerate}
             isLoading={isLoading}
             hasActiveCampaign={!!activeCampaign}
-            activeKeyCount={activeKeys.length}
-            manager1={manager1}
-            manager2={manager2}
+            hasTwoKeys={prerequisites.hasTwoKeys}
+            managerName={managerName}
             onRunBulkEncryption={handleRunBulkEncryption}
             headerSummary={headerSummary}
-            onForgetKey={openForgetKeyModal}
+            manager_order={manager_order}
           />
-            <ForgetKeyCard
-              forgetKey={forgetKey}
-              setForgetKey={setForgetKey}
-              modalforgetKey={modalforgetKey}
-              setModalForgetKey={setModalForgetKey}
-              handleForgetKey={handleForgetKey}
-              accountFullName={accountFullName}
-            />
+          <ForgetKeyCard
+            forgetKey={forgetKey}
+            setForgetKey={setForgetKey}
+            modalforgetKey={modalforgetKey}
+            setModalForgetKey={setModalForgetKey}
+            handleForgetKey={handleForgetKey}
+            accountFullName={accountFullName}
+          />
 
           {/* <ActiveKeysCard
           activeKeys={activeKeys}

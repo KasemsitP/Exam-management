@@ -92,37 +92,50 @@ interface CreateAccountPayload {
   full_name: string;
   email: string;
   role: number; // role_id
-  campaignId?: number
+  campaignId?: number;
+  manager_order?: number; //  เพิ่ม manager_order
 }
-
 export const createAccountThunk = createAsyncThunk<
   Account,
   CreateAccountPayload,
   { rejectValue: string }
 >("accounts/create", async (payload, { rejectWithValue }) => {
   try {
-
-
     const username = payload.username.trim();
+    const full_name = payload.full_name.trim();
 
     const usernameRegex = /^[a-zA-Z0-9]{4,20}$/;
-
     if (!usernameRegex.test(username)) {
       return rejectWithValue(
         "Username ต้องมีเฉพาะตัวอักษรอังกฤษและตัวเลข (4-20 ตัว)"
       );
     }
-    const response = await axios.post("/api/auth/register", payload);
+
+    //  ส่งค่าที่ trim แล้ว + ส่ง managerKeyNo ไปด้วย
+    const reqBody = {
+      ...payload,
+      username,
+      full_name,
+    };
+    console.log("Creating account with payload:", reqBody);
+
+
+    if (payload.role === 3 && !payload.manager_order) {
+      return rejectWithValue("กรุณาเลือกผู้จัดการคีย์คนที่ 1 หรือ 2");
+    }
+
+    const response = await axios.post("/api/auth/register", reqBody);
     const newId = response.data.id;
 
     const account: Account = {
       id: newId,
-      username: payload.username,
-      full_name: payload.full_name,
+      username,
+      full_name,
       email: payload.email ?? "",
       role_id: payload.role,
       active: true,
-      campaign_id: payload.campaignId
+      campaign_id: payload.campaignId,
+      //managerKeyNo: payload.managerKeyNo,
     };
 
     return account;

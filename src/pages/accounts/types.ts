@@ -16,14 +16,19 @@ export interface AccountStats {
   inactive: number;
 }
 
+export type ManagerKeyNo = 1 | 2;
+
 export interface CreateAccountFormValues {
   username: string;
   password: string;
   confirmPassword: string;
   full_name: string;
-  email: string;
+  email?: string;
   role_id: number;
   active: boolean;
+
+  // ✅ เพิ่ม
+  managerKeyNo?: ManagerKeyNo;
 }
 
 export interface UpdateAccountFormValues {

@@ -1,8 +1,8 @@
 // hooks/useKeyManagement.ts
-import { use, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
-import { useToast } from "@/components/ui/use-toast";
 import Swal from "sweetalert2";
+import axios from "axios";
 
 import {
   fetchKeysForCampaign,
@@ -17,12 +17,19 @@ import {
   runBulkEncryptionForSession,
   selectEncryptionStatus,
   selectLastBulkEncryptionStats,
-  selectPrerequisites
+  selectPrerequisites,
+  fetchKeysForCampaignByManager
 } from "@/store/slices/key.slice";
 
 import {
-  selectDashboardStatus, selectEncryptedStatus, selectImportStatus, fetchDashboardStatus
-  , selectKeyStatus, selectSubjects, selectSubjectQuestionsGrouped, selectSession
+  selectDashboardStatus,
+  selectEncryptedStatus,
+  selectImportStatus,
+  fetchDashboardStatus,
+  selectKeyStatus,
+  selectSubjects,
+  selectSubjectQuestionsGrouped,
+  selectSession
 } from "@/store/slices/dashboard.slice"
 
 import { selectCurrentUser } from "@/store/slices/auth.slice";
@@ -31,8 +38,6 @@ import {
   selectActiveCampaign,
   selectActiveCampaignSessions,
 } from "@/store/slices/examData.slice";
-import { set } from "react-hook-form";
-import axios from "axios";
 
 const parseCampaignId = (id: string): number => Number(id.replace("camp-", ""));
 const parseSessionId = (id: string): number => Number(id.replace("sess-", ""));
@@ -41,8 +46,6 @@ export const useKeyManagement = () => {
   const dispatch = useAppDispatch();
 
   // --- Redux state ---
-
-
   const activeCampaign = useAppSelector(selectActiveCampaign);
   const users = useAppSelector(selectCurrentUser)
   const activeKeys = useAppSelector(selectAllActiveKeys);
@@ -65,27 +68,25 @@ export const useKeyManagement = () => {
   const NumberOfSession = sessions.length;
 
   // --- Local state ---
-  // const [keyInput, setKeyInput] = useState("");
   const [selectedSessionId, setSelectedSessionId] = useState<string>("20");
   const [IshasKey, setIshasKey] = useState(false)
-  const [firstKey, setFirstKey] = useState<string>("");
-  const [secondKey, setSecondKey] = useState<string>("");
-  const [firstKeyId, setFirstKeyId] = useState<number | null>(null);
-  const [secondKeyId, setSecondKeyId] = useState<number | null>(null);
-  const [manager1, setmanager1] = useState<string>("");
-  const [manager2, setmanager2] = useState<string>("");
+  
+  // เปลี่ยนจาก useState เป็น useRef
+  const [initialKeyValue, setInitialKeyValue] = useState<string>("");
+  const myKeyRef = useRef<HTMLInputElement>(null);
+  const [myKeyId, setMyKeyId] = useState<number | null>(null);
+  const [managerName, setManagerName] = useState<string>("");
+  
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const [forgetKey, setForgetKey] = useState("")
   const [modalforgetKey, setModalForgetKey] = useState(false)
   const [selectedKeyId, setSelectedKeyId] = useState<number | null>(null);
 
+  const manager_order = users ? users.manager_order : null;
 
   const accountFullName = users ? users.name : "ไม่พบผู้ใช้";
   const isManager = users ? users.roles.includes("manager") : false;
-  // console.log("KeyCreateCard props:", {
-  //   manager1
-  // });
 
   const numericCampaignId = activeCampaign
     ? parseCampaignId(activeCampaign.id)
@@ -93,14 +94,11 @@ export const useKeyManagement = () => {
 
   const userAccountId = users.id ?? null;
   const isLoading = keyStatus === "loading";
-  const canGenerate = !isLoading && activeKeys.length < 2;
+  const canGenerate = !isLoading && !myKeyId;
   const isEncryptionLoading = encryptionStatus === "loading";
+  
   const canEncrypt =
     !!prerequisites?.hasTwoKeys && !!prerequisites?.hasImportedUsers;
-
-  console.log(sessions, "sessions from useKeyManagement")
-
-
 
   const headerSummary = useMemo(
     () => {
@@ -112,44 +110,22 @@ export const useKeyManagement = () => {
         ? EncryptedStatus.filter((s) => s.encryption_status === "ENCRYPTED_ALL").length
         : 0;
 
-      console.log(encryptedSessions, "encryptedSessions in useKeyManagement")
-
-      return { totalSessions, importedSessions, EncryptedStatus, encryptedSessions, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo, keyStatus };;
+      return { totalSessions, importedSessions, EncryptedStatus, encryptedSessions, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo, keyStatus };
     },
     [ImportStatus, EncryptedStatus, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo, keyStatus]
   );
 
-  function syncLocalFromKeys(keys: any[]) {
-    const first = keys.find((k) => k.order_num === 1) ?? null;
-    const second = keys.find((k) => k.order_num === 2) ?? null;
+  const syncLocalFromKeys = (keys: any[]) => {
+    const userKey = keys.find((k) => k.account_id === Number(userAccountId)) ?? keys[0] ?? null;
 
-    setFirstKey(first?.key ?? "");
-    setSecondKey(second?.key ?? "");
-    setFirstKeyId(first?.id ?? null);
-    setSecondKeyId(second?.id ?? null);
-
-    setmanager1(String(first?.full_name ?? ""));
-    setmanager2(String(second?.full_name ?? ""));
-  }
-
-
-  useEffect(() => {
-    console.log("dashboardStatus =", dashboardStatus);
-    console.log("EncryptedStatus =", EncryptedStatus);
-    console.log("ImportStatus =", ImportStatus);
-    console.log("headerSummary =", headerSummary);
-    console.log("sessions =", sessions);
-    console.log("keyStatusDashboard =", keyStatusDashboard);
-    console.log("subjects =", subjects);
-    console.log("subjectQuestionsGrouped =", subjectQuestionsGrouped);
-    console.log("sessionInfo =", sessionInfo);
-    console.log("keyStatus =", keyStatus);
-
-  }, [dashboardStatus, EncryptedStatus, ImportStatus, sessions, keyStatusDashboard, subjects, subjectQuestionsGrouped, sessionInfo]);
-
-
-
-
+    // อัปเดตค่า input ผ่าน ref
+    if (myKeyRef.current) {
+      myKeyRef.current.value = userKey?.key ?? "";
+    }
+    setInitialKeyValue(userKey?.key ?? "");
+    setMyKeyId(userKey?.id ?? null);
+    setManagerName(String(userKey?.full_name ?? ""));
+  };
 
   useEffect(() => {
     if (!numericCampaignId || !userAccountId) {
@@ -159,13 +135,13 @@ export const useKeyManagement = () => {
 
     const loadInitialData = async () => {
       try {
-        await Promise.all([
+        await Promise.all([       
           dispatch(fetchDashboardStatus(numericCampaignId)).unwrap(),
-          dispatch(fetchKeysForCampaign(numericCampaignId))
+          dispatch(fetchKeysForCampaignByManager({campaignId: numericCampaignId , AccountId : Number(userAccountId)}))
             .unwrap()
             .then(syncLocalFromKeys)
             .catch((err) => {
-              console.log("fetchKeysForCampaign failed:", err);
+              console.log("fetchKeysForCampaignByManager failed:", err);
               syncLocalFromKeys([]);
             }),
           dispatch(checkEncryptionPrerequisites(numericCampaignId)).unwrap()
@@ -184,22 +160,13 @@ export const useKeyManagement = () => {
     };
   }, [numericCampaignId, userAccountId, dispatch]);
 
-
-
-
   useEffect(() => {
     if (sessions.length > 0) {
-      // บังคับให้เลือกตัวแรกเสมอ (หรือจะหา default ตัวอื่นก็ได้)
       setSelectedSessionId(String(sessions[0].id));
     } else {
       setSelectedSessionId("");
     }
   }, [sessions]);
-
-
-  const handleSaveFirstKey = () => handleSaveKey(1);
-  const handleSaveSecondKey = () => handleSaveKey(2);
-
 
   const openForgetKeyModal = (keyId: number) => {
     if (!isManager) {
@@ -214,7 +181,7 @@ export const useKeyManagement = () => {
     setModalForgetKey(true);
   };
 
-  const handleSaveKey = (orderNum: 1 | 2) => {
+  const handleSaveKey = async () => {
     if (!isManager) {
       Swal.fire({
         icon: "error",
@@ -231,26 +198,29 @@ export const useKeyManagement = () => {
       return;
     }
 
-    // ป้องกัน save ซ้ำ
-    if (orderNum === 1 && firstKeyId) {
+    const isok = await Swal.fire({
+      title: "ยืนยันการบันทึกคีย์",
+      text: "คุณต้องการบันทึกคีย์ของคุณหรือไม่?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "บันทึก",
+      cancelButtonText: "ยกเลิก",
+    })
+    if (!isok.isConfirmed) return;
+
+
+    if (myKeyId) {
       Swal.fire({
         icon: "error",
-        title: "คีย์คนที่ 1 ถูกบันทึกแล้ว",
+        title: "คีย์ถูกบันทึกแล้ว",
       });
       return;
     }
 
-    if (orderNum === 2 && secondKeyId) {
-      Swal.fire({
-        icon: "error",
-        title: "คีย์คนที่ 2 ถูกบันทึกแล้ว",
-      });
-      return;
-    }
+    // ดึงค่ามาจาก useRef
+    const currentKeyValue = myKeyRef.current?.value || "";
 
-    const keyValue = orderNum === 1 ? firstKey : secondKey;
-
-    if (!keyValue.trim()) {
+    if (!currentKeyValue.trim()) {
       Swal.fire({
         icon: "warning",
         title: "กรุณากรอก Secret Key",
@@ -258,7 +228,7 @@ export const useKeyManagement = () => {
       return;
     }
 
-    if (keyValue.trim().length !== 16) {
+    if (currentKeyValue.trim().length !== 16) {
       Swal.fire({
         icon: "error",
         title: "คีย์ต้องมีความยาว 16 ตัวอักษร",
@@ -269,60 +239,22 @@ export const useKeyManagement = () => {
     dispatch(
       saveNewKey({
         campaignId: numericCampaignId,
-        key: keyValue.trim(),
+        key: currentKeyValue.trim(),
         account_id: Number(userAccountId),
-        order_num: orderNum,
+        order_num: manager_order === 1 ? 1 : 2, 
       })
     )
       .unwrap()
       .then(async () => {
-        Swal.fire({ icon: "success", title: "บันทึกคีย์สำเร็จ", timer: 1500, showConfirmButton: false });
+        Swal.fire({ icon: "success", title: "บันทึกคีย์สำเร็จ", 
+          text : `บันทึกคีย์ลำดับที่ ${manager_order} สำเร็จ ในรอบสอบ ${activeCampaign?.name ?? ""}`,
+          timer: 1500, showConfirmButton: false });
 
-        const keys = await dispatch(fetchKeysForCampaign(numericCampaignId)).unwrap();
+        const keys = await dispatch(fetchKeysForCampaignByManager({ campaignId: numericCampaignId, AccountId: Number(userAccountId) })).unwrap();
         syncLocalFromKeys(keys);
 
         dispatch(checkEncryptionPrerequisites(numericCampaignId));
         dispatch(fetchDashboardStatus(numericCampaignId));
-
-        const MIN_LOADING_TIME = 3000;
-        const startTime = Date.now();
-
-        // // ✅ 2. เปิด loading
-        // Swal.fire({
-        //   title: "กำลังประมวลผล...",
-        //   allowOutsideClick: false,
-        //   didOpen: () => {
-        //     Swal.showLoading();
-        //   },
-        // });
-
-        // // ✅ 3. ใส่ logic เวลา "ตรงนี้"
-        // dispatch(runBulkEncryptionForSession({ campaignId: numericCampaignId }))
-        //   .unwrap()
-        //   .then(() => {
-        //     const elapsed = Date.now() - startTime;
-        //     const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
-
-        //     setTimeout(() => {
-        //       Swal.fire({
-        //         icon: "success",
-        //         title: "เข้ารหัสสำเร็จ",
-        //         timer: 1500,
-        //         showConfirmButton: false,
-        //       });
-        //     }, remaining);
-        //   })
-        //   .catch(() => {
-        //     const elapsed = Date.now() - startTime;
-        //     const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
-
-        //     setTimeout(() => {
-        //       Swal.fire({
-        //         icon: "error",
-        //         title: "เข้ารหัสล้มเหลว",
-        //       });
-        //     }, remaining);
-        //   });
       })
       .catch((error) => {
         Swal.fire({
@@ -333,11 +265,8 @@ export const useKeyManagement = () => {
       })
   };
 
-
   const handleForgetKey = async (password: string) => {
-    if (!selectedKeyId) {
-      return;
-    }
+    if (!selectedKeyId) return;
     if (!isManager) {
       Swal.fire({
         icon: "error",
@@ -354,16 +283,10 @@ export const useKeyManagement = () => {
         password
       })
       if (result.data.success) {
-        Swal.fire({
-          icon: "success",
-          title: "กู้คืนคีย์สำเร็จ",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        console.log(result)
+        Swal.fire({ icon: "success", title: "กู้คืนคีย์สำเร็จ", timer: 1500, showConfirmButton: false });
         setForgetKey(result.data.data)
       }
-    } catch (error) {
+    } catch (error: any) {
       Swal.fire({
         icon: "error",
         title: "กู้คืนคีย์ไม่สำเร็จ",
@@ -371,9 +294,7 @@ export const useKeyManagement = () => {
         confirmButtonText: "ตกลง",
       });
     }
-
   }
-
 
   const handleDeleteKey = (keyId: number) => {
     if (!isManager) {
@@ -385,8 +306,8 @@ export const useKeyManagement = () => {
       return;
     }
     Swal.fire({
-      title: `ยืนยันการลบคีย์  ${keyId === firstKeyId ? "ผู้จัดการคีย์คนที่ 1" : "ผู้จัดการคีย์คนที่ 2"}`,
-      text: `คุณต้องการลบคีย์ของ ${keyId === firstKeyId ? manager1 : manager2} หรือไม่?`,
+      title: `ยืนยันการลบคีย์`,
+      text: `คุณต้องการลบคีย์ของคุณหรือไม่?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "ลบ",
@@ -397,9 +318,14 @@ export const useKeyManagement = () => {
       dispatch(deleteKey({ campaignId: numericCampaignId!, account_id: Number(userAccountId), keyId }))
         .unwrap()
         .then(async () => {
-          Swal.fire({ icon: "success", title: "ลบคีย์สำเร็จ", timer: 1500, showConfirmButton: false });
+          Swal.fire({ icon: "success", title: "ลบคีย์สำเร็จ",
+            text: `ลบคีย์ลำดับที่ ${manager_order} สำเร็จ ในรอบสอบ ${activeCampaign?.name ?? ""}`,
+            timer: 1500, showConfirmButton: false });
 
-          const keys = await dispatch(fetchKeysForCampaign(numericCampaignId!)).unwrap();
+          // เคลียร์ค่า input ใน ref
+          if (myKeyRef.current) myKeyRef.current.value = "";
+
+          const keys = await dispatch(fetchKeysForCampaignByManager({ campaignId: numericCampaignId!, AccountId: Number(userAccountId) })).unwrap();
           syncLocalFromKeys(keys);
 
           dispatch(checkEncryptionPrerequisites(numericCampaignId!));
@@ -416,9 +342,7 @@ export const useKeyManagement = () => {
     });
   };
 
-
   const handleSessionChange = (sessionId: string) => {
-    console.log(sessionId)
     setSelectedSessionId(sessionId);
   };
 
@@ -427,39 +351,29 @@ export const useKeyManagement = () => {
       await Swal.fire({
         icon: "warning",
         title: "ข้อมูลไม่ครบ",
-        text: "กรุณาตรวจสอบให้แน่ใจว่ามีคีย์ 2 คีย์ และนำเข้าผู้สอบเรียบร้อยแล้ว",
+        text: "กรุณาตรวจสอบให้แน่ใจว่ามีคีย์ในระบบครบ 2 คีย์ และนำเข้าผู้สอบเรียบร้อยแล้ว",
         confirmButtonText: "ตกลง",
       });
       return;
     }
 
     dispatch(clearEncryptionResult());
-
     const MIN_LOADING_TIME = 3000;
     const startTime = Date.now();
 
-    // ✅ เปิด loading
     Swal.fire({
       title: "กำลังเข้ารหัส...",
       text: "กรุณารอสักครู่",
       allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
+      didOpen: () => { Swal.showLoading(); },
     });
 
     let result;
     try {
-      result = await dispatch(
-        runBulkEncryptionForSession({
-          campaignId: numericCampaignId,
-        })
-      );
+      result = await dispatch(runBulkEncryptionForSession({ campaignId: numericCampaignId }));
     } finally {
-      //  คำนวณเวลาให้ loading โชว์ขั้นต่ำ
       const elapsed = Date.now() - startTime;
       const remaining = Math.max(MIN_LOADING_TIME - elapsed, 0);
-
       await new Promise((resolve) => setTimeout(resolve, remaining));
       Swal.close();
     }
@@ -473,7 +387,7 @@ export const useKeyManagement = () => {
       await Swal.fire({
         icon: "success",
         title: "เข้ารหัสสำเร็จ!",
-        text: `เข้ารหัสผู้สอบ ${result.payload.usersEncrypted / NumberOfSession} คนในรอบสอบนี้`,
+        text: `เข้ารหัสผู้สอบ ${(result.payload as any).usersEncrypted / NumberOfSession} คนในรอบสอบนี้`,
         timer: 2000,
         showConfirmButton: false,
       });
@@ -487,7 +401,6 @@ export const useKeyManagement = () => {
     }
   };
 
-
   const prerequisitesCards = useMemo(
     () => ({
       hasTwoKeys: prerequisites?.hasTwoKeys ?? false,
@@ -497,7 +410,7 @@ export const useKeyManagement = () => {
   );
 
   return {
-    // redux-ish
+    initialKeyValue,
     activeCampaign,
     activeKeys,
     keyStatus,
@@ -508,18 +421,13 @@ export const useKeyManagement = () => {
     lastBulkEncryptionStats,
     headerSummary,
 
-    // local
-
     IshasKey,
-    firstKey,
-    secondKey,
-    firstKeyId,
-    secondKeyId,
+    myKeyRef, // โยน Ref ออกไปแทนตัวแปร String
+    myKeyId,
+    managerName,
+    
     selectedSessionId,
     setSelectedSessionId,
-    setFirstKey,
-    setSecondKey,
-    // derived
     numericCampaignId,
     isLoading,
     isInitialLoading,
@@ -527,31 +435,23 @@ export const useKeyManagement = () => {
     isEncryptionLoading,
     canEncrypt,
 
-    //manager
-    manager1,
-    manager2,
-
-    // handlers
-    handleSaveFirstKey,
-    handleSaveSecondKey,
     handleSaveKey,
     handleDeleteKey,
     handleSessionChange,
     handleRunBulkEncryption,
 
-
     keyStatusDashboard,
     subjects,
     subjectQuestionsGrouped,
 
-    //forgetkey
     forgetKey,
     setForgetKey,
     modalforgetKey,
     setModalForgetKey,
     handleForgetKey,
     accountFullName,
-    openForgetKeyModal
+    openForgetKeyModal,
 
+    manager_order
   };
 };

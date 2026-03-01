@@ -87,7 +87,7 @@ export function AppSidebar({
           />
 
           <div className="d-flex align-items-center gap-3 w-100 position-relative" style={{ zIndex: 1 }}>
-            <div className="px-0 d-flex align-items-center w-100 flex-column text-center">
+            <div onClick={() => navigate("/Home")} className="px-0 d-flex align-items-center w-100 flex-column text-center">
               <img
                 src={Logo}
                 alt="Logo"

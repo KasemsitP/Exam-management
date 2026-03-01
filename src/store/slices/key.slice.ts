@@ -14,6 +14,7 @@ export interface CampaignKey {
   active: number;
   order_num: number;
   created_at: string;
+  manager_order: number;
 }
 
 export interface PrerequisiteStatus {
