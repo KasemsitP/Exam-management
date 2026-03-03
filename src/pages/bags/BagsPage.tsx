@@ -40,6 +40,7 @@ import BagScannerModal from "./components/BagScannerModal";
 import type { CreateBagForm } from "./bags.types";
 import axios from "axios";
 import { OverlayLoader } from "@/components/ui/Loading";
+import ComposeBagModalOnlyViews from "./components/ComposeBagModal";
 
 // ปรับ payload ให้เทียบเท่ากันเสมอ
 const normalizePayload = (s: string) => s.trim();
@@ -63,8 +64,8 @@ export default function BagsPage() {
     selectBagStatsForCampaign(activeCampaign?.id ?? null)
   );
   const defaultCapacity = useAppSelector(selectDefaultBagCapacity);
-  const { status: bagStatus } = useAppSelector(selectBagsSlice);
-  const { submitStatus: bagSubmitStatus } = useAppSelector(selectBagsSlice);
+  const { status: bagStatus, submitStatus: bagSubmitStatus } =
+    useAppSelector(selectBagsSlice);
 
   const [searchText, setSearchText] = useState("");
   const [filterSessionId, setFilterSessionId] = useState<string>("all");
@@ -143,7 +144,7 @@ export default function BagsPage() {
     const bagNo = (composeBag as any).bag_no ?? Number(composeBag.id);
     const sessionId = Number(composeBag.sessionId);
     const campaignIdNumeric = Number(activeCampaign.id);
-    console.log("bagno: ", bagNo)
+    // console.log("bagno: ", bagNo)
     dispatch(
       ScannedPayloadThunk({
         bagNo,
@@ -175,7 +176,7 @@ export default function BagsPage() {
   const filteredBags = useMemo(() => {
     const term = searchText.trim().toLowerCase();
     console.log(sessions)
-    const filterdays = sessions.map(row=> row.label.split("วันที่ 1")[1])
+    const filterdays = sessions.map(row => row.label.split("วันที่ 1")[1])
     const sessionFiltered =
       filterSessionId === "all"
         ? bags
@@ -216,7 +217,7 @@ export default function BagsPage() {
       bagNo
     )(state);
   });
-  console.log("Booklets in bag:", bookletsInBag);
+  //console.log("Booklets in bag:", bookletsInBag);
 
   const status = composeBag ? (composeBag as any).status : undefined;
   const isSealed = status === "ready" || status === "SEALED";
@@ -273,25 +274,6 @@ export default function BagsPage() {
   );
 
 
-  const playBeep = () => {
-    try {
-      const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = context.createOscillator();
-      const gainNode = context.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(context.destination);
-
-      oscillator.type = 'sine'; // ชนิดของเสียง (sine, square, sawtooth, triangle)
-      oscillator.frequency.value = 800; // ความถี่เสียง (Hz) - 800 จะคล้ายๆ เสียงเครื่องสแกน
-      gainNode.gain.setValueAtTime(0.1, context.currentTime); // ความดัง (0.0 ถึง 1.0)
-
-      oscillator.start(context.currentTime);
-      oscillator.stop(context.currentTime + 0.1); // ให้ดังแค่ 0.1 วินาที (สั้นๆ ไม่น่ารำคาญ)
-    } catch (err) {
-      console.log("Audio not supported or disabled");
-    }
-  };
   // ------------------------------
   // Scan logic
   // ------------------------------
@@ -336,19 +318,21 @@ export default function BagsPage() {
     // Trick: หยุด Scanner ชั่วคราวเพื่อให้ user รู้ว่าสแกนติดแล้ว (เสียง beep หรือ ui กระพริบ)
     // setScannerEnabled(false);
     // setTimeout(() => setScannerEnabled(true), 500);
-    playBeep();
 
   }, [activeCampaign, scannerEnabled, qrPayloads]); // Dependencies ที่จำเป็น
 
   // 2. Optimize handleManualAdd
-  const handleManualAdd = useCallback(() => {
+  const handleManualAdd2 = useCallback(() => {
     const v = normalizePayload(manualCode);
     if (!v) return;
     handleScan(v);
   }, [manualCode, handleScan]);
 
-
-
+  const handleManualAdd = useCallback((code: string) => {
+    const v = normalizePayload(code);
+    if (!v) return;
+    handleScan(v);
+  }, [handleScan]);
 
   const handleFinalizeAndLink = async () => {
     if (!activeCampaign) return;
@@ -398,7 +382,7 @@ export default function BagsPage() {
       });
       Swal.close();
       console.log("Check subjects response:", data);
-     
+
 
       if (!data.success) {
         await Swal.fire({
@@ -408,7 +392,7 @@ export default function BagsPage() {
         });
         return;
       }
-       
+
 
       // ==============================
       // 2️⃣ CONFIRM
@@ -446,7 +430,7 @@ export default function BagsPage() {
           campaignId: Number(activeCampaign.id),
           payload: qrPayloads,
           datetime: DatePayloads,
-          bagNo:data.bagNo,
+          bagNo: data.bagNo,
         })
       ).unwrap();
 
@@ -620,8 +604,6 @@ export default function BagsPage() {
         isSealed={isSealed}
         scannerEnabled={scannerEnabled}
         deviceId={deviceId}
-        manualCode={manualCode}
-        onManualCodeChange={setManualCode}
         onManualAdd={handleManualAdd}
         onScan={handleScan}
         onCapacityChange={handleCapacityChange}
@@ -655,7 +637,7 @@ export default function BagsPage() {
 
       {/* Compose modal */}
       <ModalBackdrop open={!!composeBag} />
-      <ComposeBagModal
+      <ComposeBagModalOnlyViews
         open={!!composeBag}
         composeBag={composeBag}
         onClose={() => setComposeBagId(null)}
@@ -665,7 +647,7 @@ export default function BagsPage() {
         deviceId={deviceId}
         manualCode={manualCode}
         onManualCodeChange={setManualCode}
-        onManualAdd={handleManualAdd}
+        onManualAdd={handleManualAdd2}
         onScan={handleScan}
         onCapacityChange={handleCapacityChange}
         onRemoveCode={handleRemoveCode}

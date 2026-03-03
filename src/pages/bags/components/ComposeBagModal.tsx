@@ -23,7 +23,7 @@ interface ComposeBagModalProps {
   isLoading: boolean;
 }
 
-export default function ComposeBagModal({
+export default function ComposeBagModalOnlyViews({
   open,
   composeBag,
   onClose,

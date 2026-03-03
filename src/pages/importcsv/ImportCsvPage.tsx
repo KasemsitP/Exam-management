@@ -10,6 +10,7 @@ import ImportAlerts from "./components/ImportAlerts";
 import ImportPreviewCard from "./components/ImportPreviewCard";
 import { selectIsSystemLocked } from "@/store/slices/examData.slice";
 import { useAppSelector } from "@/store/hook";
+import { OverlayLoader } from "@/components/ui/Loading";
 
 export default function ImportCsvPage() {
   const locked = useAppSelector(selectIsSystemLocked);
@@ -34,14 +35,22 @@ export default function ImportCsvPage() {
     statsText,
     handleFile,
     handleConfirm,
-    resetState
+    resetState,
+    UserNum,
+    isPageLoading
   } = useUserImport();
 
+  if (isPageLoading) {
+  return <OverlayLoader open={true} label="" />;
+}
+
   return (
-    <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
+    <fieldset disabled={locked} style={{ opacity: locked ? 1 : 1 }}>
     <ShowIfCan permission="importcsv">
      <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
-        <ImportHeader />
+        <ImportHeader
+          UserNum={UserNum}
+        />
 
         <div className="card mt-3" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           <div className="card-body">

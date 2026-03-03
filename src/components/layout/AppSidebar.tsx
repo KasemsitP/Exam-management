@@ -55,27 +55,27 @@ export function AppSidebar({
 
       <div className="d-flex flex-column h-100 sidebar-shell " style={{ background: SB.bg }}>
         {/* Logo / Title */}
-<div
-  className="px-4 py-4 d-flex align-items-center position-relative"
-  style={{
-    height: 150,
-    flexShrink: 0,   // ✅ สำคัญมาก
-    position: "sticky",
-    top: 0,
-    zIndex: 10,
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
-    overflow: "hidden",
-  }}
->
+        <div
+          className="px-4 py-4 d-flex align-items-center position-relative"
+          style={{
+            height: 150,
+            flexShrink: 0,   // ✅ สำคัญมาก
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
+            overflow: "hidden",
+          }}
+        >
           {/* ✅ Striped pattern background */}
-{/* Base background */}
-<div
-  style={{
-    position: "absolute",
-    inset: 0,
-    background: SB.bg,
-  }}
-/>
+          {/* Base background */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: SB.bg,
+            }}
+          />
           {/* ✅ Base background */}
           <div
             style={{
@@ -279,7 +279,7 @@ export function AppSidebar({
         >
           <div className="d-flex align-items-center gap-3">
             <div
-              className="rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm"
+              className="rounded-circle d-flex align-items-center justify-content-center  shadow-sm"
               style={{
                 width: 46,
                 height: 46,
@@ -288,7 +288,11 @@ export function AppSidebar({
                 fontSize: "1.1rem",
               }}
             >
-              {user?.name?.charAt(0) ?? "A"}
+              {
+                user?.name
+                  ?.replace(/^(นาย|นางสาว|นาง)\s*/, "")
+                  .charAt(0) ?? "A"
+              }
             </div>
 
             <div className="overflow-hidden">

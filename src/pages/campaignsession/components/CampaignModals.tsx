@@ -4,11 +4,9 @@ import { UseFormReturn } from "react-hook-form";
 import {
   CampaignFormValues,
   SessionFormValues,
-  SubjectFormValues,
 } from "../hooks/useCampaignsPage";
 import {
   CampaignSession,
-  CampaignSubject,
   ExamCampaign,
 } from "@/store/slices/examData.slice";
 
@@ -17,6 +15,12 @@ import {
    ===================================================================== */
 
 type MasterSubject = { id: number; code: string; name: string };
+
+const formatTimeTH = (hhmm?: string) => {
+  if (!hhmm) return "-";
+  // hhmm = "13:05"
+  return `${hhmm} น.`; // โชว์สไตล์ไทยง่ายๆ
+};
 
 const currentYear = new Date().getFullYear() + 543;
 // const years = [currentYear - 1, currentYear, currentYear + 1];
@@ -83,10 +87,10 @@ export function CampaignModal({
             <div className="modal-header bg-white border-bottom">
               <div>
                 <h6 className="modal-title mb-0 fw-semibold">
-                  {isEdit ? "แก้ไขแคมเปญ" : "สร้างแคมเปญใหม่"}
+                  {isEdit ? "แก้ไขรอบสอบ" : "สร้างรอบสอบใหม่"}
                 </h6>
                 <small className="text-muted">
-                  กำหนดข้อมูลแคมเปญให้ครบถ้วนก่อนเริ่มใช้งาน
+                  กำหนดข้อมูลรอบสอบให้ครบถ้วนก่อนเริ่มใช้งาน
                 </small>
               </div>
               <button
@@ -154,11 +158,11 @@ export function CampaignModal({
                       {...form.register("isActive")}
                     />
                     <label className="form-check-label" htmlFor="campaign-active">
-                      Active campaign
+                      เปิดใช้งานรอบสอบ
                     </label>
-                    <div className="form-text">
+                    {/* <div className="form-text">
                       เปิดใช้งานเพื่อให้ระบบถือเป็นแคมเปญปัจจุบัน
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               </div>
@@ -177,7 +181,7 @@ export function CampaignModal({
                     type="submit"
                     className="btn btn-dark"
                   >
-                    {isEdit ? "บันทึกการแก้ไข" : "สร้างแคมเปญ"}
+                    {isEdit ? "บันทึกการแก้ไข" : "สร้างรอบสอบ"}
                   </button>
                 </div>
               </div>
@@ -340,73 +344,72 @@ export function SessionModal({
                         </div>
                       ) : (
                         <div className="p-3">
-                        
-                        <div className="table-responsive">
-                          <table className="table table-sm table-hover align-middle mb-0">
-                            <thead className="table-light">
-                              <tr>
-                                {/* <th
+
+                          <div className="table-responsive">
+                            <table className="table table-sm table-hover align-middle mb-0">
+                              <thead className="table-light">
+                                <tr>
+                                  {/* <th
                                   className="text-nowrap ps-4"
                                   style={{ width: 60 }}
                                 >
                                   #
                                 </th> */}
-                                <th
-                                  className="text-nowrap"
-                                  style={{ width: 140 }}
-                                >
-                                  รหัส
-                                </th>
-                                <th>วิชา</th>
-                                <th
-                                  className="text-center text-nowrap"
-                                  style={{ width: 110 }}
-                                >
-                                  เวลาเริ่ม
-                                </th>
-                                <th
-                                  className="text-center text-nowrap"
-                                  style={{ width: 110 }}
-                                >
-                                  เวลาสิ้นสุด
-                                </th>
-                                <th
-                                  className="text-center text-nowrap"
-                                  style={{ width: 180 }}
-                                >
-                                  จัดการ
-                                </th>
-                              </tr>
-                            </thead>
+                                  <th
+                                    className="text-nowrap"
+                                    style={{ width: 140 }}
+                                  >
+                                    รหัส
+                                  </th>
+                                  <th>วิชา</th>
+                                  <th
+                                    className="text-center text-nowrap"
+                                    style={{ width: 110 }}
+                                  >
+                                    เวลาเริ่ม
+                                  </th>
+                                  <th
+                                    className="text-center text-nowrap"
+                                    style={{ width: 110 }}
+                                  >
+                                    เวลาสิ้นสุด
+                                  </th>
+                                  <th
+                                    className="text-center text-nowrap"
+                                    style={{ width: 180 }}
+                                  >
+                                    จัดการ
+                                  </th>
+                                </tr>
+                              </thead>
 
-                            <tbody>
-                              {session.subjects.map((subject, sIdx) => (
-                                <tr key={subject.id}>
-                                  {/* <td className="ps-4 text-muted">{sIdx + 1}</td> */}
+                              <tbody>
+                                {session.subjects.map((subject, sIdx) => (
+                                  <tr key={subject.id}>
+                                    {/* <td className="ps-4 text-muted">{sIdx + 1}</td> */}
 
-                                  <td className="fw-semibold text-nowrap">
-                                    {subject.code}
-                                  </td>
+                                    <td className="fw-semibold text-nowrap">
+                                      {subject.code}
+                                    </td>
 
-                                  <td style={{ minWidth: 180 }}>
-                                    <div className="fw-semibold">
-                                      {subject.name}
-                                    </div>
-                                    <small className="text-muted">
-                                      วิชา {subject.code}
-                                    </small>
-                                  </td>
+                                    <td style={{ minWidth: 180 }}>
+                                      <div className="fw-semibold">
+                                        {subject.name}
+                                      </div>
+                                      <small className="text-muted">
+                                        วิชา {subject.code}
+                                      </small>
+                                    </td>
+                                    <td className="text-center text-nowrap">
+                                      {formatTimeTH(subject.startTime)}
+                                    </td>
+                                    <td className="text-center text-nowrap">
+                                      {formatTimeTH(subject.endTime)}
+                                    </td>
 
-                                  <td className="text-center text-nowrap">
-                                    {subject.startTime}
-                                  </td>
-                                  <td className="text-center text-nowrap">
-                                    {subject.endTime}
-                                  </td>
-
-                                  <td className="text-center text-nowrap">
-                                    <div className="d-flex justify-content-center gap-2">
-                                      {/* <button
+                                    <td className="text-center text-nowrap">
+                                      <div className="d-flex justify-content-center gap-2">
+                                        {/* <button
                                         className="btn btn-sm btn-outline-secondary"
                                         onClick={() =>
                                           onOpenSubjectDialog(
@@ -419,25 +422,25 @@ export function SessionModal({
                                         แก้ไข
                                       </button> */}
 
-                                      <button
-                                        className="btn btn-sm btn-outline-danger"
-                                        onClick={() =>
-                                          onDeleteSubject(
-                                            campaign.id,
-                                            session.id,
-                                            subject
-                                          )
-                                        }
-                                      >
-                                        ลบรายวิชา
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
+                                        <button
+                                          className="btn btn-sm btn-outline-danger"
+                                          onClick={() =>
+                                            onDeleteSubject(
+                                              campaign.id,
+                                              session.id,
+                                              subject
+                                            )
+                                          }
+                                        >
+                                          ลบรายวิชา
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -574,10 +577,27 @@ export function SessionFormModal({
     </>
   );
 }
+// ===== SubjectModal (ฟอร์มรายวิชา) =====
 
-/* =====================================================================
-   Subject Modal
-   ===================================================================== */
+
+
+export interface SubjectFormValues {
+  subjectId: string;
+  code: string;
+  name: string;
+  startTime: string; // UI รับ "HH.MM"
+  endTime: string;   // UI รับ "HH.MM"
+  questions: number;
+}
+
+type CampaignSubject = {
+  id: string;
+  code: string;
+  name: string;
+  startTime: string; // ระบบ/DB ควรเป็น "HH:mm"
+  endTime: string;   // ระบบ/DB ควรเป็น "HH:mm"
+  questions: number;
+};
 
 interface SubjectModalProps {
   open: boolean;
@@ -586,6 +606,52 @@ interface SubjectModalProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: SubjectFormValues) => Promise<void> | void;
   allSubjects: MasterSubject[];
+}
+
+/** รับ "17.00" / "17:00" / "1700" -> คืน "17:00" */
+function toHHmm(input: string): string {
+  const raw = (input || "").trim();
+
+  let hh = "";
+  let mm = "";
+
+  if (/^\d{1,2}[:.]\d{1,2}$/.test(raw)) {
+    const [h, m] = raw.split(/[:.]/);
+    hh = h;
+    mm = m;
+  } else if (/^\d{3,4}$/.test(raw)) {
+    const s = raw.padStart(4, "0");
+    hh = s.slice(0, 2);
+    mm = s.slice(2, 4);
+  } else {
+    throw new Error("รูปแบบเวลาไม่ถูกต้อง (เช่น 09.00, 17.30)");
+  }
+
+  const H = Number(hh);
+  const M = Number(mm);
+
+  if (!Number.isFinite(H) || !Number.isFinite(M)) throw new Error("เวลาไม่ถูกต้อง");
+  if (H < 0 || H > 23) throw new Error("ชั่วโมงต้องอยู่ในช่วง 00-23");
+  if (M < 0 || M > 59) throw new Error("นาทีต้องอยู่ในช่วง 00-59");
+
+  return `${String(H).padStart(2, "0")}:${String(M).padStart(2, "0")}`;
+}
+
+function validateHHdotMM(v: string) {
+  try {
+    toHHmm(v);
+    return true;
+  } catch (e: any) {
+    return e?.message || "เวลาไม่ถูกต้อง";
+  }
+}
+
+/** เอา "17:00" -> "17.00" สำหรับโชว์ใน input */
+function hhmmToDot(v: string) {
+  if (!v) return "";
+  const m = v.match(/^(\d{2}):(\d{2})/);
+  if (!m) return v;
+  return `${m[1]}.${m[2]}`;
 }
 
 export function SubjectModal({
@@ -599,6 +665,7 @@ export function SubjectModal({
   if (!open) return null;
 
   const isEdit = Boolean(context?.subject);
+
   const {
     register,
     handleSubmit,
@@ -608,9 +675,7 @@ export function SubjectModal({
   } = form;
 
   const selectedSubjectId = watch("subjectId");
-  const selectedMaster = allSubjects.find(
-    (s) => String(s.id) === String(selectedSubjectId)
-  );
+  const selectedMaster = allSubjects.find((s) => String(s.id) === String(selectedSubjectId));
 
   const handleSubjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -623,43 +688,45 @@ export function SubjectModal({
     }
   };
 
+  const normalizeDot = (v: string) => {
+    const hhmm = toHHmm(v);     // "17:00"
+    return hhmmToDot(hhmm);     // "17.00"
+  };
+
+  const submit = handleSubmit(async (values) => {
+    // ✅ ส่ง backend เป็น HH:mm (ไม่ยุ่ง Date ไม่โดน timezone)
+    const startHHmm = toHHmm(values.startTime);
+    const endHHmm = toHHmm(values.endTime);
+
+    await onSubmit({
+      ...values,
+      startTime: startHHmm,
+      endTime: endHHmm,
+    });
+  });
+
   return (
     <>
-      <div
-        className="modal fade show d-block"
-        role="dialog"
-        aria-modal="true"
-        style={{ zIndex: 1065 }}
-      >
+      <div className="modal fade show d-block" role="dialog" aria-modal="true" style={{ zIndex: 1065 }}>
         <div className="modal-dialog modal-dialog-centered modal-lg">
-          <div className="modal-content" style={{ border: 0, boxShadow: "0 4px 16px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.10)" }}>
+          <div className="modal-content" style={{ border: 0, boxShadow: "0 4px 16px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.10)" }}>
             <div className="modal-header bg-white border-bottom">
               <div>
-                <h6 className="modal-title mb-0 fw-semibold">
-                  {isEdit ? "แก้ไขรายวิชา" : "เพิ่มรายวิชา"}
-                </h6>
-                <small className="text-muted">
-                  เลือกรายวิชาหลัก แล้วกำหนดเวลาเริ่ม–สิ้นสุด
-                </small>
+                <h6 className="modal-title mb-0 fw-semibold">{isEdit ? "แก้ไขรายวิชา" : "เพิ่มรายวิชา"}</h6>
+                <small className="text-muted">กรอกเวลาแบบ 24 ชม. เช่น 17.00</small>
               </div>
-              <button
-                type="button"
-                className="btn-close"
-                onClick={() => onOpenChange(false)}
-              />
+              <button type="button" className="btn-close" onClick={() => onOpenChange(false)} />
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form onSubmit={submit}>
               <div className="modal-body p-4">
-                <SectionTitle>ข้อมูลรายวิชา</SectionTitle>
-
                 <div className="mb-4">
                   <label className="form-label">
                     รายวิชา <span className="text-danger">*</span>
                   </label>
+
                   <select
-                    className={`form-select ${errors.subjectId ? "is-invalid" : ""
-                      }`}
+                    className={`form-select ${errors.subjectId ? "is-invalid" : ""}`}
                     value={selectedSubjectId || ""}
                     onChange={handleSubjectChange}
                   >
@@ -681,48 +748,73 @@ export function SubjectModal({
                   )}
                 </div>
 
-                <div className="row g-3">
+                <div className="row g-3 mb-3">
                   <div className="col-sm-6">
                     <label className="form-label">รหัสวิชา</label>
-                    <input
-                      className="form-control"
-                      readOnly
-                      {...register("code")}
-                    />
+                    <input className="form-control" readOnly {...register("code")} />
                   </div>
-
                   <div className="col-sm-6">
                     <label className="form-label">ชื่อวิชา</label>
-                    <input
-                      className="form-control"
-                      readOnly
-                      {...register("name")}
-                    />
+                    <input className="form-control" readOnly {...register("name")} />
                   </div>
                 </div>
 
                 <div className="border-top pt-4 mt-2">
-                  <SectionTitle>เวลา</SectionTitle>
                   <div className="row g-3">
                     <div className="col-sm-6">
                       <label className="form-label">
                         เวลาเริ่ม <span className="text-danger">*</span>
                       </label>
                       <input
-                        type="time"
-                        className="form-control"
-                        {...register("startTime", { required: true })}
+                        type="text"
+                        inputMode="numeric"
+                        className={`form-control ${errors.startTime ? "is-invalid" : ""}`}
+                        placeholder="เช่น 09.00 หรือ 17.30"
+                        {...register("startTime", {
+                          required: "กรุณากรอกเวลาเริ่ม",
+                          validate: validateHHdotMM,
+                          onBlur: (e) => {
+                            const v = e.target.value;
+                            if (!v) return;
+                            try {
+                              setValue("startTime", normalizeDot(v), { shouldValidate: true });
+                            } catch {}
+                          },
+                        })}
                       />
+                      {errors.startTime ? (
+                        <div className="invalid-feedback">{String(errors.startTime.message)}</div>
+                      ) : (
+                        <div className="form-text">รูปแบบ 00.00 - 23.59 (24 ชั่วโมง)</div>
+                      )}
                     </div>
+
                     <div className="col-sm-6">
                       <label className="form-label">
                         เวลาสิ้นสุด <span className="text-danger">*</span>
                       </label>
                       <input
-                        type="time"
-                        className="form-control"
-                        {...register("endTime", { required: true })}
+                        type="text"
+                        inputMode="numeric"
+                        className={`form-control ${errors.endTime ? "is-invalid" : ""}`}
+                        placeholder="เช่น 12.00 หรือ 18.00"
+                        {...register("endTime", {
+                          required: "กรุณากรอกเวลาสิ้นสุด",
+                          validate: validateHHdotMM,
+                          onBlur: (e) => {
+                            const v = e.target.value;
+                            if (!v) return;
+                            try {
+                              setValue("endTime", normalizeDot(v), { shouldValidate: true });
+                            } catch {}
+                          },
+                        })}
                       />
+                      {errors.endTime ? (
+                        <div className="invalid-feedback">{String(errors.endTime.message)}</div>
+                      ) : (
+                        <div className="form-text">ตัวอย่าง: 17.00 = 5 โมงเย็น</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -730,11 +822,7 @@ export function SubjectModal({
 
               <div className="modal-footer bg-white border-top">
                 <div className="d-grid d-sm-flex gap-2 w-100 w-sm-auto justify-content-sm-end">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary"
-                    onClick={() => onOpenChange(false)}
-                  >
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => onOpenChange(false)}>
                     ยกเลิก
                   </button>
                   <button type="submit" className="btn btn-dark">
@@ -747,11 +835,7 @@ export function SubjectModal({
         </div>
       </div>
 
-      <div
-        className="modal-backdrop fade show"
-        style={{ zIndex: 1064 }}
-        onClick={() => onOpenChange(false)}
-      />
+      <div className="modal-backdrop fade show" style={{ zIndex: 1064 }} onClick={() => onOpenChange(false)} />
     </>
   );
 }

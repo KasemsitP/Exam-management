@@ -26,15 +26,23 @@ export function CampaignPickerModal({
     }
   }, [open, activeCampaignId]);
 
-  const filteredCampaigns = useMemo(() => {
-    const k = keyword.trim().toLowerCase();
-    if (!k) return campaigns;
-    return campaigns.filter((c) => {
-      const code = (c.year_be ?? `${c.id}`).toLowerCase();
-      const name = (c.name ?? "").toLowerCase();
-      return code.includes(k) || name.includes(k);
-    });
-  }, [campaigns, keyword]);
+const filteredCampaigns = useMemo(() => {
+  const k = keyword.trim().toLowerCase();
+
+  const filtered = !k
+    ? campaigns
+    : campaigns.filter((c) => {
+        const code = (c.year_be ?? `${c.id}`).toLowerCase();
+        const name = (c.name ?? "").toLowerCase();
+        return code.includes(k) || name.includes(k);
+      });
+
+  return [...filtered].sort((a, b) => {
+    const yearA = Number(a.year_be ?? 0);
+    const yearB = Number(b.year_be ?? 0);
+    return yearB - yearA; 
+  });
+}, [campaigns, keyword]);
 
   if (!open) return null;
 

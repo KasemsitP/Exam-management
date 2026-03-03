@@ -71,6 +71,8 @@ export default function BagScoresPage() {
   const [isDecrypted, setIsdecrypted] = useState<boolean>(false)
   const [scoresReloadKey, setScoresReloadKey] = useState(0);
 
+  
+
   const OTP_LENGTH = 6;
   const [otpDigits, setOtpDigits] = useState<string[]>(
     Array(OTP_LENGTH).fill("")
@@ -244,35 +246,35 @@ export default function BagScoresPage() {
   // -----------------------------
   // 3) โหลดคะแนนของถุงที่เลือก
   // -----------------------------
-useEffect(() => {
-  if (!selectedBagId || !activeCampaign) return;
+  useEffect(() => {
+    if (!selectedBagId || !activeCampaign) return;
 
-  let cancelled = false;
+    let cancelled = false;
 
-  const fetchScores = async () => {
-    setLoadingScores(true);
-    setErrorScores(null);
-    setBagScores(null);
-
-    try {
-      const res = await axios.get<BagScoresApiResponse>(
-        `/api/reports/bags/${selectedBagId}/scores`,
-        { params: { campaignId: activeCampaign.id } }
-      );
-      if (cancelled) return;
-      setBagScores(res.data);
-    } catch (err: any) {
-      if (cancelled) return;
-      setErrorScores(err?.response?.data?.message ?? "โหลดคะแนนของถุงนี้ไม่สำเร็จ");
+    const fetchScores = async () => {
+      setLoadingScores(true);
+      setErrorScores(null);
       setBagScores(null);
-    } finally {
-      if (!cancelled) setLoadingScores(false);
-    }
-  };
 
-  fetchScores();
-  return () => { cancelled = true; };
-}, [selectedBagId, activeCampaign?.id, scoresReloadKey]);
+      try {
+        const res = await axios.get<BagScoresApiResponse>(
+          `/api/reports/bags/${selectedBagId}/scores`,
+          { params: { campaignId: activeCampaign.id } }
+        );
+        if (cancelled) return;
+        setBagScores(res.data);
+      } catch (err: any) {
+        if (cancelled) return;
+        setErrorScores(err?.response?.data?.message ?? "โหลดคะแนนของถุงนี้ไม่สำเร็จ");
+        setBagScores(null);
+      } finally {
+        if (!cancelled) setLoadingScores(false);
+      }
+    };
+
+    fetchScores();
+    return () => { cancelled = true; };
+  }, [selectedBagId, activeCampaign?.id, scoresReloadKey]);
   // -----------------------------
   // 4) header ข้อสอบ + helper
   // -----------------------------
@@ -452,7 +454,7 @@ useEffect(() => {
 
   }
 
-    const handlePDFNameperBags = async () => {
+  const handlePDFNameperBags = async () => {
     console.log(selectedBagId)
     if (!selectedBagId) {
       Swal.fire({
@@ -650,7 +652,7 @@ useEffect(() => {
             <div className="d-grid gap-2 gap-md-1 d-md-flex flex-md-wrap justify-content-md-end flex-md-grow-1">
               {viewMode === "score" ? (
                 <>
-                                  <button
+                  <button
                     type="button"
                     className="btn btn-sm btn-secondary d-inline-flex align-items-center justify-content-center text-nowrap"
                     disabled={!selectedBagId}
@@ -847,7 +849,7 @@ useEffect(() => {
       {loadingBags && (
         <div className="card" style={{ border: 0, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)" }}>
           <div className="card-body text-center py-5">
-            <Loader2 className="spinner-border mb-2" />
+            {/* <Loader2 className="spinner-border mb-2" /> */}
             <div className="text-muted small">กำลังโหลดข้อมูลถุง...</div>
           </div>
         </div>
@@ -911,13 +913,15 @@ useEffect(() => {
                 <div
                   className="table-responsive"
                 >
-                  <table
-                    className="table table-sm mb-0"
-                    style={{
-                      borderCollapse: "collapse",
-                      fontSize: "0.8rem",
-                      width: "100%",
-                    }}
+  <table
+    className="table table-sm mb-0 align-middle text-nowrap"
+    style={{
+      borderCollapse: "collapse",
+      fontSize: "0.8rem",
+      tableLayout: "fixed",   //  fix layout
+      width: "max-content",   //  ไม่ให้หดตาม container (ให้ scroll แทน)
+      minWidth: "1400px",     //  กันบี้ (ปรับตามจำนวนคอลัมน์)
+    }}
                   >
                     <thead>
                       {/* แถวที่ 1 : หัวข้อข้อสอบ + label */}
@@ -935,10 +939,25 @@ useEffect(() => {
                           รหัสสอบ
                         </th>
 
+                        {isDecrypted && (
+                          <th
+                            rowSpan={2}
+                            className="align-middle text-center"
+                            style={{
+                              border: "1px solid #dee2e6",
+                              backgroundColor: "#f8fafc",
+                              fontWeight: 600,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            ชื่อ-สกุล
+                          </th>
+                        )}
+
                         {headerQuestions.map((hq) => (
                           <th
                             key={hq.questionNo}
-                            colSpan={viewMode === "score" ? 4 : 2}  // ✅ 4 คอลัมน์ต่อข้อ
+                            colSpan={viewMode === "score" ? 4 : 2}
                             className="text-center"
                             style={{ border: "1px solid #dee2e6", backgroundColor: "#f8fafc" }}
                           >
@@ -963,18 +982,6 @@ useEffect(() => {
                             คะแนนรวม
                           </th>
                         )}
-                        {/* <th
-                          rowSpan={2}
-                          className="align-middle text-center"
-                          style={{
-                            border: "1px solid #dee2e6",
-                            backgroundColor: "#e5f0ff",
-                            fontWeight: 600,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          คะแนนรวม
-                        </th> */}
                       </tr>
 
                       {/* แถวที่ 2 : หัวคอลัมน์ย่อย */}
@@ -1022,6 +1029,19 @@ useEffect(() => {
                           >
                             {bk.examCode}
                           </td>
+                          {isDecrypted && (
+                            <td
+                              className="text-start"
+                              style={{
+                                border: "1px solid #dee2e6",
+                                backgroundColor: "#ffffff",
+                                whiteSpace: "nowrap",
+                                minWidth: 180,
+                              }}
+                            >
+                              {bk.candidateName || "-"}
+                            </td>
+                          )}
 
                           {/* รายข้อของเล่มนี้ */}
                           {headerQuestions.map((hq) => {
@@ -1083,7 +1103,7 @@ useEffect(() => {
                                   className="text-end"
                                   style={{
                                     border: "1px solid #edeff2",
-                                    backgroundColor: diff != null && diff >= 3 ? "#fff5f5" : undefined, // optional highlight
+                                    backgroundColor: diff != null && diff > 4 ? "#fff5f5" : undefined, // optional highlight
                                   }}
                                 >
                                   {diffText}

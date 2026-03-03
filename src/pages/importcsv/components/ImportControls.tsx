@@ -1,5 +1,6 @@
 // components/ImportControls.tsx
 import { ENCODINGS, PREVIEW_ROW_OPTIONS } from "../hooks/useUserImport";
+import { useRef } from "react";
 
 interface ImportControlsProps {
   activeCampaign: any;
@@ -30,12 +31,22 @@ export default function ImportControls({
   onFileChange,
   resetState
 }: ImportControlsProps) {
+
+  const handleResetClick = () => {
+    resetState();
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+  const fileInputRef = useRef<HTMLInputElement>(null);
   return (
     <>
       <div className="row g-4">
         <div className="col-md-6">
           <label className="form-label">เลือกไฟล์</label>
           <input
+            ref={fileInputRef}
             type="file"
             accept=".csv,.xlsx,.xls"
             className="form-control"
@@ -78,7 +89,7 @@ export default function ImportControls({
         </div>
         <div className="col-md-2">
           <label className="form-label invisible">dummy</label>
-          <button className="btn btn-secondary w-100" onClick={resetState}>
+          <button className="btn btn-secondary w-100" onClick={handleResetClick}>
             รีเซ็ต
           </button>
         </div>

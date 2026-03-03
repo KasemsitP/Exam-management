@@ -21,6 +21,7 @@ import {
 } from "@/store/slices/examData.slice";
 import { OverlayLoader } from "@/components/ui/Loading";
 
+
 /* -------------------------------------------------------------------------- */
 /*  Helper: debounce                                                          */
 /* -------------------------------------------------------------------------- */
@@ -489,7 +490,7 @@ export default function SignSheetsPage() {
             {/* Row 1: Title + Buttons */}
             <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
               <div className="flex-shrink-0">
-                <h5 className="mb-1 text-nowrap">รายชื่อผู้เข้าสอบและ QR</h5>
+                <h5 className="mb-1 text-nowrap">รายชื่อผู้เข้าสอบและคิวอาร์โค้ด</h5>
               </div>
 
               {/* Buttons on right */}

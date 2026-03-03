@@ -53,7 +53,7 @@ export default function AccountsToolbar({
                   id="acc-search"
                   value={searchText}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="ค้นหา username, ชื่อ-สกุล, หรือ email"
+                  placeholder="ค้นหา username, ชื่อ-สกุล"
                   className="form-control ps-5"
                 />
               </div>

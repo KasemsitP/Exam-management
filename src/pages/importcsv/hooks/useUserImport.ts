@@ -1,5 +1,5 @@
 // hooks/useUserImport.ts
-import { useEffect, useMemo, useState } from "react";
+import { act, useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { shuffle } from "lodash";
@@ -14,6 +14,7 @@ import {
 } from "@/store/slices/users.slice";
 import { useToast } from "@/components/ui/use-toast";
 import Swal from "sweetalert2";
+import axios from "axios";
 
 export const PREVIEW_ROW_OPTIONS = [5, 10, 20, 50] as const;
 export const ENCODINGS = [
@@ -70,6 +71,8 @@ export const useUserImport = () => {
   const [excelBuffer, setExcelBuffer] = useState<ArrayBuffer | null>(null);
   const [excelSheetNames, setExcelSheetNames] = useState<string[]>([]);
   const [excelSelectedSheet, setExcelSelectedSheet] = useState<string>("");
+  const [UserNum, setUserNum] = useState<number | null>(null);
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   const supportsImport = Boolean(activeCampaign);
   const isImporting = importStatus === "loading";
@@ -81,13 +84,40 @@ export const useUserImport = () => {
     setExcelBuffer(null);
     setExcelSheetNames([]);
     setExcelSelectedSheet("");
-
   };
 
-  // เมื่อเปลี่ยน campaign ให้เคลียร์ preview เพื่อลดความสับสน
-  useEffect(() => {
-    resetState();
-  }, [activeCampaign?.id]);
+
+
+useEffect(() => {
+  if (!activeCampaign?.id) {
+    setIsPageLoading(false);
+    return;
+  }
+
+  const init = async () => {
+    try {
+      setIsPageLoading(true);
+      resetState();
+      await LoadCountUser(activeCampaign.id);
+    } finally {
+      setIsPageLoading(false);
+    }
+  };
+
+  init();
+}, [activeCampaign?.id]);
+  const LoadCountUser = async (campaignId: string) => {
+    if (activeCampaign?.id !== campaignId) return null;
+    try {
+      const response = await axios.get(`/api/user/${activeCampaign?.id}`);
+      console.log("User count response:", response.data);
+      setUserNum(response.data[0]?.user_count ?? null);
+    } catch (error) {
+      console.error("Failed to load user count:", error);
+      return null;
+    }
+  };
+
 
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.target;
@@ -233,7 +263,7 @@ export const useUserImport = () => {
           `<li>นามสกุล <b>${ln}</b> : ${count} คน</li>`
         )
         .join("");
-     // const moreText = duplicateLastNames.length > 5 ? `<li>...และอื่นๆ อีก ${duplicateLastNames.length - 5} นามสกุล</li>` : "";
+      // const moreText = duplicateLastNames.length > 5 ? `<li>...และอื่นๆ อีก ${duplicateLastNames.length - 5} นามสกุล</li>` : "";
       confirmHtml += `
 <br><br>
 <div style="
@@ -366,5 +396,7 @@ export const useUserImport = () => {
     // actions
     handleFile,
     handleConfirm,
+    UserNum,
+    isPageLoading
   };
 };

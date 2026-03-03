@@ -57,7 +57,7 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
         aria-modal="true"
       >
         <div className="modal-dialog modal-dialog-centered" role="document">
-          <div className="modal-content" style={{ borderTop: "4px solid #F59E0B" }}>
+          <div className="modal-content" >
             <form onSubmit={handleSubmit}>
               <div className="modal-header">
                 <h5 className="modal-title">เพิ่มข้อสอบใหม่</h5>
@@ -118,17 +118,18 @@ const AddQuestionModal: React.FC<AddQuestionModalProps> = ({
               </div>
 
 
-              <div className="modal-footer flex-column flex-sm-row gap-2">
+              <div className="modal-footer justify-content-end gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
+                  className="btn btn-outline-secondary"
                   onClick={onClose}
                 >
                   ยกเลิก
                 </button>
+
                 <button
                   type="submit"
-                  className="btn btn-primary w-100 w-sm-auto order-1 order-sm-2"
+                  className="btn btn-primary"
                   disabled={!label.trim() || !maxScore || Number(maxScore) <= 0}
                 >
                   บันทึกข้อสอบ

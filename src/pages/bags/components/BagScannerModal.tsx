@@ -1,7 +1,7 @@
-// src/pages/bags/components/ComposeBagModal.tsx
-// ✅ Import CustomQrScanner เข้ามา (แก้ path ให้ตรงกับที่เก็บไฟล์ในโปรเจกต์ของคุณ)
-import { CustomQrScanner } from "@/lib/Scanner"; 
+
+import { CustomQrScanner } from "@/lib/Scanner";
 import { Loader2, DatabaseZap } from "lucide-react";
+import { useRef } from "react";
 
 interface ComposeBagModalProps {
   open: boolean;
@@ -10,10 +10,8 @@ interface ComposeBagModalProps {
   isSealed: boolean;
   scannerEnabled: boolean;
   deviceId?: string; // หมายเหตุ: CustomQrScanner ปัจจุบันใช้ facingMode แทน deviceId
-  manualCode: string;
-  onManualCodeChange: (v: string) => void;
-  onManualAdd: () => void;
   onScan: (raw: string) => void;
+  onManualAdd: (code: string) => void;
   onCapacityChange?: (value: number) => void;
   onRemoveCode?: (code: string) => void;
   onClearCodes: () => void;
@@ -31,8 +29,6 @@ export default function ComposeBagModal({
   onClose,
   canScan,
   scannerEnabled,
-  manualCode,
-  onManualCodeChange,
   onManualAdd,
   onScan,
   scannedPayloads,
@@ -42,6 +38,19 @@ export default function ComposeBagModal({
   scannedDate,
   isLoading = false
 }: ComposeBagModalProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleManualSubmit = () => {
+    const code = inputRef.current?.value; 
+
+    if (!code || !code.trim()) return; 
+
+    onManualAdd(code);
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
+  };
 
   if (!open) return null;
 
@@ -161,17 +170,17 @@ export default function ComposeBagModal({
 
                       <div className="input-group">
                         <input
+                          ref={inputRef} // 4. ผูก ref เข้ากับ input
                           className="form-control font-monospace"
-                          value={manualCode}
-                          onChange={(e) => onManualCodeChange(e.target.value)}
+                          // ลบ value และ onChange ออกไปเลย
                           placeholder="กรอกคิวอาร์โค้ดด้วยตนเอง"
                           disabled={!canScan}
-                          onKeyDown={(e) => e.key === 'Enter' && onManualAdd()}
+                          onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
                         />
                         <button
                           className="btn btn-outline-secondary"
-                          onClick={onManualAdd}
-                          disabled={!canScan || !manualCode}
+                          onClick={handleManualSubmit}
+                          disabled={!canScan} // 5. เอาเงื่อนไข !manualCode ออก
                         >
                           เพิ่ม
                         </button>

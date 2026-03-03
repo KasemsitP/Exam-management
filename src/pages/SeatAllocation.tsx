@@ -471,46 +471,71 @@ export default function SeatAllocationPage() {
   };
   const handleSubmit = async (values: RoomFormValues) => {
     const roomCode = values.roomCode.trim();
-    if (!roomCode) {
-      await Swal.fire({ icon: "error", title: "ข้อมูลไม่ครบ", text: "กรุณาระบุรหัสห้องสอบ" });
-      return;
-    }
-
     const capacity = Number(values.capacity);
-    if (Number.isNaN(capacity) || capacity <= 0) {
-      await Swal.fire({ icon: "error", title: "ข้อมูลไม่ถูกต้อง", text: "จำนวนที่รองรับต้องมากกว่า 0" });
+
+    if (!roomCode) {
+      await Swal.fire({
+        icon: "error",
+        title: "ข้อมูลไม่ครบ",
+        text: "กรุณาระบุรหัสห้องสอบ",
+      });
       return;
     }
 
-    const payload: RoomFormValues = {
-      campaign_id: values.campaign_id || String(campaign?.id ?? ""),
-      roomCode,
-      capacity,
-    };
-
-    if (!payload.campaign_id) {
-      await Swal.fire({ icon: "error", title: "ไม่พบข้อมูลรอบสอบ", text: "กรุณาเลือกแคมเปญก่อน" });
+    if (Number.isNaN(capacity) || capacity <= 0) {
+      await Swal.fire({
+        icon: "error",
+        title: "ข้อมูลไม่ถูกต้อง",
+        text: "จำนวนที่รองรับต้องมากกว่า 0",
+      });
       return;
     }
 
     try {
-      await dispatch(saveRoomThunk(payload)).unwrap();
+      if (editingRoom) {
+        //  โหมดแก้ไข
+        await axios.put(
+          `/api/exam-rooms/${values.campaign_id}/${roomCode}`,
+          { capacity }
+        );
 
-      await Swal.fire({
-        icon: "success",
-        title: editingRoom ? "บันทึกห้องสอบเรียบร้อย" : "เพิ่มห้องสอบสำเร็จ",
-        text: `${roomCode} รองรับ ${capacity.toLocaleString()} คน`,
-        timer: 1500,
-        showConfirmButton: false,
-      });
+        await Swal.fire({
+          icon: "success",
+          title: "อัพเดทห้องสอบเรียบร้อย",
+          text: `${roomCode} รองรับ ${capacity.toLocaleString()} คน`,
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } else {
+        // ✅ โหมดเพิ่ม
+        await axios.post(`/api/exam-rooms`, {
+          campaign_id: values.campaign_id,
+          roomCode,
+          capacity,
+        });
 
-      if (campaign?.id) dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
+        await Swal.fire({
+          icon: "success",
+          title: "เพิ่มห้องสอบสำเร็จ",
+          text: `${roomCode} รองรับ ${capacity.toLocaleString()} คน`,
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      }
+
+      if (campaign?.id) {
+        dispatch(fetchRoomsByCampaignThunk(Number(campaign.id)));
+      }
+
       closeDialog();
     } catch (error: any) {
-      await Swal.fire({ icon: "error", title: "บันทึกล้มเหลว", text: error ?? "API Error" });
+      await Swal.fire({
+        icon: "error",
+        title: "บันทึกล้มเหลว",
+        text: error.response?.data?.message ?? "API Error",
+      });
     }
   };
-
 
 
 

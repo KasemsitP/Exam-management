@@ -88,18 +88,7 @@ interface ExamDataApiPayload {
 const toBool = (value: ApiBoolean): boolean =>
   typeof value === "boolean" ? value : value === 1;
 
-const toTime = (timestamp: string): string => {
-  if (!timestamp) return "";
-  const date = new Date(timestamp);
 
-  if (Number.isNaN(date.getTime())) {
-    // Fallback to substring HH:mm if timestamp is not ISO
-    const parts = timestamp.split("T");
-    if (parts[1]) return parts[1].slice(0, 5);
-    return timestamp.slice(0, 5);
-  }
-  return date.toISOString().slice(11, 16);
-};
 
 const axiosErrorMessage = (error: unknown, fallback: string) => {
   if (!axios.isAxiosError(error)) return fallback;
@@ -129,6 +118,20 @@ const parseSubjectCompositeId = (id: string) => {
 /* =========================================================
  * Mappers (API -> UI)
  * ======================================================= */
+const pickHHmm = (s: string) => {
+  if (!s) return "";
+
+  // แปลงเป็น Date แล้วดึง local time
+  const d = new Date(s);
+
+  if (isNaN(d.getTime())) return "";
+
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+
+  return `${hh}:${mm}`;
+};
+
 const mapApiSubject = (subject: ApiSubject): CampaignSubject => ({
   id: buildSubjectId(subject.session_id, subject.subject_id),
   subjectId: subject.subject_id,
@@ -136,10 +139,9 @@ const mapApiSubject = (subject: ApiSubject): CampaignSubject => ({
   name: subject.name,
   questions: subject.question_count,
   bookletRange: subject.question_range ?? "",
-  startTime: toTime(subject.start_at),
-  endTime: toTime(subject.end_at),
+  startTime: pickHHmm(subject.start_at),
+  endTime: pickHHmm(subject.end_at),
 });
-
 const mapApiSessionToCampaignSession = (session: ApiSession): CampaignSession => ({
   id: buildSessionId(session.id),
   label: session.title ?? session.session_code,
