@@ -67,6 +67,11 @@ export const CustomQrScanner = React.memo(({
     const now = Date.now();
     const last = lastScanRef.current;
 
+    const GLOBAL_COOLDOWN = 1000;
+    if (last && (now - last.time) < GLOBAL_COOLDOWN) {
+      return; // ถ้ายังไม่ถึง 1 วินาที ให้เมินการสแกนนี้ไปเลย
+    }
+
     // ✅ ถ้าไม่อนุญาตให้ยิงซ้ำรัวๆ ให้มาเช็คเวลาตรงนี้
     if (!allowMultipleScans) {
       // ถ้าเป็นโค้ดเดิม และเวลาผ่านไปยังไม่ถึง 1.5 วินาที ให้ข้ามไป

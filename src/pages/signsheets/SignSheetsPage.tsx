@@ -198,7 +198,7 @@ export default function SignSheetsPage() {
 
     setCourse((prev) => s.subjects?.[0]?.name ?? prev);
     setSessionText(
-      `${new Date(s.examDate).toLocaleDateString("th-TH")} ${s.subjects?.[0]?.startTime ?? ""}–${s.subjects?.[0]?.endTime ?? ""}`
+      `สอบวันที่ ${new Date(s.examDate).toLocaleDateString("th-TH")} เวลา ${s.subjects?.[0]?.startTime ?? ""}–${s.subjects?.[0]?.endTime ?? ""} น.`
     );
   }, [sessions, selectedSessionId]);
 
