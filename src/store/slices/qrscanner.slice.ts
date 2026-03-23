@@ -6,6 +6,7 @@ export interface QRverification {
   user_session_id: number;
   session_id: number;
   user_id: number;
+  title : string;
   userCode: string;
   firstName: string;
   lastName: string;
@@ -24,6 +25,7 @@ export interface userQR {
   session_id: number;
   user_id: number;
   userCode: string;
+  title : string;
   firstName: string;
   lastName: string;
   roomName: string | null;

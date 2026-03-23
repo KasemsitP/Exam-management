@@ -79,7 +79,7 @@ export function useProctorScan() {
         title: "ยืนยันตัวตนสำเร็จ",
         html: `
           <div class="mt-2">
-            <div class="fs-5 fw-bold text-primary">${scannedUser.firstName} ${scannedUser.lastName}</div>
+            <div class="fs-5 fw-bold text-primary">${scannedUser.title} ${scannedUser.firstName} ${scannedUser.lastName}</div>
             <div class="text-muted mt-1 font-monospace">รหัส: ${scannedUser.userCode}</div>
           </div>
         `,

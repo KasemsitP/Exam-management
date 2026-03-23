@@ -74,7 +74,7 @@ const ScanResult = React.memo(({
             <li className="list-group-item d-flex justify-content-between align-items-center px-1">
               <span className="text-muted small">ชื่อ-สกุล</span>
               <span className="fw-bold text-end text-primary">
-                {user.firstName} {user.lastName}
+                {user.title} {user.firstName} {user.lastName}
               </span>
             </li>
             <li className="list-group-item d-flex justify-content-between align-items-center px-1">
