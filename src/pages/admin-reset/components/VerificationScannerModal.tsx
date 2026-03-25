@@ -43,7 +43,7 @@ export default function ScannerModal({ onClose, activeCampaignId, initialCode = 
           title: "สแกนสำเร็จ",
           html: `
             <div style="text-align:left">  
-              <div><strong>รหัสสอบ:</strong> ${data.data.booklets_id}</div>
+              <div><strong>ลำดับจัดเก็บ:</strong> ${data.data.booklets_id}</div>
               <div><strong>วิชา:</strong> ${data.data.subject_name}</div>
               <div><strong>หมายเลขถุง:</strong> ${data.data.bag_no}</div>
             </div>

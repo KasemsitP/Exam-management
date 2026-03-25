@@ -139,7 +139,7 @@ export function CampaignList({
                   <td className="text-muted">{campaign.site || "-"}</td>
 
                   <td className="text-center">
-                    <span className={`badge ${campaign.isActive ? "bg-success" : "bg-secondary"}`}>
+                    <span className={` `}>
                       {campaign.isActive ? "เปิดใช้งาน" : "ปิดใช้งาน"}
                     </span>
                   </td>
@@ -159,7 +159,7 @@ export function CampaignList({
                         แก้ไข
                       </button>
                       <button
-                        className={`btn btn-sm text-nowrap ${campaign.isActive ? "btn-warning" : "btn-success"}`}
+                        className={`btn btn-sm text-nowrap ${campaign.isActive ? "btn-warning" : "btn-success"}`} style ={{ minWidth: 100 }}
                         onClick={() => onActiveCampaign(campaign)}
                       >
                         {campaign.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}

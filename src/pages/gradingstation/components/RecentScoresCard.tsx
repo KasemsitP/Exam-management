@@ -35,7 +35,7 @@ export default function RecentScoresCard({ recent }: RecentScoresCardProps) {
               <thead className="table-light sticky-top">
                 <tr>
                   <th style={{ width: 60 }} className="text-center">ลำดับ</th>
-                  <th className="text-center">เลขรหัส</th>
+                  <th className="text-center">ลำดับจัดเก็บ</th>
                   <th className="text-center">คะแนน</th>
                   <th className="text-center">Payload</th>
                   <th className="text-center" style={{ width: 150 }}>เวลา</th>

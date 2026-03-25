@@ -874,7 +874,7 @@ export default function BagScoresPage() {
             <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
               <div>
                 <h5 className="mb-0">
-                  คะแนนตามรหัสสอบ ถุงที่ {String(selectedBag.bagNo)}
+                  คะแนนตามลำดับจัดเก็บ ถุงที่ {String(selectedBag.bagNo)}
                 </h5>
                 <div className="text-muted small mt-1 d-flex flex-wrap gap-3">
                   <span>รอบสอบ: {selectedBag.sessionLabel}</span>
@@ -936,7 +936,7 @@ export default function BagScoresPage() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          รหัสสอบ
+                          {isDecrypted ? "รหัสประจำตัวสอบ" : "ลำดับจัดเก็บ"}
                         </th>
 
                         {isDecrypted && (

@@ -740,10 +740,10 @@ export function SubjectModal({
 
                   {selectedMaster && (
                     <div className="form-text">
-                      จะผูกกับ:{" "}
+                      {/* จะผูกกับ:{" "}
                       <span className="fw-semibold">
                         {selectedMaster.code} - {selectedMaster.name}
-                      </span>
+                      </span> */}
                     </div>
                   )}
                 </div>
@@ -751,11 +751,11 @@ export function SubjectModal({
                 <div className="row g-3 mb-3">
                   <div className="col-sm-6">
                     <label className="form-label">รหัสวิชา</label>
-                    <input className="form-control" readOnly {...register("code")} />
+                    <input className="form-control" disabled={true} readOnly {...register("code")}  />
                   </div>
                   <div className="col-sm-6">
                     <label className="form-label">ชื่อวิชา</label>
-                    <input className="form-control" readOnly {...register("name")} />
+                    <input className="form-control" disabled={true} readOnly {...register("name")} />
                   </div>
                 </div>
 
@@ -785,7 +785,7 @@ export function SubjectModal({
                       {errors.startTime ? (
                         <div className="invalid-feedback">{String(errors.startTime.message)}</div>
                       ) : (
-                        <div className="form-text">รูปแบบ 00.00 - 23.59 (24 ชั่วโมง)</div>
+                        <div className="form-text">กรุณากรอกตามฟอร์แมต xx.xx เช่น 13.00 </div>
                       )}
                     </div>
 

@@ -158,7 +158,7 @@ export default function AdminResetScoresPage() {
                     <thead className="table-light">
                       <tr>
                         <th className="text-center">เลขถุง</th>
-                        <th className="text-center">รหัสสอบ</th>
+                        <th className="text-center">ลำดับจัดเก็บ</th>
                         <th className="text-center">วิชา</th>
                         <th className="text-center">ข้อ</th>
                         <th className="text-center">หัวข้อ</th>

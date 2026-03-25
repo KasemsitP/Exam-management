@@ -1,11 +1,12 @@
 import React from "react";
 import { Loader2, Minus, Plus, ShieldCheck, Key, AlertCircle } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 interface KeyCreateCardProps {
   myKeyRef: React.RefObject<HTMLInputElement>; // รับเป็น Ref แทน String
   myKeyId: number | null;
   managerName: string;
-  initialKeyValue: string; 
+  initialKeyValue: string;
   manager_order: number | null;
 
   onSaveKey: () => void;
@@ -39,12 +40,14 @@ export default function KeyCreateCard({
   manager_order
 }: KeyCreateCardProps) {
 
+  const [showPassword, setShowPassword] = React.useState(false);
+
   const allEncrypted =
     headerSummary.EncryptedStatus?.every(
       (s: any) => s.encryption_status === "ENCRYPTED_ALL"
     ) ?? false;
 
-    const textitle = manager_order === 1 ? "กรุณากำหนดคีย์ลำดับที่ 1 สำหรับผู้จัดการอัยการพิเศษฝ่าย (คก.2) คณะกรรมการ 2" 
+  const textitle = manager_order === 1 ? "กรุณากำหนดคีย์ลำดับที่ 1 สำหรับผู้จัดการอัยการพิเศษฝ่าย (คก.2) คณะกรรมการ 2"
     : "กรุณากำหนดคีย์ลำดับที่ 2 สำหรับรองอธิบดี";
 
 
@@ -65,23 +68,37 @@ export default function KeyCreateCard({
                 </span>
               )}
             </label>
+            <div className="position-relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                className="form-control form-control-sm pe-5" // เพิ่ม padding ขวา
+                ref={myKeyRef}
+                defaultValue={initialKeyValue}
+                disabled={!!myKeyId}
+                maxLength={16}
+                placeholder="กรอกคีย์ความยาว 16 ตัวอักษร"
+              />
 
-            {/* ใช้ Uncontrolled input ด้วย ref */}
-            <input
-              type="password"
-              className="form-control form-control-sm"
-              ref={myKeyRef}
-              defaultValue={initialKeyValue}
-              disabled={!!myKeyId}
-              maxLength={16}
-              placeholder="กรอกคีย์ความยาว 16 ตัวอักษร"
-            />
+              <button
+                type="button"
+                onClick={() => setShowPassword(prev => !prev)}
+                disabled={!!myKeyId}
+                className="btn  position-absolute top-50 end-0 translate-middle-y me-2 p-0"
+                style={{ border: "none" }}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
           </div>
 
           <div className="col-12 col-lg-4 d-flex align-items-end gap-1 gap-sm-2">
             <button
               className="btn btn-sm btn-primary w-100 d-inline-flex align-items-center justify-content-center gap-1"
-              onClick={onSaveKey}
+              onClick={ ()=>{
+                  onSaveKey();
+                  setShowPassword(false); // ซ่อนรหัสหลังบันทึก
+
+              }}
               // เอาเงื่อนไข !myKey.trim() ออก เพราะปุ่มไม่สามารถรู้ state แบบ real-time ได้
               disabled={!!myKeyId || !hasActiveCampaign}
               title="สร้างคีย์"

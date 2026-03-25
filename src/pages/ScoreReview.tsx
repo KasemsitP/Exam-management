@@ -104,7 +104,7 @@ const renderOverviewTable = () => (
             style={{ position: "sticky", left: 0, zIndex: 2 }}
             rowSpan={2}
           >
-            รหัสสอบ
+            ลำดับจัดเก็บ
           </th>
 
           {Array.from({ length: 10 }, (_, idx) => (
@@ -182,7 +182,7 @@ const renderOverviewTable = () => (
       <table className="table align-middle mb-0">
         <thead className="table-light text-muted small text-uppercase">
           <tr>
-            <th>รหัสสอบ</th>
+            <th>ลำดับจัดเก็บ</th>
             <th className="text-center">ข้อที่</th>
             <th>ผู้ตรวจ A</th>
             <th className="text-end">คะแนน A</th>
@@ -261,7 +261,7 @@ const renderOverviewTable = () => (
             <input
               className="form-control"
               style={{ minWidth: 160 }}
-              placeholder="ค้นหารหัสสอบ"
+              placeholder="ค้นหาลำดับจัดเก็บ"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -273,7 +273,7 @@ const renderOverviewTable = () => (
               value={viewMode}
               onChange={(e) => setViewMode(e.target.value as ViewMode)}
             >
-              <option value="overview">ภาพรวม (ตามรหัสสอบ)</option>
+              <option value="overview">ภาพรวม (ตามลำดับจัดเก็บ)</option>
               <option value="details">รายละเอียด (ตามผู้ตรวจ)</option>
             </select>
 
@@ -333,7 +333,7 @@ const renderOverviewTable = () => (
                 <BarChart2 className="text-primary" size={18} />
               )}
               <span className="fw-semibold">
-                {viewMode === "overview" ? "คะแนนตามรหัสสอบ" : "คะแนนตามผู้ตรวจ"}
+                {viewMode === "overview" ? "คะแนนตามลำดับจัดเก็บ" : "คะแนนตามผู้ตรวจ"}
               </span>
             </div>
             <span className="badge text-bg-light">{bagId}</span>

@@ -381,6 +381,8 @@ export function useCampaignsPage() {
         setCampaignDialogOpen(false);
       }
     } else {
+    //  console.log(values)
+     // return;
       try {
         await dispatch(
           createCampaignThunk({
