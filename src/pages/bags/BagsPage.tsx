@@ -401,7 +401,7 @@ export default function BagsPage() {
         icon: "warning",
         title: "ยืนยันการสร้างถุงข้อสอบ",
         html: `
-        สร้างถุงข้อสอบวิชา <b>${data.subject_name.name}</b><br/>
+        สร้างถุงข้อสอบวิชา <b>${data.subject_name.subject_name}</b><br/>
         ถุงเลขที่ <b>${data.bagNo}</b><br/>
         จำนวน <b>${qrPayloads.length}</b> เล่ม
       `,
