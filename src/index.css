@@ -40,6 +40,23 @@ a:hover { text-decoration: underline; }
   input, select, textarea, button { font-size: 16px; }
 
   header h1.h6 { line-height: 1.2; }
+
+  .admin-reset-header-row {
+    flex-direction: column;
+    align-items: stretch !important;
+    gap: .5rem;
+  }
+
+  .admin-reset-filter-wrap {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .admin-reset-bag-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 100%;
+  }
 }
 
 /* helper */

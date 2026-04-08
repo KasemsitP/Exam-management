@@ -182,6 +182,15 @@ export default function SignSheetsPage() {
 
   /* ------------------------------- Init session ---------------------------- */
 
+  // เมื่อ campaign เปลี่ยน ให้ reset session เสมอ
+  useEffect(() => {
+    setSelectedSessionId("");
+    setRows([]);
+    setPage(1);
+    setTotalPages(1);
+    setTotalCount(0);
+  }, [activeCampaign?.id]);
+
   useEffect(() => {
     if (!sessions.length) return;
 
@@ -502,7 +511,7 @@ export default function SignSheetsPage() {
                   title="ดาวน์โหลดรายชื่อผู้มีสิทธิ์สอบ"
                 >
                   {isExportingPdf ? (
-                    <Loader2 size={14} className="spin-animation" />
+                    <FileDown size={14} />
                   ) : (
                     <FileDown size={14} />
                   )}
@@ -516,7 +525,7 @@ export default function SignSheetsPage() {
                   title="ดาวน์โหลดผังที่นั่งสอบ"
                 >
                   {isExportingPdf ? (
-                    <Loader2 size={14} className="spin-animation" />
+                    <FileDown size={14} />
                   ) : (
                     <FileDown size={14} />
                   )}
@@ -530,7 +539,7 @@ export default function SignSheetsPage() {
                   title="ดาวน์โหลดใบรายชื่อ"
                 >
                   {isExportingPdf ? (
-                    <Loader2 size={14} className="spin-animation" />
+                    <FileDown size={14} />
                   ) : (
                     <FileDown size={14} />
                   )}

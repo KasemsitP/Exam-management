@@ -54,7 +54,9 @@ export default function GradingStationPage() {
 
     lastSlotId,
     bagNo,
-    QRActive
+    QRActive,
+    IsScanned,
+    random_number,
   } = useGradingStation();
 
   // Show loading overlay while initial data is loading
@@ -111,6 +113,8 @@ export default function GradingStationPage() {
                 setQuestionMaxScore={setQuestionMaxScore}
                 QrActive={QRActive}
                 QuestionMaxScore={questionMaxScore}
+                  IsScanned={IsScanned}
+                  random_number={random_number}
               />
             </div>
 

@@ -1,17 +1,10 @@
 // hooks/useUserImport.ts
-import { act, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
-import { shuffle } from "lodash";
 
-import { useAppDispatch, useAppSelector } from "@/store/hook";
+import { useAppSelector } from "@/store/hook";
 import { selectActiveCampaign } from "@/store/slices/examData.slice";
-import {
-  importUsersThunk,
-  selectUserImportError,
-  selectUserImportStats,
-  selectUserImportStatus,
-} from "@/store/slices/users.slice";
 import { useToast } from "@/components/ui/use-toast";
 import Swal from "sweetalert2";
 import axios from "axios";
@@ -53,14 +46,20 @@ const parseWorksheet = (ws: XLSX.WorkSheet): ParsedState => {
   return { rows, headers };
 };
 
+interface ImportStats {
+  totalUsersCreated: number;
+  totalUsersFound: number;
+  totalCampaignLinks: number;
+  totalSessionLinks: number;
+}
+
 export const useUserImport = () => {
-  const dispatch = useAppDispatch();
   const { toast } = useToast();
 
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  const importStatus = useAppSelector(selectUserImportStatus);
-  const importError = useAppSelector(selectUserImportError);
-  const importStats = useAppSelector(selectUserImportStats);
+  const [importStatus, setImportStatus] = useState<"idle" | "loading" | "succeeded" | "failed">("idle");
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importStats, setImportStats] = useState<ImportStats | null>(null);
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [encoding, setEncoding] = useState<string>(ENCODINGS[0].value);
@@ -84,6 +83,9 @@ export const useUserImport = () => {
     setExcelBuffer(null);
     setExcelSheetNames([]);
     setExcelSelectedSheet("");
+    setImportStatus("idle");
+    setImportError(null);
+    setImportStats(null);
   };
 
 
@@ -319,12 +321,18 @@ useEffect(() => {
     });
 
     try {
-      const importResult = await dispatch(
-        importUsersThunk({
-          campaignId: activeCampaign.id,
-          rows: shuffledRows, // ส่งตัวที่สับเปลี่ยนแล้วไป
-        })
-      ).unwrap();
+      setImportStatus("loading");
+      setImportError(null);
+
+      const numericCampaignId = Number(activeCampaign.id.replace("camp-", ""));
+      const response = await axios.post<ImportStats>(
+        `/api/import/campaign/${numericCampaignId}`,
+        { rows: shuffledRows }
+      );
+      const importResult = response.data;
+
+      setImportStatus("succeeded");
+      setImportStats(importResult);
 
       const parts = [
         `ผู้เข้าสอบเดิมจำนวน ${importResult.totalUsersFound.toLocaleString()} คน`,
@@ -340,11 +348,17 @@ useEffect(() => {
       });
 
       resetState();
+      LoadCountUser(String(numericCampaignId)); // รีโหลดจำนวนผู้ใช้ใหม่หลังนำเข้า
     } catch (err) {
+      const msg = axios.isAxiosError(err)
+        ? (err.response?.data?.message ?? "Failed to import users")
+        : getErrorMessage(err);
+      setImportStatus("failed");
+      setImportError(msg);
       Swal.fire({
         icon: "error",
         title: "นำเข้าผู้ใช้งานไม่สำเร็จ",
-        text: getErrorMessage(err),
+        text: msg,
         confirmButtonText: "ตกลง",
       });
     }

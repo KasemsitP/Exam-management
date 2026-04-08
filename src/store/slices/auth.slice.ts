@@ -9,8 +9,7 @@ export interface AuthUser {
   name: string;
   username: string;
   roles: Role[];
-  password?: string;
-  manager_order?: number; //  เพิ่ม manager_order
+  manager_order?: number;
 }
 
 interface AuthState {

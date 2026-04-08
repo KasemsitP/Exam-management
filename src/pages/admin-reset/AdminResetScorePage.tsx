@@ -1,37 +1,44 @@
 // src/pages/grading/recheck/AdminResetScoresPage.tsx
 import axios from "axios";
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Swal from "sweetalert2";
 import { Loader2, QrCode } from "lucide-react";
-import { Scanner, boundingBox, IDetectedBarcode } from "@yudiel/react-qr-scanner";
 
 import { useAppSelector } from "@/store/hook";
-import { selectActiveCampaign, selectIsSystemLocked, selectQrActiveCampaign } from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectIsSystemLocked } from "@/store/slices/examData.slice";
 import { DeleteCamp } from "@/utils/camp";
 import type { DisputedQuestionDto } from "./types";
-import { OverlayLoader } from "@/components/ui/Loading";
 
 import ScannerModal from "./components/VerificationScannerModal";
-import { selectCurrentUser } from "@/store/slices/auth.slice";
 
 // ============================================================================
 // Main Component
 // ============================================================================
 export default function AdminResetScoresPage() {
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  const user = useAppSelector(selectCurrentUser)
   const locked = useAppSelector(selectIsSystemLocked);
-  const QRActive = useAppSelector(selectQrActiveCampaign);
   const [rows, setRows] = useState<DisputedQuestionDto[]>([]);
   const [loading, setLoading] = useState(false);
-  const [resettingSlotId, setResettingSlotId] = useState<number | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  const [selectedBag, setSelectedBag] = useState<string>("");
+
+  const bagOptions = Array.from(
+    new Set(rows.map((r) => String(r.bagNo ?? "")).filter((v) => v !== ""))
+  ).sort((a, b) => Number(a) - Number(b));
+
+  const sortedRows = [...rows]
+    .filter((r) => (selectedBag ? String(r.bagNo) === selectedBag : true))
+    .sort((a, b) => {
+      const bagDiff = Number(a.bagNo) - Number(b.bagNo);
+      if (bagDiff !== 0) return bagDiff;
+      const randDiff = Number(a.random_num) - Number(b.random_num);
+      if (randDiff !== 0) return randDiff;
+      return Number(a.questionNo) - Number(b.questionNo);
+    });
 
   // Scanner State
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedBookletId, setSelectedBookletId] = useState<number | null>(null);
-
-  const isAdmin = user?.roles?.includes("admin") ? true : false;
+  const [selectedRow, setSelectedRow] = useState<DisputedQuestionDto | null>(null);
 
 
   const campaignNumericId = activeCampaign?.id
@@ -64,66 +71,15 @@ export default function AdminResetScoresPage() {
         console.error('Failed to load initial data:', error);
       } finally {
         setLoading(false);
-        setIsInitialLoading(false);
-      }
+        }
     };
     init();
   }, [reloadRows]);
 
-  const handleReset = async (row: DisputedQuestionDto) => {
-    if (!isAdmin) {
-      Swal.fire(
-        {
-          icon: "error",
-          title: "สิทธิ์ไม่เพียงพอ",
-          text: "คุณไม่มีสิทธิ์ในการรีเซ็ตคะแนนกรุณาติดต่อผู้ดูแลระบบ",
-        }
-      );
-      return;
-    }
-    const result = await Swal.fire({
-      icon: "warning",
-      title: "ยืนยันการรีเซ็ตคะแนน",
-      html: `
-      <div style="text-align:left">
-        <p>ต้องการรีเซ็ตคะแนนข้อนี้ใช่หรือไม่?</p>
-        <p><strong>ผู้ตรวจ:</strong> ${row.graderName1} , ${row.graderName2}</p>
-        <p><strong>ข้อ:</strong> ${row.questionNo} (Diff: ${row.diff})</p>
-      </div>`,
-      showCancelButton: true,
-      confirmButtonText: "ยืนยันรีเซ็ต",
-      confirmButtonColor: "#d33",
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      setResettingSlotId(row.slotId1);
-      await axios.post(`/api/recheck/reset/${row.slotId1}`);
-      await Swal.fire({
-        icon: "success",
-        title: "สำเร็จ",
-        text: "รีเซ็ตคะแนนเรียบร้อย",
-        timer: 1500,
-        showConfirmButton: false
-      });
-      await reloadRows();
-    } catch (err: any) {
-      Swal.fire("ผิดพลาด", err?.response?.data?.message ?? "เกิดข้อผิดพลาด", "error");
-    } finally {
-      setResettingSlotId(null);
-    }
-  };
-
-  const handleOpenScanner = (bookletId: number | null) => {
-    setSelectedBookletId(bookletId);
+  const handleOpenScanner = (row: DisputedQuestionDto) => {
+    setSelectedRow(row);
     setModalOpen(true);
   };
-
-  // Show loading overlay while initial data is loading
-  if (isInitialLoading) {
-    return <OverlayLoader open={true} label="" />;
-  }
 
   return (
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
@@ -131,17 +87,36 @@ export default function AdminResetScoresPage() {
         <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
           <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
             <div className="card-header bg-white">
-              <div className="d-flex justify-content-between align-items-center">
+              <div className="d-flex justify-content-between align-items-center admin-reset-header-row">
                 <div>
                   <h5 className="mb-1">จัดการคะแนนที่ต่างกันเกิน 4 คะแนน</h5>
-                  <small className="text-muted">เพิ่ม ลบ แก้ไข และกำหนดข้อสำหรับผู้ตรวจ</small>
+                  <small className="text-muted">สแกนหาที่เล่มข้อสอบและรีเซ็ตคะแนน</small>
                 </div>
-                {/* <button
-                  className="btn btn-outline-primary d-flex align-items-center gap-2"
-                  onClick={() => handleOpenScanner(null)}
-                >
-                  <QrCode size={18} /> สแกนตรวจสอบ
-                </button> */}
+                <div className="d-flex align-items-center gap-2 admin-reset-filter-wrap">
+                 <label className="small text-muted mb-0" style={{ whiteSpace: "nowrap" }}>เลือกถุง:</label>
+                  <select
+                    className="form-select form-select-sm admin-reset-bag-select"
+                    style={{ minWidth: 160 }}
+                    value={selectedBag}
+                    onChange={(e) => setSelectedBag(e.target.value)}
+                  >
+                    <option value="">ทั้งหมด</option>
+                    {bagOptions.map((b) => (
+                      <option key={b} value={b}>
+                        ถุง {b}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedBag && (
+                    <button
+                      type="button"
+                      className="btn btn-link btn-sm p-0 text-muted text-decoration-none"
+                      onClick={() => setSelectedBag("")}
+                    >
+                      ล้าง
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -167,12 +142,11 @@ export default function AdminResetScoresPage() {
                         <th className="text-center">ผู้ตรวจ 2</th>
                         <th className="text-center">คะแนน 2</th>
                         <th className="text-center">ผลต่าง</th>
-                        <th className="text-center">จัดการ</th>
-                        <th className="text-center">เช็คเล่มถุง</th>
+                        <th className="text-center">สแกน/แก้ไข</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map((row) => (
+                      {sortedRows.map((row) => (
                         <tr key={`${row.bookletId}-${row.subjectId}-${row.questionNo}`}>
                           <td className="text-center">{row.bagNo ?? "-"}</td>
                           <td className="text-center">{row.random_num ?? "-"}</td>
@@ -188,23 +162,12 @@ export default function AdminResetScoresPage() {
                           <td className="text-center">{row.score2}</td>
                           <td className={row.diff >= 4 ? "text-danger fw-bold text-center" : "text-center"}>{row.diff}</td>
 
-                          {/* ✅ แสดงเวลาที่บันทึก */}
-
                           <td className="text-center">
                             <button
-                              className="btn btn-sm btn-danger text-center"
-                              disabled={resettingSlotId === row.slotId1}
-                              onClick={() => handleReset(row)}
+                              className="btn btn-sm btn-primary d-inline-flex align-items-center gap-1"
+                              onClick={() => handleOpenScanner(row)}
                             >
-                              {resettingSlotId === row.slotId1 ? "..." : "รีเซ็ตคะแนน"}
-                            </button>
-                          </td>
-                          <td className="text-center">
-                            <button
-                              className="btn btn-sm btn-primary"
-                              onClick={() => handleOpenScanner(row.bookletId)}
-                            >
-                              ตรวจสอบเล่ม
+                              <QrCode size={14} /> สแกนเพื่อแก้ไข
                             </button>
                           </td>
                         </tr>
@@ -221,11 +184,14 @@ export default function AdminResetScoresPage() {
           <>
             <div className="modal-backdrop show" style={{ zIndex: 1040 }} />
             <div className="modal d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
-              <ScannerModal
-                onClose={() => setModalOpen(false)}
-                activeCampaignId={activeCampaign?.id ?? 0}
-                initialCode={selectedBookletId}
-              />
+              {selectedRow && (
+                <ScannerModal
+                  onClose={() => setModalOpen(false)}
+                  activeCampaignId={activeCampaign?.id ?? 0}
+                  row={selectedRow}
+                  onSuccess={reloadRows}
+                />
+              )}
             </div>
           </>
         )}

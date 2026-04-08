@@ -6,8 +6,10 @@ import { OverlayLoader } from "@/components/ui/Loading";
 import KeyHeader from "./components/KeyHeader";
 import KeyCreateCard from "./components/KeyCreateCard";
 import ForgetKeyCard from "./components/ForgetKeyCard";
+import NoLinkedCard from "./components/nolinkedCard";
 import { selectIsSystemLocked } from "@/store/slices/examData.slice";
 import { useAppSelector } from "@/store/hook";
+
 
 export default function KeyManagementPage() {
   const locked = useAppSelector(selectIsSystemLocked);
@@ -48,7 +50,8 @@ export default function KeyManagementPage() {
     handleForgetKey,
     accountFullName,
     openForgetKeyModal,
-    manager_order
+    manager_order,
+    islinkedsession
 
   } = useKeyManagement();
 
@@ -61,7 +64,8 @@ export default function KeyManagementPage() {
     <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
 
       <ShowIfCan anyOf={["manage_keys"]}>
-        <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
+        {islinkedsession ? (
+                  <div className="container-fluid px-3 px-sm-4 py-3 gap-1 d-flex flex-column">
           <KeyHeader activeCampaign={activeCampaign}
             headerSummary={headerSummary}
           />
@@ -113,7 +117,9 @@ export default function KeyManagementPage() {
           onRunBulkEncryption={handleRunBulkEncryption}
         /> */}
         </div>
-
+        ) : (    
+          <NoLinkedCard islinkedsession={islinkedsession} />
+        )}
 
       </ShowIfCan>
     </fieldset>

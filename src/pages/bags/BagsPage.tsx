@@ -39,8 +39,6 @@ import ComposeBagModal from "./components/ComposeBagModal";
 import BagScannerModal from "./components/BagScannerModal";
 import type { CreateBagForm } from "./bags.types";
 import axios from "axios";
-import { OverlayLoader } from "@/components/ui/Loading";
-import ComposeBagModalOnlyViews from "./components/ComposeBagModal";
 
 // ปรับ payload ให้เทียบเท่ากันเสมอ
 const normalizePayload = (s: string) => s.trim();
@@ -175,8 +173,6 @@ export default function BagsPage() {
   // ฟิลเตอร์ + ค้นหา
   const filteredBags = useMemo(() => {
     const term = searchText.trim().toLowerCase();
-    console.log(sessions)
-    const filterdays = sessions.map(row => row.label.split("วันที่ 1")[1])
     const sessionFiltered =
       filterSessionId === "all"
         ? bags
@@ -579,11 +575,6 @@ export default function BagsPage() {
   // Render
   // ==============================
 
-  // Show loading overlay while initial data is loading
-  if (isInitialLoading) {
-    return <OverlayLoader open={true} label="" />;
-  }
-
   return (
     <div className="container-fluid px-3 px-sm-4 py-3 gap-4 d-flex flex-column">
       <BagsHeader
@@ -619,7 +610,7 @@ export default function BagsPage() {
 
       <BagsTable
         filteredBags={filteredBags}
-        bagStatus={bagStatus}
+        isInitialLoading={isInitialLoading}
         onOpenCompose={(bagId) => setComposeBagId(bagId)}
         onDeleteBag={handleDeleteBag}
       />
@@ -637,7 +628,7 @@ export default function BagsPage() {
 
       {/* Compose modal */}
       <ModalBackdrop open={!!composeBag} />
-      <ComposeBagModalOnlyViews
+      <ComposeBagModal
         open={!!composeBag}
         composeBag={composeBag}
         onClose={() => setComposeBagId(null)}

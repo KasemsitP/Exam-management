@@ -38,3 +38,18 @@ export interface BagScoresApiResponse {
   questionCount: number;
   booklets: BagBookletScore[];
 }
+
+export interface ScoreChangeLog {
+  bag: number;
+  booklet: number;
+  subject: string;
+  subject_name: string;
+  question: number;
+  grader1: string;
+  score1: string;
+  grader2: string;
+  score2: string;
+  changed_by: string;
+  changed_time: string;
+  total_scorerow: string;
+}

@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.9.2",
+    "@tanstack/react-virtual": "^3.13.23",
     "@yudiel/react-qr-scanner": "^2.4.1",
     "axios": "^1.13.0",
     "bootstrap": "^5.3.8",

@@ -38,6 +38,7 @@ import {
   selectActiveCampaign,
   selectActiveCampaignSessions,
 } from "@/store/slices/examData.slice";
+import { set } from "react-hook-form";
 
 const parseCampaignId = (id: string): number => Number(id.replace("camp-", ""));
 const parseSessionId = (id: string): number => Number(id.replace("sess-", ""));
@@ -78,6 +79,8 @@ export const useKeyManagement = () => {
   const [managerName, setManagerName] = useState<string>("");
   
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  const [islinkedsession , setIslinkedsession] = useState(false)
 
   const [forgetKey, setForgetKey] = useState("")
   const [modalforgetKey, setModalForgetKey] = useState(false)
@@ -144,7 +147,8 @@ export const useKeyManagement = () => {
               console.log("fetchKeysForCampaignByManager failed:", err);
               syncLocalFromKeys([]);
             }),
-          dispatch(checkEncryptionPrerequisites(numericCampaignId)).unwrap()
+          dispatch(checkEncryptionPrerequisites(numericCampaignId)).unwrap(),
+          loadIsLinked(numericCampaignId)
         ]);
       } catch (error) {
         console.error("Failed to load initial data:", error);
@@ -167,6 +171,20 @@ export const useKeyManagement = () => {
       setSelectedSessionId("");
     }
   }, [sessions]);
+
+  const loadIsLinked = async (numericCampaignId: number) => {
+    if (!numericCampaignId || !userAccountId) return;
+    try {
+      const linked = await axios.get(`/api/session-subjects/linked/${numericCampaignId}`);
+      if(linked.data.isLinked){
+          setIslinkedsession(true)
+      }
+      console.log(linked.data)
+    }
+    catch (error) {
+      console.error("Failed to check if session-subjects are linked:", error);
+    }
+  }
 
   const openForgetKeyModal = (keyId: number) => {
     if (!isManager) {
@@ -451,6 +469,7 @@ export const useKeyManagement = () => {
     handleForgetKey,
     accountFullName,
     openForgetKeyModal,
+    islinkedsession,
 
     manager_order
   };

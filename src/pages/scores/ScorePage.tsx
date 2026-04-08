@@ -6,6 +6,7 @@ import {
   ChevronRight,
   FileText,
   Users,
+  History,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { useForm } from "react-hook-form";
@@ -22,6 +23,7 @@ import type {
   BagScoresApiResponse,
   BagBookletScore,
   BagQuestionScoreRow,
+  ScoreChangeLog,
 } from "./types";
 
 import Swal from "sweetalert2";
@@ -50,6 +52,7 @@ export default function BagScoresPage() {
   const [bagScores, setBagScores] = useState<BagScoresApiResponse | null>(null);
   const [loadingScores, setLoadingScores] = useState(false);
   const [errorScores, setErrorScores] = useState<string | null>(null);
+  const [scoreLogs, setScoreLogs] = useState<ScoreChangeLog[]>([]);
 
   const [opendecrypt, setopendecrypt] = useState<boolean>(false);
 
@@ -71,7 +74,7 @@ export default function BagScoresPage() {
   const [isDecrypted, setIsdecrypted] = useState<boolean>(false)
   const [scoresReloadKey, setScoresReloadKey] = useState(0);
 
-  
+
 
   const OTP_LENGTH = 6;
   const [otpDigits, setOtpDigits] = useState<string[]>(
@@ -275,6 +278,50 @@ export default function BagScoresPage() {
     fetchScores();
     return () => { cancelled = true; };
   }, [selectedBagId, activeCampaign?.id, scoresReloadKey]);
+
+  // ดึงประวัติการแก้ไขคะแนน (score change logs) ของถุงที่เลือก
+  useEffect(() => {
+    if (!selectedBagId) {
+      setScoreLogs([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.get<ScoreChangeLog[]>(
+          `/api/gradingscorelog/${selectedBagId}`
+        );
+        if (cancelled) return;
+        setScoreLogs(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("โหลดประวัติคะแนนไม่สำเร็จ:", err);
+        setScoreLogs([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedBagId, scoresReloadKey]);
+
+  // สร้าง Map สำหรับ lookup: key = "bookletNo-questionNo" -> รายการประวัติทั้งหมด (ใหม่สุดก่อน)
+  const scoreLogMap = useMemo(() => {
+    const map = new Map<string, ScoreChangeLog[]>();
+    for (const log of scoreLogs) {
+      const key = `${log.booklet}-${log.question}`;
+      const arr = map.get(key);
+      if (arr) arr.push(log);
+      else map.set(key, [log]);
+    }
+    // parse "DD/MM/YYYY HH:mm" -> เรียงใหม่สุดก่อน
+    const parseTime = (s: string): number => {
+      const [datePart, timePart = "00:00"] = s.split(" ");
+      const [d, m, y] = datePart.split("/");
+      return Date.parse(`${y}-${m}-${d}T${timePart}:00`) || 0;
+    };
+    for (const arr of map.values()) {
+      arr.sort((a, b) => parseTime(b.changed_time) - parseTime(a.changed_time));
+    }
+    return map;
+  }, [scoreLogs]);
   // -----------------------------
   // 4) header ข้อสอบ + helper
   // -----------------------------
@@ -309,12 +356,13 @@ export default function BagScoresPage() {
     });
   }, [bagScores]);
 
-  const formatScore = (v: number | string | null | undefined) => {
-    if (v === null || v === undefined) return "-";
-    const num = Number(v);
-    if (Number.isNaN(num)) return String(v);
-    return num.toFixed(2);
-  };
+const formatScore = (v: number | string | null | undefined) => {
+  if (v === null || v === undefined) return "-";
+  const num = Number(v);
+  if (Number.isNaN(num)) return String(v);
+
+  return Number.isInteger(num) ? String(num) : String(num);
+};
 
   const calcTotalForBooklet = (bk: BagBookletScore) => {
     return bk.questions.reduce((sum, q) => {
@@ -913,15 +961,15 @@ export default function BagScoresPage() {
                 <div
                   className="table-responsive"
                 >
-  <table
-    className="table table-sm mb-0 align-middle text-nowrap"
-    style={{
-      borderCollapse: "collapse",
-      fontSize: "0.8rem",
-      tableLayout: "fixed",   //  fix layout
-      width: "max-content",   //  ไม่ให้หดตาม container (ให้ scroll แทน)
-      minWidth: "1400px",     //  กันบี้ (ปรับตามจำนวนคอลัมน์)
-    }}
+                  <table
+                    className="table table-sm mb-0 align-middle text-nowrap"
+                    style={{
+                      borderCollapse: "collapse",
+                      fontSize: "0.8rem",
+                      tableLayout: "fixed",   //  fix layout
+                      width: "max-content",   //  ไม่ให้หดตาม container (ให้ scroll แทน)
+                      minWidth: "1400px",     //  กันบี้ (ปรับตามจำนวนคอลัมน์)
+                    }}
                   >
                     <thead>
                       {/* แถวที่ 1 : หัวข้อข้อสอบ + label */}
@@ -1088,36 +1136,30 @@ export default function BagScoresPage() {
                               );
                             }
 
+                            const log = scoreLogMap.get(`${bk.bookletId}-${hq.questionNo}`);
+
                             return (
                               <React.Fragment key={`${bk.bookletId}-${hq.questionNo}`}>
-                                <td className="text-end" style={{ border: "1px solid #edeff2" }}>
+                                <td className="text-center" style={{ border: "1px solid #edeff2" }}>
                                   {score1Text}
                                 </td>
 
-                                <td className="text-end" style={{ border: "1px solid #edeff2" }}>
+                                <td className="text-center" style={{ border: "1px solid #edeff2" }}>
                                   {score2Text}
                                 </td>
 
                                 {/* ✅ ผลต่าง อยู่ขวาคะแนน2 */}
                                 <td
-                                  className="text-end"
+                                  className="text-center"
                                   style={{
                                     border: "1px solid #edeff2",
-                                    backgroundColor: diff != null && diff > 4 ? "#fff5f5" : undefined, // optional highlight
+                                    backgroundColor: diff != null && diff > 4 ? "#fff5f5" : undefined,
                                   }}
                                 >
                                   {diffText}
                                 </td>
 
-                                <td
-                                  className="text-end fw-semibold"
-                                  style={{
-                                    border: "1px solid #edeff2",
-                                    backgroundColor: "#fafbff",
-                                  }}
-                                >
-                                  {totalText}
-                                </td>
+                                <ChangedTotalCell totalText={totalText} logs={log} />
                               </React.Fragment>
                             );
 
@@ -1126,7 +1168,7 @@ export default function BagScoresPage() {
                           {/* คะแนนรวมทั้งเล่ม */}
                           {viewMode === "score" && (
                             <td
-                              className="text-end fw-bold"
+                              className="text-center fw-bold"
                               style={{
                                 border: "1px solid #dee2e6",
                                 backgroundColor: "#e5f0ff",
@@ -1282,5 +1324,161 @@ export default function BagScoresPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// -----------------------------
+// เซลล์รวม (ข้อ) พร้อม tooltip แสดงประวัติการแก้ไขคะแนน
+// -----------------------------
+function ChangedTotalCell({
+  totalText,
+  logs,
+}: {
+  totalText: string;
+  logs: ScoreChangeLog[] | undefined;
+}) {
+  const [hover, setHover] = useState(false);
+  const changed = !!logs && logs.length > 0;
+  const latest = changed ? logs![0] : undefined;
+
+  return (
+    <td
+      className="text-center fw-semibold position-relative"
+      style={{
+        border: "1px solid #edeff2",
+        backgroundColor: changed ? "#fff1f2" : "#fafbff",
+        color: changed ? "#dc2626" : undefined,
+        cursor: changed ? "help" : undefined,
+        transition: "background-color 0.15s ease",
+      }}
+      onMouseEnter={() => changed && setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <span className="d-inline-flex align-items-center gap-1 justify-content-end">
+        {changed && (
+          <History size={14} style={{ color: "#dc2626" }} aria-label="คะแนนถูกแก้ไข" />
+        )}
+        {totalText}
+      </span>
+
+      {changed && hover && logs && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            right: 0,
+            marginTop:0,
+            zIndex: 30,
+            minWidth: 300,
+            maxHeight: 420,
+            overflowY: "auto",
+            background: "#ffffff",
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            boxShadow: "0 10px 25px rgba(0,0,0,0.12), 0 4px 10px rgba(0,0,0,0.06)",
+            padding: "12px 14px",
+            textAlign: "left",
+            color: "#111827",
+            fontWeight: 400,
+            fontSize: 13,
+            lineHeight: 1.5,
+            whiteSpace: "normal",
+          }}
+        >
+          <div
+            className="d-flex align-items-center justify-content-between gap-2 mb-2 pb-2"
+            style={{ borderBottom: "1px solid #f3f4f6" }}
+          >
+            <div className="d-flex align-items-center gap-2">
+              <History size={16} style={{ color: "#dc2626" }} />
+              <span className="fw-semibold" style={{ color: "#dc2626" }}>
+                ประวัติการแก้ไขคะแนน
+              </span>
+            </div>
+            <span
+              className="badge"
+              style={{ backgroundColor: "#fee2e2", color: "#dc2626", fontWeight: 600 }}
+            >
+              {logs.length} ครั้ง
+            </span>
+          </div>
+
+          <div className="d-flex flex-column gap-2">
+            {logs.map((log, idx) => (
+              <div
+                key={idx}
+                style={{
+                  border: "1px solid #f3f4f6",
+                  borderRadius: 8,
+                  padding: "8px 10px",
+                  backgroundColor: idx === 0 ? "#fff7f7" : "#fafafa",
+                }}
+              >
+                <div
+                  className="d-flex justify-content-between align-items-center mb-1 pb-1"
+                  style={{ borderBottom: "1px dashed #e5e7eb" }}
+                >
+                  <span
+                    className="fw-semibold"
+                    style={{ color: idx === 0 ? "#dc2626" : "#6b7280", fontSize: 12 }}
+                  >
+                    {idx === 0 ? "ล่าสุด" : `ครั้งที่ ${logs.length - idx}`}
+                  </span>
+                  <span className="text-muted" style={{ fontSize: 12 }}>
+                    ข้อ {log.question}
+                  </span>
+                </div>
+
+                <div className="d-flex justify-content-between">
+                  <div className="d-flex gap-1 align-items-center">
+                    <span className="text-muted">ผู้ตรวจ 1:</span>
+                    <span>{log.grader1}</span>
+                  </div>
+                  <span className="fw-semibold" style={{ color: "#dc2626" }}>
+                    {log.score1}
+                  </span>
+                </div>
+
+                <div className="d-flex justify-content-between">
+                  <div className="d-flex gap-1 align-items-center">
+                    <span className="text-muted">ผู้ตรวจ 2:</span>
+                    <span>{log.grader2}</span>
+                  </div>
+                  <span className="fw-semibold" style={{ color: "#dc2626" }}>
+                    {log.score2}
+                  </span>
+                </div>
+
+                {(log as any).total_scorerow != null && (
+                  <div
+                    className="d-flex justify-content-between mt-1 pt-1"
+                    style={{ borderTop: "1px dashed #e5e7eb" }}
+                  >
+                    <span className="text-muted">คะแนนรวม:</span>
+                    <span className="fw-semibold" style={{ color: "#dc2626" }}>
+                      {(log as any).total_scorerow}
+                    </span>
+                  </div>
+                )}
+
+                <div
+                  className="mt-1 pt-1 d-flex flex-column gap-1"
+                  style={{ borderTop: "1px dashed #e5e7eb", fontSize: 12 }}
+                >
+                  <div className="d-flex justify-content-between">
+                    <span className="text-muted">แก้ไขโดย:</span>
+                    <span>{log.changed_by}</span>
+                  </div>
+                  <div className="d-flex justify-content-between">
+                    <span className="text-muted">เมื่อ:</span>
+                    <span>{log.changed_time}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </td>
   );
 }

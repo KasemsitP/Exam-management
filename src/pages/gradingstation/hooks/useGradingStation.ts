@@ -1,22 +1,14 @@
 // hooks/useGradingStation.ts
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import axios from "axios";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppSelector, useAppDispatch } from "@/store/hook";
 import Swal from "sweetalert2";
 
-import {
-  submitScoreThunk,
-  selectIsGradingLoading,
-  selectGradingError,
-  clearGradingError,
+import type {
   PayloadScore,
-  verifyAndAllocateThunk,
-  selectLastSlotId,
-  selectGradingRecords,
-  fetchRecordThunk,
-  gradingSlice,
-  selectBagNo,
-  clearGradingState,
+  PayloadSlot,
+  GradingRecord,
 } from "@/store/slices/grading.slice";
 
 import { selectCurrentUser } from "@/store/slices/auth.slice";
@@ -49,8 +41,15 @@ export const useGradingStation = () => {
   const user = useAppSelector(selectCurrentUser);
   console.log("Current user:", user);
   const activeCampaign = useAppSelector(selectActiveCampaign);
-  const lastSlotId = useAppSelector(selectLastSlotId);
-  const records = useAppSelector(selectGradingRecords);
+
+  // --- Local grading state (เดิมอยู่ใน Redux grading.slice) ---
+  const [lastSlotId, setLastSlotId] = useState<number | null>(null);
+  const [bagNo, setBagNo] = useState<number | null>(null);
+  const [records, setRecords] = useState<GradingRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [gradingError, setGradingError] = useState<string | null>(null);
+  const [random_number , setRandom_number] = useState<number | null>(null);
+  const [IsScanned, setIsScanned] = useState(false);
 
   const QRActive = useAppSelector(selectQrActiveCampaign);
 
@@ -68,15 +67,11 @@ export const useGradingStation = () => {
     selectAssignmentsForGrader(campaignNumericId, accountId)
   );
 
-  const bagNo = useAppSelector(selectBagNo);
-
   useEffect(() => {
     console.log("gradersAssignment =", gradersAssignment);
     console.log("bagNo =", bagNo);
-  }, [gradersAssignment]);
+  }, [gradersAssignment, bagNo]);
 
-  const isLoading = useAppSelector(selectIsGradingLoading);
-  const gradingError = useAppSelector(selectGradingError);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   // --- 2. Fetch graders once ---
@@ -154,16 +149,102 @@ export const useGradingStation = () => {
   // --- 6. Error -> toast ---
   useEffect(() => {
     if (gradingError) {
-      dispatch(clearGradingError());
+      setGradingError(null);
     }
-  }, [gradingError, dispatch, toast]);
+  }, [gradingError, toast]);
+
+  // --- Local API helpers (แทน thunks) ---
+  const fetchRecords = useCallback(async (graderId: number) => {
+    setIsLoading(true);
+    setGradingError(null);
+    try {
+      const res = await axios.get(`/api/gradingscore/record/${graderId}`);
+      const mapped: GradingRecord[] = res.data.map((r: any) => ({
+        slotId: r.slot_id,
+        score: r.score,
+        qr_payload: r.qr_payload,
+        enteredAt: new Date(r.enteredAT).toLocaleString("th-TH", {
+          timeZone: "Asia/Bangkok",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        random_num: r.random_num,
+      }));
+      setRecords(mapped);
+      return mapped;
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "ไม่สามารถดึงประวัติคะแนนได้";
+      setGradingError(msg);
+      throw new Error(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const verifyAndAllocate = useCallback(
+    async (payload: PayloadSlot): Promise<{ slotId: number; bagNo: number }> => {
+      setGradingError(null);
+      try {
+        const res = await axios.post("/api/gradingslots/verify", payload);
+        setLastSlotId(res.data.slotId);
+        setBagNo(res.data.bagNo);
+        setIsScanned(true);
+        setRandom_number(res.data.random_num);
+        return res.data;
+      } catch (error: any) {
+        const msg =
+          error.response?.data?.message || "ไม่สามารถสร้าง Slot การตรวจได้";
+        setGradingError(msg);
+        throw new Error(msg);
+      }
+    },
+    []
+  );
+
+  const submitScore = useCallback(async (payload: PayloadScore) => {
+    setIsLoading(true);
+    setGradingError(null);
+    try {
+      const res = await axios.post("/api/gradingscore/submit", payload);
+      return res.data as { slotId: number; score: number };
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "ไม่สามารถบันทึกคะแนนได้";
+      setGradingError(msg);
+      throw new Error(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const clearLocalGradingState = useCallback(() => {
+    setLastSlotId(null);
+    setBagNo(null);
+    setRandom_number(null);
+    setRecords([]);
+    setGradingError(null);
+    setIsLoading(false);
+    setIsScanned(false);
+  }, []);
+
+  // --- Reset เมื่อ user เปลี่ยน (แก้บั๊ก state ค้างหลัง logout/login) ---
+  const prevUserIdRef = useRef(user?.id);
+  useEffect(() => {
+    if (prevUserIdRef.current !== user?.id) {
+      clearLocalGradingState();
+      prevUserIdRef.current = user?.id;
+    }
+  }, [user?.id, clearLocalGradingState]);
 
   // --- 7. Fetch records for recent list ---
   useEffect(() => {
     if (activeAssignment?.grader_id) {
-      dispatch(fetchRecordThunk(activeAssignment.grader_id));
+      fetchRecords(activeAssignment.grader_id).catch(() => {});
     }
-  }, [dispatch, activeAssignment?.grader_id]);
+  }, [activeAssignment?.grader_id, fetchRecords]);
 
   useEffect(() => {
     if (records && records.length > 0) {
@@ -211,21 +292,19 @@ export const useGradingStation = () => {
     setScannerEnabled(false);
     setPause(true);
 
-    const result = await dispatch(
-      verifyAndAllocateThunk({
+    try {
+      const result = await verifyAndAllocate({
         qrPayload: value,
         campaignId: Number(DeleteCamp(activeCampaign.id)),
         graderId: graderProfile.grader_id,
         questionNo: questionNo,
-      })
-    );
-    console.log("verifyAndAllocate result:", result);
-
-    if (verifyAndAllocateThunk.rejected.match(result)) {
+      });
+      console.log("verifyAndAllocate result:", result);
+    } catch (err: any) {
       await Swal.fire({
         icon: "error",
         title: "สแกนไม่สำเร็จ",
-        text: result.payload || result.error?.message || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
+        text: err.message || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
       });
       return;
     }
@@ -249,7 +328,7 @@ export const useGradingStation = () => {
   };
 
   const handleClear = () => {
-    dispatch(clearGradingState());
+    clearLocalGradingState();
     setManualPayload("");
     setScanData(null);
     setPause(false);
@@ -270,8 +349,6 @@ export const useGradingStation = () => {
       return;
     }
 
-    setScannerEnabled(false);
-    setPause(true);
     await handleScan(value);
   };
 
@@ -356,7 +433,7 @@ html: `
     <div>รายวิชา: <strong>${activeAssignment.subject_name}</strong></div>
     <div>หัวข้อ: <strong>${activeAssignment.question_label}</strong></div>
     <div>เลขประจำถุง: <strong>${bagNo}</strong></div>
-    <div>รหัส Slot: <strong>${lastSlotId}</strong></div>
+    <div>รหัสจัดเก็บ: <strong>${random_number}</strong></div>
 
   </div>
 `
@@ -382,17 +459,8 @@ html: `
     };
 
     try {
-      const resultAction = await dispatch(submitScoreThunk(payload));
-
-      if (resultAction.type.endsWith("/rejected")) {
-        const errorPayload = resultAction.payload as string;
-        throw new Error(errorPayload);
-      }
-
-      const result = resultAction.payload as {
-        slotId: number;
-        score: number;
-      };
+      const result = await submitScore(payload);
+      console.log("submitScore result:", result);
 
       const record: RecordedScore = {
         slotId: lastSlotId,
@@ -404,9 +472,10 @@ html: `
       //setRecent((prev) => [record, ...prev].slice(0, 6));
       setScanData(null);
       setScore("");
+      setIsScanned(false);
 
 
-      await dispatch(fetchRecordThunk(activeAssignment.grader_id)).unwrap();
+      await fetchRecords(activeAssignment.grader_id);
 
       await Swal.fire({
         icon: "success",
@@ -506,6 +575,9 @@ html: `
 
     bagNo,
     lastSlotId,
-    QRActive
+    QRActive,
+
+    IsScanned,
+    random_number,
   };
 };
