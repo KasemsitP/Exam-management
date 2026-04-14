@@ -283,6 +283,7 @@ import {
   AdminResetPage,
   SubjectRankingExportPage,
   SettingsPage,
+  GraderScoreSummaryPage,
 } from "@/routes/pages";
 
 function NotFound() {
@@ -327,6 +328,7 @@ children: [
       { path: "/admin-reset", element: <AdminResetPage />, loader: AdminResetPage.preload },
       { path: "/subject-ranking-export", element: <SubjectRankingExportPage />, loader: SubjectRankingExportPage.preload },
       { path: "/settings", element: <SettingsPage />, loader: SettingsPage.preload },
+      { path: "/grader-score-summary", element: <GraderScoreSummaryPage />, loader: GraderScoreSummaryPage.preload },
       { path: "*", element: <NotFound /> },
     ],
   },

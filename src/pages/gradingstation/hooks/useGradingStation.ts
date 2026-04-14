@@ -12,7 +12,7 @@ import type {
 } from "@/store/slices/grading.slice";
 
 import { selectCurrentUser } from "@/store/slices/auth.slice";
-import { selectActiveCampaign  , selectQrActiveCampaign} from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectQrActiveCampaign } from "@/store/slices/examData.slice";
 import {
   selectGradersForCampaign,
   selectGradersStatus,
@@ -55,6 +55,23 @@ export interface DraftScore {
   status_slot: string;
 }
 
+type PreviewStartResponse = {
+  canStart: boolean;
+  bagId: number;
+  bagNo: number;
+  bookletId: number;
+  random_num: string | number;
+  examCode: string | number;
+  subjectId: number;
+  subjectName: string;
+  questionNo: number;
+  questionLabel?: string | null;
+  graderId: number;
+  totalBooklets: number;
+  message: string;
+};
+
+
 export const useGradingStation = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
@@ -71,7 +88,7 @@ export const useGradingStation = () => {
   const [records, setRecords] = useState<GradingRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [gradingError, setGradingError] = useState<string | null>(null);
-  const [random_number , setRandom_number] = useState<number | null>(null);
+  const [random_number, setRandom_number] = useState<number | null>(null);
   const [IsScanned, setIsScanned] = useState(false);
 
   const QRActive = useAppSelector(selectQrActiveCampaign);
@@ -165,10 +182,16 @@ export const useGradingStation = () => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [recent, setRecent] = useState<RecordedScore[]>([]);
   const [draftScores, setDraftScores] = useState<DraftScore[]>([]);
+  const [draftBagInfo, setDraftBagInfo] = useState<{
+    subject_name: string | null;
+    question_label: string | null;
+    question_no: number | null;
+  }>({ subject_name: null, question_label: null, question_no: null });
   const [isDraftLoading, setIsDraftLoading] = useState(false);
   const [questionNo, setQuestionNo] = useState<number>(null);
   const [questionMaxScore, setQuestionMaxScore] = useState<number>(null);
   const [currentBagId, setCurrentBagId] = useState<number | null>(null);
+  const [previewData, setPreviewData] = useState<PreviewStartResponse | null>(null);
 
   console.log(questionNo, questionMaxScore)
 
@@ -180,42 +203,58 @@ export const useGradingStation = () => {
   }, [gradingError, toast]);
 
   // --- Local API helpers (แทน thunks) ---
-  const fetchRecords = useCallback(async (graderId: number) => {
-    setIsLoading(true);
-    setGradingError(null);
-    try {
-      const res = await axios.get(`/api/gradingscore/record/${graderId}`);
-      const mapped: GradingRecord[] = res.data.map((r: any) => ({
-        slotId: r.slot_id,
-        score: r.score,
-        qr_payload: r.qr_payload,
-        enteredAt: new Date(r.enteredAT).toLocaleString("th-TH", {
-          timeZone: "Asia/Bangkok",
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
-        random_num: r.random_num,
-      }));
-      setRecords(mapped);
-      return mapped;
-    } catch (error: any) {
-      const msg = error.response?.data?.message || "ไม่สามารถดึงประวัติคะแนนได้";
-      setGradingError(msg);
-      throw new Error(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // const fetchRecords = useCallback(async (graderId: number) => {
+  //   setIsLoading(true);
+  //   setGradingError(null);
+  //   try {
+  //     const res = await axios.get(`/api/gradingscore/record/${graderId}`);
+  //     const mapped: GradingRecord[] = res.data.map((r: any) => ({
+  //       slotId: r.slot_id,
+  //       score: r.score,
+  //       qr_payload: r.qr_payload,
+  //       enteredAt: new Date(r.enteredAT).toLocaleString("th-TH", {
+  //         timeZone: "Asia/Bangkok",
+  //         year: "numeric",
+  //         month: "2-digit",
+  //         day: "2-digit",
+  //         hour: "2-digit",
+  //         minute: "2-digit",
+  //         second: "2-digit",
+  //       }),
+  //       random_num: r.random_num,
+  //     }));
+  //     setRecords(mapped);
+  //     return mapped;
+  //   } catch (error: any) {
+  //     const msg = error.response?.data?.message || "ไม่สามารถดึงประวัติคะแนนได้";
+  //     setGradingError(msg);
+  //     throw new Error(msg);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }, []);
 
-  const verifyAndAllocate = useCallback(
-    async (payload: PayloadSlot): Promise<{ slotId: number; bagNo: number }> => {
+  const previewStart = useCallback(
+    async (payload: PayloadSlot): Promise<PreviewStartResponse> => {
       setGradingError(null);
       try {
-        const res = await axios.post("/api/gradingslots/verify", payload);
+        const res = await axios.post("/api/gradingslots/preview-start", payload);
+        return res.data;
+      } catch (error: any) {
+        const msg =
+          error.response?.data?.message || "ไม่สามารถตรวจสอบข้อมูลก่อนเริ่มตรวจได้";
+        setGradingError(msg);
+        throw new Error(msg);
+      }
+    },
+    []
+  );
+
+  const confirmStart = useCallback(
+    async (payload: PayloadSlot): Promise<{ slotId: number; bagNo: number; random_num: number }> => {
+      setGradingError(null);
+      try {
+        const res = await axios.post("/api/gradingslots/confirm-start", payload);
         setLastSlotId(res.data.slotId);
         setBagNo(res.data.bagNo);
         setIsScanned(true);
@@ -223,7 +262,7 @@ export const useGradingStation = () => {
         return res.data;
       } catch (error: any) {
         const msg =
-          error.response?.data?.message || "ไม่สามารถสร้าง Slot การตรวจได้";
+          error.response?.data?.message || "ไม่สามารถเริ่มตรวจและสร้าง Slot ได้";
         setGradingError(msg);
         throw new Error(msg);
       }
@@ -246,99 +285,144 @@ export const useGradingStation = () => {
     }
   }, []);
 
-const fetchDraftScores = useCallback(async (graderId: number) => {
-  setIsDraftLoading(true);
-  try {
-    const res = await axios.get(`/api/gradingdraft/unconfirmed/${graderId}`);
-    console.log("Fetched draft scores:", res.data);
-
-    const bagId =
-      typeof res.data?.data?.bag_id === "number" ? res.data.data.bag_id : null;
-
-    const drafts = Array.isArray(res.data?.data?.drafts)
-      ? res.data.data.drafts
-      : [];
-
-    setCurrentBagId(bagId);
-    setDraftScores(drafts);
-  } catch (error: any) {
-    console.error("Failed to fetch draft scores:", error);
-    setCurrentBagId(null);
-    setDraftScores([]);
-  } finally {
-    setIsDraftLoading(false);
-  }
-}, []);
-
- const confirmAllDraftScores = useCallback(
-  async (graderId: number, editedScores: Record<string, string>) => {
+  const fetchDraftScores = useCallback(async (graderId: number) => {
     setIsDraftLoading(true);
-
     try {
-      const scores = Object.entries(editedScores)
-        .map(([key, score]) => {
-          let parsedKey: ScoreKey;
+      const res = await axios.get(`/api/gradingdraft/unconfirmed/${graderId}`);
+      console.log("Fetched draft scores:", res.data);
 
-          try {
-            parsedKey = JSON.parse(key) as ScoreKey;
-          } catch {
-            return null;
-          }
+      const bagId =
+        typeof res.data?.data?.bag_id === "number" ? res.data.data.bag_id : null;
 
-          const slot_id = Number(parsedKey.slot_id);
-          const question_no = Number(parsedKey.question_no);
-          const numericScore = Number(score);
+      const drafts = Array.isArray(res.data?.data?.drafts)
+        ? res.data.data.drafts
+        : [];
 
-          if (
-            !Number.isFinite(slot_id) ||
-            !Number.isFinite(question_no) ||
-            !Number.isFinite(numericScore) ||
-            !Number.isFinite(currentBagId)
-          ) {
-            return null;
-          }
-
-          return {
-            slot_id,
-            question_no,
-            score: numericScore,
-          };
-        })
-        .filter(
-          (
-            item
-          ): item is { slot_id: number; question_no: number; score: number } =>
-            item !== null
-        );
-
-      if (scores.length === 0) {
-        await Swal.fire({
-          icon: "warning",
-          title: "ยังไม่มีคะแนนที่ยืนยันได้",
-          text: "กรุณาตรวจสอบข้อมูลคะแนนอีกครั้ง",
-        });
-        return;
-      }
-
-      await axios.post(`/api/gradingdraft/confirm-bag`, { graderId, scores, bagId: currentBagId });
-      await fetchDraftScores(graderId);
-
-      await Swal.fire({
-        icon: "success",
-        title: "ยืนยันคะแนนทั้งหมดสำเร็จ!",
+      setCurrentBagId(bagId);
+      setDraftScores(drafts);
+      setDraftBagInfo({
+        subject_name: res.data?.data?.subject_name ?? null,
+        question_label: res.data?.data?.question_label ?? null,
+        question_no:
+          typeof res.data?.data?.question_no === "number"
+            ? res.data.data.question_no
+            : null,
       });
     } catch (error: any) {
-      await Swal.fire({
-        icon: "error",
-        title: "ยืนยันคะแนนไม่สำเร็จ",
-        text: error.response?.data?.message || "เกิดข้อผิดพลาด",
-      });
+      console.error("Failed to fetch draft scores:", error);
+      setCurrentBagId(null);
+      setDraftScores([]);
+      setDraftBagInfo({ subject_name: null, question_label: null, question_no: null });
     } finally {
       setIsDraftLoading(false);
     }
-  },
-  [fetchDraftScores, currentBagId]
-);
+  }, []);
+
+  const confirmAllDraftScores = useCallback(
+    async (graderId: number, editedScores: Record<string, string>) => {
+      setIsDraftLoading(true);
+
+      try {
+        const scores = Object.entries(editedScores)
+          .map(([key, score]) => {
+            let parsedKey: ScoreKey;
+
+            try {
+              parsedKey = JSON.parse(key) as ScoreKey;
+            } catch {
+              return null;
+            }
+
+            const slot_id = Number(parsedKey.slot_id);
+            const question_no = Number(parsedKey.question_no);
+            const numericScore = Number(score);
+
+            if (
+              !Number.isFinite(slot_id) ||
+              !Number.isFinite(question_no) ||
+              !Number.isFinite(numericScore) ||
+              !Number.isFinite(currentBagId)
+            ) {
+              return null;
+            }
+
+            return {
+              slot_id,
+              question_no,
+              score: numericScore,
+            };
+          })
+          .filter(
+            (
+              item
+            ): item is { slot_id: number; question_no: number; score: number } =>
+              item !== null
+          );
+
+        if (scores.length === 0) {
+          await Swal.fire({
+            icon: "warning",
+            title: "ยังไม่มีคะแนนที่ยืนยันได้",
+            text: "กรุณาตรวจสอบข้อมูลคะแนนอีกครั้ง",
+          });
+          return;
+        }
+        const randomNums = draftScores
+          .map((d) => Number(d.random_num))
+          .filter((n) => Number.isFinite(n));
+        const minRandom = randomNums.length > 0 ? Math.min(...randomNums) : null;
+        const maxRandom = randomNums.length > 0 ? Math.max(...randomNums) : null;
+        const rangeText =
+          minRandom != null && maxRandom != null
+            ? `${minRandom} - ${maxRandom}`
+            : "-";
+
+        const ok = await Swal.fire({
+          icon: "question",
+          title: "ยืนยันการบันทึกคะแนนทั้งหมด?",
+          html: `<div style="text-align:left; line-height:1.8;">
+          <div>วิชา: <strong>${draftBagInfo.subject_name ?? "-"}</strong></div>
+          <div>ข้อ: <strong>${draftBagInfo.question_no ?? "-"}</strong>
+          </div>
+          <div>หัวข้อสอบ: <strong>${
+            draftBagInfo.question_label ? ` ${draftBagInfo.question_label}` : ""
+          }</strong></div>
+          <div>เลขประจำถุง: <strong>${bagNo ?? "-"}</strong></div>
+          <div>รหัสจัดเก็บ: <strong>${random_number ?? "-"}</strong></div>
+          <div>ช่วงรหัสจัดเก็บในถุง: <strong>${rangeText}</strong></div>
+        </div>`,
+          showCancelButton: true,
+          confirmButtonText: "ยืนยัน",
+          cancelButtonText: "ยกเลิก",
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+        });
+
+        if (!ok.isConfirmed) {
+          return;
+          }
+
+
+
+        await axios.post(`/api/gradingdraft/confirm-bag`, { graderId, scores, bagId: currentBagId });
+        await fetchDraftScores(graderId);
+
+        await Swal.fire({
+          icon: "success",
+          title: "ยืนยันคะแนนทั้งหมดสำเร็จ!",
+        });
+      } catch (error: any) {
+        await Swal.fire({
+          icon: "error",
+          title: "ยืนยันคะแนนไม่สำเร็จ",
+          text: error.response?.data?.message || "เกิดข้อผิดพลาด",
+        });
+      } finally {
+        setIsDraftLoading(false);
+      }
+    },
+    [fetchDraftScores, currentBagId]
+  );
 
   const clearLocalGradingState = useCallback(() => {
     setLastSlotId(null);
@@ -362,10 +446,11 @@ const fetchDraftScores = useCallback(async (graderId: number) => {
   // --- 7. Fetch records for recent list ---
   useEffect(() => {
     if (activeAssignment?.grader_id) {
-      fetchRecords(activeAssignment.grader_id).catch(() => {});
-      fetchDraftScores(activeAssignment.grader_id).catch(() => {});
+      // fetchRecords(activeAssignment.grader_id).catch(() => {});
+      fetchDraftScores(activeAssignment.grader_id).catch(() => { });
     }
-  }, [activeAssignment?.grader_id, fetchRecords, fetchDraftScores]);
+  }, [activeAssignment?.grader_id, fetchDraftScores]);
+  //fetchRecords
 
   useEffect(() => {
     if (records && records.length > 0) {
@@ -391,44 +476,73 @@ const fetchDraftScores = useCallback(async (graderId: number) => {
 
   // --- 8. Handlers ---
 
-  const handleScan = async (value: string) => {
-    const now = Date.now();
-    if (!canScan) return;
+const handleScan = async (value: string) => {
+  const now = Date.now();
+  if (!canScan) return;
 
-    if (!questionNo) {
-      await Swal.fire({
-        icon: "warning",
-        title: "ยังไม่ได้เลือกข้อ",
-        text: "กรุณาเลือกข้อคำถามก่อนดำเนินการต่อ",
-        confirmButtonText: "ตกลง",
+  if (!questionNo) {
+    await Swal.fire({
+      icon: "warning",
+      title: "ยังไม่ได้เลือกข้อ",
+      text: "กรุณาเลือกข้อคำถามก่อนดำเนินการต่อ",
+      confirmButtonText: "ตกลง",
+    });
+    return;
+  }
+
+  if (now - lastScanRef.current < cooldownMs) return;
+  lastScanRef.current = now;
+
+  if (!activeAssignment || !graderProfile || !activeCampaign?.id) return;
+
+  setScannerEnabled(false);
+  setPause(true);
+
+  const requestPayload: PayloadSlot = {
+    qrPayload: value,
+    campaignId: Number(DeleteCamp(activeCampaign.id)),
+    graderId: graderProfile.grader_id,
+    questionNo: questionNo,
+  };
+
+  try {
+    const hasActiveDraft = currentBagId !== null && draftScores.length > 0;
+
+    if (!hasActiveDraft) {
+      const preview = await previewStart(requestPayload);
+      setPreviewData(preview);
+
+      const result = await Swal.fire({
+        icon: "question",
+        title: "ยืนยันเริ่มตรวจ",
+        html: `
+          <div style="text-align:left; line-height:1.8;">
+            <div>ถุงที่: <strong>${preview.bagNo}</strong></div>
+            <div>วิชา: <strong>${preview.subjectName}</strong></div>
+            <div>ข้อที่: <strong>${preview.questionNo}</strong></div>
+            <div>หัวข้อ: <strong>${preview.questionLabel ?? "-"}</strong></div>
+            <div>จำนวนเล่มในถุง: <strong>${preview.totalBooklets}</strong></div>
+            <div>รหัสจัดเก็บ: <strong>${preview.random_num}</strong></div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: "เริ่มตรวจ",
+        cancelButtonText: "ยกเลิก",
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
       });
-      return;
+
+      if (!result.isConfirmed) {
+        setPause(false);
+        setScannerEnabled(true);
+        return;
+      }
+     
     }
 
-    if (now - lastScanRef.current < cooldownMs) return;
-    lastScanRef.current = now;
-
-    if (!activeAssignment || !graderProfile) return;
-
-    setScannerEnabled(false);
-    setPause(true);
-
-    try {
-      const result = await verifyAndAllocate({
-        qrPayload: value,
-        campaignId: Number(DeleteCamp(activeCampaign.id)),
-        graderId: graderProfile.grader_id,
-        questionNo: questionNo,
-      });
-      console.log("verifyAndAllocate result:", result);
-    } catch (err: any) {
-      await Swal.fire({
-        icon: "error",
-        title: "สแกนไม่สำเร็จ",
-        text: err.message || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
-      });
-      return;
-    }
+    // มี draft อยู่แล้ว หรือเพิ่ง preview ผ่าน -> ค่อย confirm start
+    const confirmed = await confirmStart(requestPayload);
+    console.log("confirmStart result:", confirmed);
 
     setScanData(value ?? null);
 
@@ -440,14 +554,25 @@ const fetchDraftScores = useCallback(async (graderId: number) => {
       showConfirmButton: false,
     });
 
-    if (pauseAfterSuccess) return;
+    if (!pauseAfterSuccess) {
+      setTimeout(() => {
+        setPause(false);
+        setScannerEnabled(true);
+      }, cooldownMs);
+    }
+     await fetchDraftScores(activeAssignment.grader_id);
+  } catch (err: any) {
+    await Swal.fire({
+      icon: "error",
+      title: "สแกนไม่สำเร็จ",
+      text: err.message || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
+      confirmButtonText: "ตกลง",
+    });
 
-    setTimeout(() => {
-      setPause(false);
-      setScannerEnabled(true);
-    }, cooldownMs);
-  };
-
+    setPause(false);
+    setScannerEnabled(true);
+  }
+};
   const handleClear = () => {
     clearLocalGradingState();
     setManualPayload("");
@@ -546,7 +671,7 @@ const fetchDraftScores = useCallback(async (graderId: number) => {
     const confirmResult = await Swal.fire({
       icon: "warning",
       title: "ยืนยันการบันทึกคะแนน?",
-html: `
+      html: `
   <div style="text-align:left; line-height:1.8;">
     <div>ข้อที่: <strong>${questionNo}</strong></div>
     <div>คะแนนที่บันทึก: <strong>${score}</strong> คะแนน</div>
@@ -557,7 +682,7 @@ html: `
 
   </div>
 `
-,
+      ,
       showCancelButton: true,
       confirmButtonText: "ยืนยัน",
       cancelButtonText: "ยกเลิก",
@@ -596,7 +721,7 @@ html: `
       setManualPayload("");
 
 
-      await fetchRecords(activeAssignment.grader_id);
+      // await fetchRecords(activeAssignment.grader_id);
       await fetchDraftScores(activeAssignment.grader_id);
 
       await Swal.fire({
@@ -620,7 +745,7 @@ html: `
         setScannerEnabled(true);
       }
 
-   //   handleClear();
+      //   handleClear();
     } catch (error: any) {
       console.error("Failed to save score:", error);
       await Swal.fire({
@@ -703,6 +828,7 @@ html: `
     random_number,
 
     draftScores,
+    draftBagInfo,
     isDraftLoading,
     confirmAllDraftScores,
     fetchDraftScores,

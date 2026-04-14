@@ -1,9 +1,14 @@
 // components/RecentScoresCard.tsx
 import { useState, useEffect } from "react";
-import type { DraftScore , ScoreKey } from "../hooks/useGradingStation";
+import type { DraftScore } from "../hooks/useGradingStation";
 
 interface RecentScoresCardProps {
   draftScores: DraftScore[];
+  bagInfo?: {
+    subject_name: string | null;
+    question_label: string | null;
+    question_no: number | null;
+  };
   isDraftLoading: boolean;
   onConfirmAll: (editedScores: Record<string, string>) => void;
 }
@@ -106,6 +111,7 @@ function PayloadCell({ payload }: { payload: string }) {
 /* -------------------------------------------------------------------------- */
 export default function RecentScoresCard({
   draftScores,
+  bagInfo,
   isDraftLoading,
   onConfirmAll,
 }: RecentScoresCardProps) {
@@ -154,34 +160,71 @@ export default function RecentScoresCard({
           "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)",
       }}
     >
-      <div className="card-header bg-white d-flex align-items-center gap-2">
-        <h6 className="mb-0">รายการคะแนนที่ตรวจ</h6>
-        {draftScores.length > 0 && (
-          <span className="badge bg-warning text-dark ms-auto">
-            {draftScores.length} รายการ
-          </span>
+      <div className="card-header bg-white">
+        <div className="d-flex align-items-center gap-2">
+          <h6 className="mb-0">รายการคะแนนที่ตรวจ</h6>
+          {draftScores.length > 0 && (
+            <span className="badge bg-warning text-dark ms-auto">
+              {draftScores.length} รายการ
+            </span>
+          )}
+        </div>
+
+        {bagInfo && (bagInfo.subject_name || bagInfo.question_label || bagInfo.question_no != null) && (
+          <div className="mt-2 d-flex flex-wrap gap-2 align-items-center">
+            {bagInfo.subject_name && (
+              <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
+                วิชา: {bagInfo.subject_name}
+              </span>
+            )}
+            {bagInfo.question_no != null && (
+              <span className="badge bg-info-subtle text-info border border-info-subtle">
+                ข้อ {bagInfo.question_no}
+              </span>
+            )}
+            {bagInfo.question_label && (
+              <span className="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                {bagInfo.question_label}
+              </span>
+            )}
+          </div>
         )}
       </div>
 
       <div className="card-body">
-        {isDraftLoading ? (
+        {/* {isDraftLoading ? (
           <div className="text-center py-4">
             <div
               className="spinner-border spinner-border-sm text-primary"
               role="status"
             />
             <span className="ms-2 text-muted small">กำลังโหลด...</span>
-          </div>
-        ) : draftScores.length === 0 ? (
+          </div> */}
+        {/* ) : draftScores.length === 0 ? ( */}
+        {draftScores.length === 0 ? (
           <div className="text-muted small">ยังไม่มีรายการคะแนน Draft</div>
         ) : (
           <>
-            {bagNos.map((bagNo) => (
+            {bagNos.map((bagNo) => {
+              const randomNums = groupedByBag[bagNo]
+                .map((it) => Number(it.random_num))
+                .filter((n) => Number.isFinite(n));
+              const minRandom = randomNums.length > 0 ? Math.min(...randomNums) : null;
+              const maxRandom = randomNums.length > 0 ? Math.max(...randomNums) : null;
+
+              return (
               <div key={bagNo} className="mb-3">
-                <h6 className="fw-bold text-primary mb-2">
-                  <i className="bi bi-bag-fill me-1" />
-                  ถุงที่ {bagNo}
-                </h6>
+                <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
+                  <h6 className="fw-bold text-primary mb-0">
+                    <i className="bi bi-bag-fill me-1" />
+                    ถุงที่ {bagNo}
+                  </h6>
+                  {minRandom != null && maxRandom != null && (
+                    <span className="badge bg-light text-dark border">
+                      รหัสจัดเก็บ: {minRandom} - {maxRandom}
+                    </span>
+                  )}
+                </div>
 
                 <div
                   className="table-responsive"
@@ -248,7 +291,8 @@ export default function RecentScoresCard({
                   </table>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             <div className="d-grid mt-3">
               <button

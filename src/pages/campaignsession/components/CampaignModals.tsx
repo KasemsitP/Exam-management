@@ -530,6 +530,7 @@ export function SessionFormModal({
                   <select
                     className="form-select"
                     {...form.register("label", { required: true })}
+                    disabled={isEdit}
                   >
                     <option value="">-- เลือกรอบสอบ --</option>
                     <option value="วันที่ 1">วันที่ 1</option>

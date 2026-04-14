@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { AlertCircle, ClipboardList, KeyRound, Scan, UserRound } from "lucide-react";
 import type { CrmGrader } from "@/store/slices/graders.slice";
+import "./GradingHeader.css";
 
 interface GradingHeaderProps {
   user: any;
@@ -35,14 +36,14 @@ export default function GradingHeader({
     <>
     <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
       <div className="card-body">
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <h1 className="h4 mb-0 d-flex align-items-center gap-2">
+        <div className="d-flex justify-content-between align-items-center mb-2 gh-title-row">
+          <h1 className="h4 mb-0 d-flex align-items-center gap-2 gh-title">
             {/* <Scan size={18} className="text-primary" /> */}
             บันทึกคะแนนผู้เข้าสอบ
           </h1>
           {graderProfile && activeAssignment && (
             <button
-              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+              className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 gh-subjects-btn"
               onClick={() => setShowSubjects(true)}
             >
               <ClipboardList size={16} />
@@ -55,8 +56,8 @@ export default function GradingHeader({
         </div>
 
         {graderProfile && activeAssignment ? (
-          <div className="d-flex flex-wrap gap-5 text-bold ">
-            <span className="d-inline-flex align-items-center gap-3">
+          <div className="d-flex flex-wrap gap-5 text-bold gh-info-wrap">
+            <span className="d-inline-flex align-items-center gap-3 gh-info-inner">
               <span>
                 <span className="text-muted">ผู้ตรวจ: </span>
                 <span className="fw-semibold text-dark">

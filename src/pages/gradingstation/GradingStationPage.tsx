@@ -59,6 +59,7 @@ export default function GradingStationPage() {
     random_number,
 
     draftScores,
+    draftBagInfo,
     isDraftLoading,
     confirmAllDraftScores,
   } = useGradingStation();
@@ -128,6 +129,7 @@ export default function GradingStationPage() {
               <div>
                 <RecentScoresCard
                 draftScores={draftScores}
+                bagInfo={draftBagInfo}
                 isDraftLoading={isDraftLoading}
                 onConfirmAll={(editedScores) => {
                   if (activeAssignment?.grader_id) {

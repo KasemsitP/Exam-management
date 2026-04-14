@@ -19,7 +19,8 @@ import {
   ClipboardMinus,
   RotateCcw,
   Settings,
-  House
+  House,
+  FileCheck,
 } from "lucide-react";
 import type { Permission } from "@/lib/rbac";
 
@@ -150,6 +151,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "สแกนคิวอาร์โค้ด",
     icon: QrCode,
     permissions: ["view_qr"],
+  },
+  {
+    to: "/grader-score-summary",
+    label: "พิมพ์สรุปคะแนน",
+    icon: FileCheck,
+    permissions: ["grade_exams"],
   },
   {
     to: "/admin-reset",

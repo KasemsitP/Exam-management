@@ -20,6 +20,7 @@ export const GraderPage = lazyWithPreload(() => import("@/pages/grader/GradersPa
 export const AdminResetPage = lazyWithPreload(() => import("@/pages/admin-reset/AdminResetScorePage"));
 export const SubjectRankingExportPage = lazyWithPreload(() => import("@/pages/SubjectRaningExport"));
 export const SettingsPage = lazyWithPreload(() => import("@/pages/settings/SettingsPage"));
+export const GraderScoreSummaryPage = lazyWithPreload(() => import("@/pages/grader-score-summary/GraderScoreSummaryPage"));
 
 export const PRELOAD_BY_PATH: Record<string, (() => Promise<any>) | undefined> = {
   "/home": HomePage.preload,
@@ -40,4 +41,5 @@ export const PRELOAD_BY_PATH: Record<string, (() => Promise<any>) | undefined> =
   "/admin-reset": AdminResetPage.preload,
   "/subject-ranking-export": SubjectRankingExportPage.preload,
   "/settings": SettingsPage.preload,
+  "/grader-score-summary": GraderScoreSummaryPage.preload,
 };
