@@ -1,6 +1,9 @@
 // src/pages/bags/components/ComposeBagModal.tsx
 import { CustomQrScanner } from "@/lib/Scanner"; 
 import { Loader2, DatabaseZap, X } from "lucide-react";
+import {useState} from "react";
+import Swal from "sweetalert2";
+import axios from "axios";
 
 interface ComposeBagModalProps {
   open: boolean;
@@ -44,6 +47,48 @@ export default function ComposeBagModalOnlyViews({
   
   // ป้องกันการเรนเดอร์ถ้า modal ปิดอยู่ หรือไม่มีข้อมูล composeBag
   if (!open || !composeBag) return null;
+ // const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+  
+      //setIsExportingPdf(true);
+      try {
+        Swal.fire({
+          title: "กำลังสร้างไฟล์ PDF...",
+          text: "กรุณารอสักครู่",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+  
+        const res = await axios.get(
+          `/api/bags/createpdf/${composeBag.id}`,
+          {
+            responseType: "blob",
+          }
+        );
+  
+        Swal.close();
+  
+        const blob = new Blob([res.data], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        window.open(url, "_blank");
+  
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+  
+      } catch (error) {
+        Swal.close();
+        console.error(error);
+        Swal.fire({
+          icon: "error",
+          title: "Export PDF ล้มเหลว",
+        });
+      } finally {
+       // setIsExportingPdf(false);
+      }
+    };
 
   // คำนวณจำนวนที่สแกนแล้ว
   const scannedCount = isSealed ? bookletsInBag.length : composeBag.scanned.length;
@@ -86,6 +131,9 @@ export default function ComposeBagModalOnlyViews({
                         รอบ {composeBag.sessionLabel}
                       </small>
                     </div>
+                  <button className="btn btn-success"  onClick={handleDownloadPdf} disabled={isLoading || bagStatus === "loading"}>
+                      ดาวน์โหลด PDF
+                    </button>
                     {(!isSealed && composeBag.scanned.length > 0) && (
                       <button 
                         className="btn btn-link btn-sm text-decoration-none text-danger" 

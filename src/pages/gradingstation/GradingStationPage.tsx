@@ -9,7 +9,7 @@ import NoAssignmentCard from "./components/NoAssignmentCard";
 import ScannerPanel from "./components/ScannerPanel";
 import RecentScoresCard from "./components/RecentScoresCard";
 import ConfirmSaveModal from "./components/ConfirmSaveModal";
-import AssignmentCard from "./components/AssignmentCard"
+
 
 export default function GradingStationPage() {
   const {
@@ -57,6 +57,10 @@ export default function GradingStationPage() {
     QRActive,
     IsScanned,
     random_number,
+
+    draftScores,
+    isDraftLoading,
+    confirmAllDraftScores,
   } = useGradingStation();
 
   // Show loading overlay while initial data is loading
@@ -73,6 +77,7 @@ export default function GradingStationPage() {
           graderProfile={graderProfile}
           activeAssignment={activeAssignment}
           gradersStatus={gradersStatus}
+          gradersAssignment={gradersAssignment}
         />
 
         {/* Body: guard by profile & assignment */}
@@ -120,12 +125,16 @@ export default function GradingStationPage() {
 
             {/* Right: Recent */}
             <div className="col-lg-5">
-              <div className="mb-4">
-                <AssignmentCard recent={gradersAssignment} />
-              </div>
-
               <div>
-                <RecentScoresCard recent={recent} />
+                <RecentScoresCard
+                draftScores={draftScores}
+                isDraftLoading={isDraftLoading}
+                onConfirmAll={(editedScores) => {
+                  if (activeAssignment?.grader_id) {
+                    confirmAllDraftScores(activeAssignment.grader_id, editedScores);
+                  }
+                }}
+              />
               </div>
             </div>
           </div>

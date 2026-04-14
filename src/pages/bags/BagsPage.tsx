@@ -268,11 +268,58 @@ export default function BagsPage() {
       });
     }
   );
+  const handleDownloadPdfAll = async () => {
+
+    //setIsExportingPdf(true);
+    try {
+      Swal.fire({
+        title: "กำลังสร้างไฟล์ PDF...",
+        text: "กรุณารอสักครู่",
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+      const params = new URLSearchParams();
+
+      if (filterSessionId === "all") {
+        params.append("campaign_id", String(activeCampaign?.id));
+      } else {
+        params.append("session_id", filterSessionId);
+      }
+
+      const res = await axios.get(
+        `/api/bags/createpdfAll?${params.toString()}`,
+        { responseType: "blob" }
+      );
+
+      Swal.close();
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+    } catch (error) {
+      Swal.close();
+      console.error(error);
+      Swal.fire({
+        icon: "error",
+        title: "Export PDF ล้มเหลว",
+      });
+    } finally {
+      // setIsExportingPdf(false);
+    }
+  };
+
 
 
   // ------------------------------
   // Scan logic
   // ------------------------------
+
 
   const handleScan = useCallback((raw: string) => {
     if (!activeCampaign || !scannerEnabled) return;
@@ -586,6 +633,7 @@ export default function BagsPage() {
         onFilterSessionChange={setFilterSessionId}
         onOpenCreateDialog={() => setIsScannerModalOpen(true)}
         activeCampaignPresent={!!activeCampaign}
+        onDownloadPdfAll={handleDownloadPdfAll}
       />
       <ModalBackdrop open={IsScannerModalOpen} />
       <BagScannerModal

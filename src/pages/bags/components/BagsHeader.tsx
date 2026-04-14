@@ -13,6 +13,7 @@ interface BagsHeaderProps {
   onFilterSessionChange: (value: string) => void;
   onOpenCreateDialog: () => void;
   activeCampaignPresent: boolean;
+  onDownloadPdfAll: () => void;
 }
 
 export default function BagsHeader({
@@ -24,6 +25,7 @@ export default function BagsHeader({
   onFilterSessionChange,
   onOpenCreateDialog,
   activeCampaignPresent,
+  onDownloadPdfAll,
 }: BagsHeaderProps) {
     const locked = useAppSelector(selectIsSystemLocked);
   return (
@@ -34,6 +36,9 @@ export default function BagsHeader({
             <h5 className="mb-1">จัดการถุงข้อสอบ</h5>
           </div>
           <div className="d-flex align-items-center flex-wrap gap-2">
+            <button className="btn btn-outline-secondary d-inline-flex align-items-center gap-1" onClick={onDownloadPdfAll}>
+                ดาวน์โหลด PDF 
+            </button>
             <span className="badge text-bg-secondary d-inline-flex align-items-center gap-1">
               <QrCode size={14} /> ทั้งหมด {bagStats.total}
             </span>
