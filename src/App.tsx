@@ -284,6 +284,7 @@ import {
   SubjectRankingExportPage,
   SettingsPage,
   GraderScoreSummaryPage,
+  ActiveBagsPage,
 } from "@/routes/pages";
 
 function NotFound() {
@@ -329,6 +330,7 @@ children: [
       { path: "/subject-ranking-export", element: <SubjectRankingExportPage />, loader: SubjectRankingExportPage.preload },
       { path: "/settings", element: <SettingsPage />, loader: SettingsPage.preload },
       { path: "/grader-score-summary", element: <GraderScoreSummaryPage />, loader: GraderScoreSummaryPage.preload },
+      { path: "/active-bags", element: <ActiveBagsPage />, loader: ActiveBagsPage.preload },
       { path: "*", element: <NotFound /> },
     ],
   },

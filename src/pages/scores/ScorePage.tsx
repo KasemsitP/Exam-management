@@ -747,14 +747,14 @@ const formatScore = (v: number | string | null | undefined) => {
             <div className="d-grid gap-2 gap-md-1 d-md-flex flex-md-wrap justify-content-md-end flex-md-grow-1">
               {viewMode === "score" ? (
                 <>
-                  <button
+                  {/* <button
                     type="button"
                     className="btn btn-sm btn-secondary d-inline-flex align-items-center justify-content-center text-nowrap"
                     disabled={!selectedBagId}
                     onClick={handlePDFNameperBags}
                   >
                     ดาวน์โหลดใบคะแนนพร้อมชื่อสกุล
-                  </button>
+                  </button> */}
                   <button
                     type="button"
                     className="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center text-nowrap"
@@ -1398,7 +1398,7 @@ function ChangedTotalCell({
     const el = tdRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    const top = rect.bottom + GAP;
+    const top = rect.top - GAP;
     let left = rect.right - TOOLTIP_W;
     if (left < 8) left = 8;
     if (left + TOOLTIP_W > window.innerWidth - 8)
@@ -1450,7 +1450,7 @@ function ChangedTotalCell({
           onMouseLeave={() => setHover(false)}
           style={{
             position: "fixed",
-            top: pos.top,
+            bottom: window.innerHeight - pos.top,
             left: pos.left,
             width: TOOLTIP_W,
             zIndex: 9999,

@@ -165,6 +165,12 @@ export const NAV_ITEMS: NavItem[] = [
     permissions: ["manage_grading"],
   },
   {
+    to: "/active-bags",
+    label: "รายการถุงที่ใช้งาน",
+    icon: PackageCheck,
+    permissions: ["manage_graders"],
+  },
+  {
     to: "/settings",
     label: "ตั้งค่ารอบสอบ",
     icon: Settings,

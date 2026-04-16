@@ -70,7 +70,7 @@ export default function BagsTable({
             <thead className="table-light text-uppercase small">
               <tr>
                 <th style={{ position: "sticky", top: 0, backgroundColor: "#f8f9fa", zIndex: 2 }}>หมายเลขถุง</th>
-                <th style={{ position: "sticky", top: 0, backgroundColor: "#f8f9fa", zIndex: 2 }}>รอบสอบ</th>
+                <th style={{ position: "sticky", top: 0, backgroundColor: "#f8f9fa", zIndex: 2 }}>วิชาที่สอบ</th>
                 <th className="text-center" style={{ position: "sticky", top: 0, backgroundColor: "#f8f9fa", zIndex: 2 }}>จำนวนเล่ม</th>
                 <th className="text-center" style={{ position: "sticky", top: 0, backgroundColor: "#f8f9fa", zIndex: 2 }}>สแกนแล้ว</th>
                 <th className="text-center" style={{ position: "sticky", top: 0, backgroundColor: "#f8f9fa", zIndex: 2 }}>สถานะ</th>

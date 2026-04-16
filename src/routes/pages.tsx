@@ -21,6 +21,7 @@ export const AdminResetPage = lazyWithPreload(() => import("@/pages/admin-reset/
 export const SubjectRankingExportPage = lazyWithPreload(() => import("@/pages/SubjectRaningExport"));
 export const SettingsPage = lazyWithPreload(() => import("@/pages/settings/SettingsPage"));
 export const GraderScoreSummaryPage = lazyWithPreload(() => import("@/pages/grader-score-summary/GraderScoreSummaryPage"));
+export const ActiveBagsPage = lazyWithPreload(() => import("@/pages/active-bags/ActiveBagsPage"));
 
 export const PRELOAD_BY_PATH: Record<string, (() => Promise<any>) | undefined> = {
   "/home": HomePage.preload,
@@ -42,4 +43,5 @@ export const PRELOAD_BY_PATH: Record<string, (() => Promise<any>) | undefined> =
   "/subject-ranking-export": SubjectRankingExportPage.preload,
   "/settings": SettingsPage.preload,
   "/grader-score-summary": GraderScoreSummaryPage.preload,
+  "/active-bags": ActiveBagsPage.preload,
 };
