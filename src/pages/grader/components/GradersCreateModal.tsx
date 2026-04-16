@@ -63,6 +63,7 @@ export default function AccountCreateModal({
     reset({
       username: "",
       password: "",
+      confirmPassword: "",
       full_name: "",
       email: "",
       role_id: defaultRoleId,

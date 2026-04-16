@@ -23,6 +23,8 @@ type SeatCell = {
   user_code: string;
   fullName: string;
   lastNameKey?: string;
+  rowIndex: number;
+  colIndex: number;
 };
 
 type AssignedSummary = {
@@ -309,20 +311,6 @@ export default function SeatAllocationPage() {
     return fromApi && fromApi.length > 0 ? fromApi : [];
   };
 
-  const buildColumns = (cells: SeatCell[], perCol: number): SeatCell[][] => {
-    if (!cells || cells.length === 0 || perCol <= 0) return [];
-    const totalColumns = Math.ceil(cells.length / perCol);
-    const columns: SeatCell[][] = Array.from(
-      { length: totalColumns },
-      () => []
-    );
-    for (let i = 0; i < cells.length; i++) {
-      const colIdx = Math.floor(i / perCol);
-      columns[colIdx].push(cells[i]);
-    }
-    return columns;
-  };
-
   const modalCellStyle: CSSProperties = {
     width: 140,
     height: 64,
@@ -347,10 +335,20 @@ export default function SeatAllocationPage() {
     );
   }, [selectedRoom, modalSearch, roomSeats]);
 
-  const modalColumns = useMemo(
-    () => buildColumns(modalCells, modalSeatsPerRow),
-    [modalCells, modalSeatsPerRow]
-  );
+  const modalColumns = useMemo(() => {
+    const groups = new Map<number, SeatCell[]>();
+    for (const cell of modalCells) {
+      const arr = groups.get(cell.rowIndex);
+      if (arr) arr.push(cell);
+      else groups.set(cell.rowIndex, [cell]);
+    }
+    return Array.from(groups.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([rowIndex, cells]) => ({
+        rowIndex,
+        cells: cells.slice().sort((a, b) => a.colIndex - b.colIndex),
+      }));
+  }, [modalCells]);
 
   const totalModalPages = useMemo(
     () => Math.max(1, Math.ceil(modalColumns.length / modalColsPerPage)),
@@ -369,6 +367,8 @@ export default function SeatAllocationPage() {
       user_code: s.user_code,
       fullName: s.full_name,
       lastNameKey: s.last_name,
+      rowIndex: s.rowIndex,
+      colIndex: s.colIndex,
     }));
 
 
@@ -1204,19 +1204,16 @@ export default function SeatAllocationPage() {
                       style={{ maxWidth: "100%", maxHeight: 600 }}
                     >
                       <div className="d-inline-flex gap-2 pe-2">
-                        {modalColumnsPage.map((col, colIdx) => (
+                        {modalColumnsPage.map((col) => (
                           <div
-                            key={colIdx}
+                            key={col.rowIndex}
                             className="d-flex flex-column gap-2 flex-shrink-0"
                           >
                             <div className="small text-muted text-center">
-                              แถวที่{" "}
-                              {(modalPage - 1) * modalColsPerPage +
-                                colIdx +
-                                1}
+                              แถวที่ {col.rowIndex + 1}
                             </div>
 
-                            {col.map((cell) => (
+                            {col.cells.map((cell) => (
                               <div
                                 key={`${selectedRoom.roomCode}-${cell.seatNo}-${cell.user_code}`}
                                 className="border rounded-3 bg-white d-flex flex-column justify-content-between"

@@ -89,18 +89,6 @@ export default function AccountEditModal({
                   </div>
 
                   <div className="col-md-6">
-                    <label className="form-label">Email</label>
-                    <input
-                      type="email"
-                      className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                      {...register("email")}
-                    />
-                    {errors.email && (
-                      <div className="invalid-feedback">{errors.email.message}</div>
-                    )}
-                  </div>
-
-                  <div className="col-md-6">
                     <label className="form-label">
                       Role <span className="text-danger">*</span>
                     </label>
@@ -110,6 +98,8 @@ export default function AccountEditModal({
                         required: "จำเป็นต้องระบุ",
                         valueAsNumber: true,
                       })}
+                      disabled
+                
                     >
                       {roles.map((role) => (
                         <option key={role.id} value={role.id}>
@@ -132,33 +122,20 @@ export default function AccountEditModal({
                     />
                   </div>
 
-                  <div className="col-md-6">
-                    <div className="form-check mt-4 pt-1">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="edit-active"
-                        {...register("active")}
-                      />
-                      <label className="form-check-label" htmlFor="edit-active">
-                        Active
-                      </label>
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              <div className="modal-footer flex-column flex-sm-row gap-2">
+               <div className="modal-footer d-flex justify-content-end gap-2">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary w-100 w-sm-auto order-2 order-sm-1"
+                  className="btn btn-outline-secondary"
                   onClick={onClose}
                 >
                   ยกเลิก
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-primary w-100 w-sm-auto order-1 order-sm-2"
+                  className="btn btn-primary"
                   disabled={loading || isSubmitting}
                 >
                   {(loading || isSubmitting) && (
@@ -167,6 +144,27 @@ export default function AccountEditModal({
                   บันทึกการแก้ไข
                 </button>
               </div>
+
+              {/* <div className="modal-footer d-flex justify-content-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={onClose}
+                >
+                  ยกเลิก
+                </button>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading || isSubmitting}
+                >
+                  {(loading || isSubmitting) && (
+                    <Loader2 size={16} className="me-2 spin-animation" />
+                  )}
+                  สร้างผู้ใช้
+                </button>
+              </div> */}
             </form>
           </div>
         </div>

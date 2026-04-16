@@ -75,7 +75,10 @@ export default function BagScoresPage() {
   const [isDecrypted, setIsdecrypted] = useState<boolean>(false)
   const [scoresReloadKey, setScoresReloadKey] = useState(0);
 
-
+  // ข้อมูลข้อสอบจาก API subjects
+  const [subjectQuestions, setSubjectQuestions] = useState<
+    { subject_question_id: number; question_no: number; question_name: string; max_score: number }[]
+  >([]);
 
   const OTP_LENGTH = 6;
   const [otpDigits, setOtpDigits] = useState<string[]>(
@@ -280,6 +283,29 @@ export default function BagScoresPage() {
     return () => { cancelled = true; };
   }, [selectedBagId, activeCampaign?.id, scoresReloadKey]);
 
+  // ดึงข้อมูลข้อสอบจาก API subjects เมื่อเลือกถุง
+  useEffect(() => {
+    if (!selectedBag || !activeCampaign?.id) {
+      setSubjectQuestions([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.get(
+          `/api/subjects/${selectedBag.sessionId}/${activeCampaign.id}`
+        );
+        if (cancelled) return;
+        setSubjectQuestions(Array.isArray(res.data) ? res.data : []);
+      } catch (err) {
+        if (cancelled) return;
+        console.error("โหลดข้อมูลข้อสอบไม่สำเร็จ:", err);
+        setSubjectQuestions([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedBag?.sessionId, activeCampaign?.id]);
+
   // ดึงประวัติการแก้ไขคะแนน (score change logs) ของถุงที่เลือก
   useEffect(() => {
     if (!selectedBagId) {
@@ -327,26 +353,46 @@ export default function BagScoresPage() {
   // 4) header ข้อสอบ + helper
   // -----------------------------
 
-  const headerQuestions: { questionNo: number; label: string }[] = useMemo(() => {
-    if (!bagScores || !bagScores.booklets.length) return [];
-    const first = bagScores.booklets[0];
-
-    const byNo = new Map<number, BagQuestionScoreRow>();
-    for (const q of first.questions) byNo.set(q.questionNo, q);
-
-    const maxQ =
-      bagScores.questionCount || first.questionCount || first.questions.length;
-
-    const arr: { questionNo: number; label: string }[] = [];
-    for (let q = 1; q <= maxQ; q++) {
-      const qRow = byNo.get(q);
-      arr.push({
-        questionNo: q,
-        label: qRow?.label ?? `ข้อ ${q}`,
-      });
+  const headerQuestions: { questionNo: number; label: string; maxScore?: number }[] = useMemo(() => {
+    // สร้าง map จาก subjectQuestions API
+    const sqMap = new Map<number, { question_name: string; max_score: number }>();
+    for (const sq of subjectQuestions) {
+      sqMap.set(sq.question_no, { question_name: sq.question_name, max_score: sq.max_score });
     }
-    return arr;
-  }, [bagScores]);
+
+    // ถ้ามี bagScores ใช้จำนวนข้อจาก bagScores, ถ้าไม่มีใช้จาก subjectQuestions
+    if (bagScores && bagScores.booklets.length) {
+      const first = bagScores.booklets[0];
+      const byNo = new Map<number, BagQuestionScoreRow>();
+      for (const q of first.questions) byNo.set(q.questionNo, q);
+
+      const maxQ =
+        bagScores.questionCount || first.questionCount || first.questions.length;
+
+      const arr: { questionNo: number; label: string; maxScore?: number }[] = [];
+      for (let q = 1; q <= maxQ; q++) {
+        const sq = sqMap.get(q);
+        const qRow = byNo.get(q);
+        arr.push({
+          questionNo: q,
+          label: sq?.question_name ?? qRow?.label ?? `ข้อ ${q}`,
+          maxScore: sq?.max_score,
+        });
+      }
+      return arr;
+    }
+
+    // ยังไม่มีคะแนน แต่มี subjectQuestions -> แสดง header จาก API
+    if (subjectQuestions.length > 0) {
+      return subjectQuestions.map((sq) => ({
+        questionNo: sq.question_no,
+        label: sq.question_name,
+        maxScore: sq.max_score,
+      }));
+    }
+
+    return [];
+  }, [bagScores, subjectQuestions]);
   const sortedBooklets = useMemo(() => {
     if (!bagScores || !bagScores.booklets) return [];
 
@@ -949,7 +995,8 @@ const formatScore = (v: number | string | null | undefined) => {
 
             {!loadingScores &&
               !errorScores &&
-              (!bagScores || !bagScores.booklets.length) && (
+              (!bagScores || !bagScores.booklets.length) &&
+              headerQuestions.length === 0 && (
                 <div className="text-center text-muted py-5">
                   ยังไม่มีคะแนนสำหรับถุงนี้
                 </div>
@@ -957,8 +1004,7 @@ const formatScore = (v: number | string | null | undefined) => {
 
             {!loadingScores &&
               !errorScores &&
-              bagScores &&
-              bagScores.booklets.length > 0 && (
+              headerQuestions.length > 0 && (
                 <div
                   className="table-responsive"
                 >

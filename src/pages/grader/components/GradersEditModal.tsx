@@ -44,6 +44,13 @@ export default function AccountEditModal({
   const handleFormSubmit = handleSubmit(async (values) => {
     if (!account) return;
     await onSubmit(account.id, values);
+    reset({
+      full_name: "",
+      email: "",
+      role_id: 0,
+      active: false,
+      newPassword: "",
+    });
   });
 
   return (
@@ -126,10 +133,20 @@ export default function AccountEditModal({
                     <label className="form-label">เปลี่ยนรหัสผ่าน (ถ้าต้องการ)</label>
                     <input
                       type="password"
-                      className="form-control"
-                      placeholder="กรอกรหัสผ่านใหม่"
-                      {...register("newPassword")}
+                      className={`form-control ${errors.newPassword ? "is-invalid" : ""}`}
+                      placeholder="กรอกรหัสผ่านใหม่ (อย่างน้อย 8 ตัวอักษร)"
+                      {...register("newPassword", {
+                        validate: (value) => {
+                          if (value && value.length < 8) {
+                            return "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร";
+                          }
+                          return true;
+                        },
+                      })}
                     />
+                    {errors.newPassword && (
+                      <div className="invalid-feedback">{errors.newPassword.message}</div>
+                    )}
                   </div>
 
                   <div className="col-md-6">
