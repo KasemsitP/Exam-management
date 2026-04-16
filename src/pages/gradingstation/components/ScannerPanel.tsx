@@ -132,45 +132,49 @@ export default function ScannerPanel({
           <RotateCcw size={16} /> ล้าง
         </button>
 
-      <div className="d-flex flex-column flex-md-row align-items-md-center gap-3 w-100 w-md-auto">
-  <select
-    className="form-select w-100 w-md-auto"
-    style={{ paddingRight: "2rem" }}
-    value={questionNo ?? ""}
-    onChange={(e) => {
-      const val = e.target.value;
+        <div className="d-flex flex-column flex-md-row align-items-md-center gap-3 w-100 w-md-auto">
+          <select
+            className="form-select w-100 w-md-auto"
+            style={{ paddingRight: "2rem", maxWidth: "720px" }}
+            value={questionNo ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
 
-      if (val === "") {
-        setQuestionNo(null);
-        setQuestionMaxScore(null);
-        return;
-      }
+              if (val === "") {
+                setQuestionNo(null);
+                setQuestionMaxScore(null);
+                return;
+              }
 
-      const num = Number(val);
-      setQuestionNo(num);
+              const num = Number(val);
+              setQuestionNo(num);
 
-      setQuestionMaxScore(
-        recent.find((q) => q.question_no === num)?.max_score ?? null
-      );
-    }}
-    disabled={IsScanned}
-  >
-    <option value="">-- เลือก --</option>
-    {recent.map((row) => (
-      <option key={row.question_no} value={row.question_no}>
-        ข้อ {row.question_no} วิชา {row.question_label}
-      </option>
-    ))}
-  </select>
+              setQuestionMaxScore(
+                recent.find((q) => q.question_no === num)?.max_score ?? null
+              );
+            }}
+            disabled={IsScanned}
+          >
+            <option value="" >-- เลือก --</option>
+            {recent.map((row) => (
+              <option key={row.question_no} value={row.question_no}>
+                ข้อ {row.question_no} วิชา {row.question_label}
+              </option>
+            ))}
+          </select>
 
-  <div
-    className={`badge fs-6 px-3 py-2 ${
-      !QuestionMaxScore ? "bg-secondary" : pause ? "bg-warning" : "bg-success"
-    }`}
-  >
-    คะแนนเต็ม: {QuestionMaxScore !== null ? QuestionMaxScore : "-"}
-  </div>
-</div>
+          <div
+            className={`px-3 py-1 rounded-2 small fw-medium ${!QuestionMaxScore
+                ? "bg-light text-muted"
+                : pause
+                  ? "bg-success-subtle text-success"
+                  : "bg-success-subtle text-success"
+              }`}
+          >
+            <span className="text-secondary me-1">คะแนนเต็ม</span>
+            <span>{QuestionMaxScore ?? "-"}</span>
+          </div>
+        </div>
       </div>
 
       {/* Ribbon แจ้งรหัสล่าสุด */}
@@ -256,7 +260,7 @@ export default function ScannerPanel({
               value={manualPayload}
               onChange={(e) => onChangeManualPayload(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && onVerifyManualPayload()} // กด Enter เพื่อ Submit
-              disabled = {IsScanned}
+              disabled={IsScanned}
             />
             <button
               className="btn btn-outline-primary"

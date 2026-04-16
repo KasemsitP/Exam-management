@@ -8,21 +8,34 @@ interface RecentScoresCardProps {
     subject_name: string | null;
     question_label: string | null;
     question_no: number | null;
+    bag_no?: number | null;
+    min_random?: number | null;
+    max_random?: number | null;
   };
   isDraftLoading: boolean;
   onConfirmAll: (editedScores: Record<string, string>) => void;
 }
 
-
-
 /* -------------------------------------------------------------------------- */
 /*  Helpers                                                                   */
 /* -------------------------------------------------------------------------- */
-function makeScoreKey(input: Pick<DraftScore, "slot_id" | "question_no">): string {
+function makeScoreKey(
+  input: Pick<DraftScore, "booklet_id" | "slot_id" | "question_no">
+): string {
   return JSON.stringify({
-    slot_id: Number(input.slot_id),
-    question_no: Number(input.question_no),
+    booklet_id: Number(input.booklet_id),
+    slot_id: input.slot_id ?? null,
+    question_no: input.question_no ?? null,
   });
+}
+
+function makeRowKey(item: DraftScore): string {
+  return [
+    item.bag_id ?? "nobag",
+    item.booklet_id ?? "nobooklet",
+    item.slot_id ?? "noslot",
+    item.question_no ?? "noq",
+  ].join("-");
 }
 
 /* -------------------------------------------------------------------------- */
@@ -122,7 +135,7 @@ export default function RecentScoresCard({
     const initial: Record<string, string> = {};
 
     draftScores.forEach((item) => {
-      if (item.score != null) {
+      if (item.score != null && item.slot_id != null && item.question_no != null) {
         initial[makeScoreKey(item)] = String(parseInt(String(item.score), 10));
       }
     });
@@ -160,137 +173,145 @@ export default function RecentScoresCard({
           "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)",
       }}
     >
-      <div className="card-header bg-white">
-        <div className="d-flex align-items-center gap-2">
-          <h6 className="mb-0">รายการคะแนนที่ตรวจ</h6>
+      <div className="card-header bg-white py-3 px-3 border-bottom">
+        <div className="d-flex align-items-center">
+          <h6 className="mb-0 fw-semibold text-dark ">
+            รายการคะแนนที่ตรวจในแต่ละถุง
+          </h6>
+
           {draftScores.length > 0 && (
-            <span className="badge bg-warning text-dark ms-auto">
+            <span className="ms-auto small text-muted">
               {draftScores.length} รายการ
             </span>
           )}
         </div>
 
-        {bagInfo && (bagInfo.subject_name || bagInfo.question_label || bagInfo.question_no != null) && (
-          <div className="mt-2 d-flex flex-wrap gap-2 align-items-center">
-            {bagInfo.subject_name && (
-              <span className="badge bg-primary-subtle text-primary border border-primary-subtle">
-                วิชา: {bagInfo.subject_name}
-              </span>
-            )}
-            {bagInfo.question_no != null && (
-              <span className="badge bg-info-subtle text-info border border-info-subtle">
-                ข้อ {bagInfo.question_no}
-              </span>
-            )}
-            {bagInfo.question_label && (
-              <span className="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
-                {bagInfo.question_label}
-              </span>
-            )}
-          </div>
-        )}
+        {bagInfo &&
+          (bagInfo.subject_name ||
+            bagInfo.question_label ||
+            bagInfo.question_no != null) && (
+            <div className="mt-2 small text-muted">
+              {bagInfo.bag_no && (
+                <div className="mb-1">
+                  <span className="text-secondary">ถุงที่:</span>{" "}
+                  <span className="fw-medium text-dark">{bagInfo.bag_no}</span>
+                </div>
+              )}
+
+              {bagInfo.question_no != null && (
+                <div className="mb-1">
+                  <span className="text-secondary">ข้อ:</span>{" "}
+                  <span className="fw-medium text-dark">
+                    {bagInfo.question_no} {bagInfo.question_label}
+                  </span>
+                </div>
+              )}
+
+              {bagInfo.subject_name && (
+                <div className="mb-1">
+                  <span className="text-secondary">วิชา:</span>{" "}
+                  <span className="fw-medium text-dark">
+                    {bagInfo.subject_name}
+                  </span>
+                </div>
+              )}
+
+              {bagInfo.min_random != null && bagInfo.max_random != null && (
+                <div className="mb-1">
+                  <span className="text-secondary">ลำดับจัดเก็บ:</span>{" "}
+                  <span className="fw-medium text-dark">
+                    {bagInfo.min_random} - {bagInfo.max_random}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
       </div>
 
       <div className="card-body">
-        {/* {isDraftLoading ? (
-          <div className="text-center py-4">
-            <div
-              className="spinner-border spinner-border-sm text-primary"
-              role="status"
-            />
-            <span className="ms-2 text-muted small">กำลังโหลด...</span>
-          </div> */}
-        {/* ) : draftScores.length === 0 ? ( */}
         {draftScores.length === 0 ? (
-          <div className="text-muted small">ยังไม่มีรายการคะแนน Draft</div>
+          <div className="text-muted small">
+            ยังไม่มีรายการคะแนนที่ตรวจในแต่ละถุง กรุณาสแกนเพื่อตรวจข้อสอบ
+          </div>
         ) : (
           <>
             {bagNos.map((bagNo) => {
               const randomNums = groupedByBag[bagNo]
                 .map((it) => Number(it.random_num))
                 .filter((n) => Number.isFinite(n));
-              const minRandom = randomNums.length > 0 ? Math.min(...randomNums) : null;
-              const maxRandom = randomNums.length > 0 ? Math.max(...randomNums) : null;
+              const minRandom =
+                randomNums.length > 0 ? Math.min(...randomNums) : null;
+              const maxRandom =
+                randomNums.length > 0 ? Math.max(...randomNums) : null;
 
               return (
-              <div key={bagNo} className="mb-3">
-                <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
-                  <h6 className="fw-bold text-primary mb-0">
-                    <i className="bi bi-bag-fill me-1" />
-                    ถุงที่ {bagNo}
-                  </h6>
-                  {minRandom != null && maxRandom != null && (
-                    <span className="badge bg-light text-dark border">
-                      รหัสจัดเก็บ: {minRandom} - {maxRandom}
-                    </span>
-                  )}
+                <div key={bagNo} className="mb-3">
+                  <div
+                    className="table-responsive"
+                    style={{ overflow: "visible" }}
+                  >
+                    <table className="table table-sm table-striped table-hover align-middle mb-0">
+                      <thead className="table-light">
+                        <tr>
+                          <th className="text-center" style={{ width: 60 }}>
+                            ลำดับ
+                          </th>
+                          <th className="text-center">ลำดับจัดเก็บ</th>
+                          <th className="text-center">Payload</th>
+                          <th className="text-center" style={{ width: 100 }}>
+                            คะแนน
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {groupedByBag[bagNo].map((item, index) => {
+                          const scoreKey = makeScoreKey(item);
+                          const rowKey = makeRowKey(item);
+
+                          return (
+                            <tr key={rowKey}>
+                              <td className="text-center">{index + 1}</td>
+
+                              <td className="text-center">{item.random_num}</td>
+
+                              <PayloadCell payload={item.payload} />
+
+                              <td className="text-center">
+                                {item.score != null &&
+                                item.slot_id != null &&
+                                item.question_no != null ? (
+                                  <input
+                                    type="number"
+                                    className="form-control form-control-sm text-center fw-semibold"
+                                    style={{
+                                      width: 70,
+                                      minWidth: 60,
+                                      margin: "0 auto",
+                                    }}
+                                    value={
+                                      editedScores[scoreKey] ??
+                                      String(parseInt(String(item.score), 10))
+                                    }
+                                    onChange={(e) =>
+                                      handleScoreChange(scoreKey, e.target.value)
+                                    }
+                                    min={0}
+                                    step={1}
+                                  />
+                                ) : (
+                                  <span className="text-muted small">
+                                    ยังไม่มีคะแนน
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-
-                <div
-                  className="table-responsive"
-                  style={{ overflow: "visible" }}
-                >
-                  <table className="table table-sm table-striped table-hover align-middle mb-0">
-                    <thead className="table-light">
-                      <tr>
-                        <th className="text-center" style={{ width: 60 }}>
-                          ลำดับ
-                        </th>
-                        <th className="text-center">ลำดับจัดเก็บ</th>
-                        <th className="text-center">Payload</th>
-                        <th className="text-center" style={{ width: 100 }}>
-                          คะแนน
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {groupedByBag[bagNo].map((item, index) => {
-                        const scoreKey = makeScoreKey(item);
-
-                        return (
-                          <tr key={scoreKey}>
-                            <td className="text-center">{index + 1}</td>
-
-                            <td className="text-center">{item.random_num}</td>
-
-                            <PayloadCell payload={item.payload} />
-
-                            <td className="text-center">
-                              {item.score != null ? (
-                                <input
-                                  type="number"
-                                  className="form-control form-control-sm text-center fw-semibold"
-                                  style={{
-                                    width: 70,
-                                    minWidth: 60,
-                                    margin: "0 auto",
-                                  }}
-                                  value={
-                                    editedScores[scoreKey] ??
-                                    (item.score != null
-                                      ? String(parseInt(String(item.score), 10))
-                                      : "")
-                                  }
-                                  onChange={(e) =>
-                                    handleScoreChange(scoreKey, e.target.value)
-                                  }
-                                  min={0}
-                                  step={1}
-                                />
-                              ) : (
-                                <span className="text-muted small">
-                                  ยังไม่มีคะแนน
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
               );
             })}
 

@@ -6,7 +6,9 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  
 }
+
 
 :root {
   --bs-body-font-family: "Kanit", sans-serif;
@@ -19,6 +21,7 @@ html {
   background-color: #f4f7fb;
   color: #1f2937;
 }
+
 
 body {
   margin: 0;
@@ -99,6 +102,7 @@ a:hover { text-decoration: underline; }
 }
 .app-compact .form-control,
 .app-compact .form-select,
+
 .app-compact .input-group-text {
   font-size: var(--app-font-sm);
   padding: .375rem .5rem;

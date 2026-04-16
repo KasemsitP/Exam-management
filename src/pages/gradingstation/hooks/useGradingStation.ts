@@ -33,8 +33,9 @@ export interface RecordedScore {
 }
 
 export type ScoreKey = {
-  slot_id: number;
-  question_no: number;
+  booklet_id: number;
+  slot_id: number | null;
+  question_no: number | null;
 };
 
 export interface DraftScore {
@@ -68,6 +69,8 @@ type PreviewStartResponse = {
   questionLabel?: string | null;
   graderId: number;
   totalBooklets: number;
+  min_random: number;
+  max_random: number;
   message: string;
 };
 
@@ -186,6 +189,9 @@ export const useGradingStation = () => {
     subject_name: string | null;
     question_label: string | null;
     question_no: number | null;
+    bag_no?: number | null;
+    min_random?: number | null;
+    max_random?: number | null;
   }>({ subject_name: null, question_label: null, question_no: null });
   const [isDraftLoading, setIsDraftLoading] = useState(false);
   const [questionNo, setQuestionNo] = useState<number>(null);
@@ -303,6 +309,9 @@ export const useGradingStation = () => {
       setDraftBagInfo({
         subject_name: res.data?.data?.subject_name ?? null,
         question_label: res.data?.data?.question_label ?? null,
+        bag_no: typeof res.data?.data?.bag_no === "number" ? res.data.data.bag_no : null,
+        min_random: typeof res.data?.data?.min_random === "number" ? res.data.data.min_random : null,
+        max_random: typeof res.data?.data?.max_random === "number" ? res.data.data.max_random : null,
         question_no:
           typeof res.data?.data?.question_no === "number"
             ? res.data.data.question_no
@@ -323,41 +332,43 @@ export const useGradingStation = () => {
       setIsDraftLoading(true);
 
       try {
-        const scores = Object.entries(editedScores)
-          .map(([key, score]) => {
-            let parsedKey: ScoreKey;
+const scores = Object.entries(editedScores)
+  .map(([key, score]) => {
+    let parsedKey: ScoreKey;
 
-            try {
-              parsedKey = JSON.parse(key) as ScoreKey;
-            } catch {
-              return null;
-            }
+    try {
+      parsedKey = JSON.parse(key) as ScoreKey;
+    } catch {
+      return null;
+    }
 
-            const slot_id = Number(parsedKey.slot_id);
-            const question_no = Number(parsedKey.question_no);
-            const numericScore = Number(score);
+    const slot_id =
+      parsedKey.slot_id != null ? Number(parsedKey.slot_id) : NaN;
+    const question_no =
+      parsedKey.question_no != null ? Number(parsedKey.question_no) : NaN;
+    const numericScore = Number(score);
 
-            if (
-              !Number.isFinite(slot_id) ||
-              !Number.isFinite(question_no) ||
-              !Number.isFinite(numericScore) ||
-              !Number.isFinite(currentBagId)
-            ) {
-              return null;
-            }
+    if (
+      !Number.isFinite(slot_id) ||
+      !Number.isFinite(question_no) ||
+      !Number.isFinite(numericScore) ||
+      !Number.isFinite(currentBagId)
+    ) {
+      return null;
+    }
 
-            return {
-              slot_id,
-              question_no,
-              score: numericScore,
-            };
-          })
-          .filter(
-            (
-              item
-            ): item is { slot_id: number; question_no: number; score: number } =>
-              item !== null
-          );
+    return {
+      slot_id,
+      question_no,
+      score: numericScore,
+    };
+  })
+  .filter(
+    (
+      item
+    ): item is { slot_id: number; question_no: number; score: number } =>
+      item !== null
+  );
 
         if (scores.length === 0) {
           await Swal.fire({
@@ -377,26 +388,68 @@ export const useGradingStation = () => {
             ? `${minRandom} - ${maxRandom}`
             : "-";
 
-        const ok = await Swal.fire({
-          icon: "question",
-          title: "ยืนยันการบันทึกคะแนนทั้งหมด?",
-          html: `<div style="text-align:left; line-height:1.8;">
-          <div>วิชา: <strong>${draftBagInfo.subject_name ?? "-"}</strong></div>
-          <div>ข้อ: <strong>${draftBagInfo.question_no ?? "-"}</strong>
-          </div>
-          <div>หัวข้อสอบ: <strong>${
-            draftBagInfo.question_label ? ` ${draftBagInfo.question_label}` : ""
-          }</strong></div>
-          <div>เลขประจำถุง: <strong>${bagNo ?? "-"}</strong></div>
-          <div>รหัสจัดเก็บ: <strong>${random_number ?? "-"}</strong></div>
-          <div>ช่วงรหัสจัดเก็บในถุง: <strong>${rangeText}</strong></div>
-        </div>`,
-          showCancelButton: true,
-          confirmButtonText: "ยืนยัน",
-          cancelButtonText: "ยกเลิก",
-          confirmButtonColor: "#3085d6",
-          cancelButtonColor: "#d33",
-        });
+            const snapshotDraftScores = structuredClone(draftScores);
+const snapshotEditedScores = { ...editedScores };
+//const snapshotBagInfo = structuredClone(draftBagInfo);
+
+const scoreTableHtml = snapshotDraftScores
+  .map((item, index) => {
+    const key = JSON.stringify({
+      booklet_id: Number(item.booklet_id),
+      slot_id: item.slot_id ?? null,
+      question_no: item.question_no ?? null,
+    });
+
+    const scoreValue =
+      snapshotEditedScores[key] ??
+      (item.score != null ? String(parseInt(String(item.score), 10)) : "-");
+
+    return `
+      <tr>
+        <td style="border:1px solid #ddd; padding:6px; text-align:center;">${index + 1}</td>
+        <td style="border:1px solid #ddd; padding:6px; text-align:center;">${item.random_num ?? "-"}</td>
+        <td style="border:1px solid #ddd; padding:6px; text-align:center;">${scoreValue}</td>
+      </tr>
+    `;
+  })
+  .join("");
+const ok = await Swal.fire({
+  icon: "question",
+  title: "ยืนยันการบันทึกคะแนนทั้งหมด?",
+  html: `
+    <div style="text-align:left; line-height:1.8;">
+      <div>วิชา: <strong>${draftBagInfo.subject_name ?? "-"}</strong></div>
+      <div>ข้อ: <strong>${draftBagInfo.question_no ?? "-"}</strong></div>
+      <div>หัวข้อสอบ: <strong>${
+        draftBagInfo.question_label ?? "-"
+      }</strong></div>
+      <div>เลขประจำถุง: <strong>${draftBagInfo.bag_no ?? "-"}</strong></div>
+      <div>ช่วงรหัสจัดเก็บในถุง: <strong>${rangeText}</strong></div>
+    </div>
+
+    <hr/>
+
+    <div style="max-height:250px; overflow:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="border:1px solid #ddd; padding:6px;">ลำดับ</th>
+            <th style="border:1px solid #ddd; padding:6px;">ลำดับจัดเก็บ</th>
+            <th style="border:1px solid #ddd; padding:6px;">คะแนน</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${scoreTableHtml}
+        </tbody>
+      </table>
+    </div>
+  `,
+  showCancelButton: true,
+  confirmButtonText: "ยืนยัน",
+  cancelButtonText: "ยกเลิก",
+  confirmButtonColor: "#3085d6",
+  cancelButtonColor: "#d33",
+});
 
         if (!ok.isConfirmed) {
           return;
@@ -421,8 +474,9 @@ export const useGradingStation = () => {
         setIsDraftLoading(false);
       }
     },
-    [fetchDraftScores, currentBagId]
+    [fetchDraftScores, currentBagId, draftScores, draftBagInfo]
   );
+  //Old [fetchDraftScores, currentBagId]
 
   const clearLocalGradingState = useCallback(() => {
     setLastSlotId(null);
@@ -522,7 +576,7 @@ const handleScan = async (value: string) => {
             <div>ข้อที่: <strong>${preview.questionNo}</strong></div>
             <div>หัวข้อ: <strong>${preview.questionLabel ?? "-"}</strong></div>
             <div>จำนวนเล่มในถุง: <strong>${preview.totalBooklets}</strong></div>
-            <div>รหัสจัดเก็บ: <strong>${preview.random_num}</strong></div>
+            <div>รหัสจัดเก็บ: <strong>${preview.min_random} - ${preview.max_random}</strong></div>
           </div>
         `,
         showCancelButton: true,
@@ -733,8 +787,8 @@ const handleScan = async (value: string) => {
     <div>คะแนนที่บันทึก: <strong>${score}</strong> คะแนน</div>
     <div>รายวิชา: <strong>${activeAssignment.subject_name}</strong></div>
     <div>หัวข้อ: <strong>${activeAssignment.question_label}</strong></div>
-    <div>เลขประจำถุง: <strong>${bagNo}</strong></div>
-    <div>รหัส Slot: <strong>${lastSlotId}</strong></div>
+    <div>เลขประจำถุง: <strong>${draftBagInfo.bag_no ?? "-"}</strong></div>
+    <div>ลำดับจัดเก็บ: <strong>${ random_number?? "-"}</strong></div>
 
   </div>
 `,

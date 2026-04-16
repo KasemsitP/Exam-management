@@ -18,7 +18,7 @@ import {
 import Swal from "sweetalert2";
 import axios from "axios";
 import { useAppSelector } from "@/store/hook";
-import { selectActiveCampaign, selectActiveCampaignSessions } from "@/store/slices/examData.slice";
+import { selectActiveCampaign, selectActiveCampaignSessions, selectIsSystemLocked } from "@/store/slices/examData.slice";
 import { selectSession } from "@/store/slices/dashboard.slice";
 import { OverlayLoader } from "@/components/ui/Loading";
 import { ShowIfCan } from "@/components/auth/ShowIfCan";
@@ -141,6 +141,7 @@ export default function SubjectRankingExportPage() {
   const campaignId = activeCampaign?.id;
 
   const sessions = useAppSelector(selectActiveCampaignSessions)
+  const locked = useAppSelector(selectIsSystemLocked);
   const selectedSessionId = sessions[0]?.id
 
   // data
@@ -708,6 +709,7 @@ export default function SubjectRankingExportPage() {
 
   return (
     <>
+    <fieldset disabled={locked} style={{ opacity: locked ? 0.9 : 1 }}>
       <ShowIfCan permission="manage_grading">
         <div className="container-fluid px-2 px-sm-3 px-md-4 py-2 py-sm-3">
           <div className="card mb-3" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
@@ -1290,6 +1292,7 @@ export default function SubjectRankingExportPage() {
       `}</style>
         </div>
       </ShowIfCan>
+      </fieldset>
     </>
   );
 }

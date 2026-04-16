@@ -1,5 +1,6 @@
 // src/pages/.../BagScoresPage.tsx
 import React, { useEffect, useMemo, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Loader2,
   ChevronLeft,
@@ -1338,11 +1339,47 @@ function ChangedTotalCell({
   logs: ScoreChangeLog[] | undefined;
 }) {
   const [hover, setHover] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const tdRef = useRef<HTMLTableCellElement | null>(null);
   const changed = !!logs && logs.length > 0;
   const latest = changed ? logs![0] : undefined;
 
+  const TOOLTIP_W = 320;
+  const TOOLTIP_MAX_H = 420;
+  const GAP = 0;
+
+  const computePos = () => {
+    const el = tdRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const top = rect.bottom + GAP;
+    let left = rect.right - TOOLTIP_W;
+    if (left < 8) left = 8;
+    if (left + TOOLTIP_W > window.innerWidth - 8)
+      left = window.innerWidth - TOOLTIP_W - 8;
+    setPos({ top, left });
+  };
+
+  const handleEnter = () => {
+    if (!changed) return;
+    computePos();
+    setHover(true);
+  };
+
+  useEffect(() => {
+    if (!hover) return;
+    const onScroll = () => computePos();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [hover]);
+
   return (
     <td
+      ref={tdRef}
       className="text-center fw-semibold position-relative"
       style={{
         border: "1px solid #edeff2",
@@ -1351,7 +1388,7 @@ function ChangedTotalCell({
         cursor: changed ? "help" : undefined,
         transition: "background-color 0.15s ease",
       }}
-      onMouseEnter={() => changed && setHover(true)}
+      onMouseEnter={handleEnter}
       onMouseLeave={() => setHover(false)}
     >
       <span className="d-inline-flex align-items-center gap-1 justify-content-end">
@@ -1361,16 +1398,17 @@ function ChangedTotalCell({
         {totalText}
       </span>
 
-      {changed && hover && logs && (
+      {changed && hover && logs && pos && createPortal(
         <div
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
           style={{
-            position: "absolute",
-            top: "100%",
-            right: 0,
-            marginTop:0,
-            zIndex: 30,
-            minWidth: 300,
-            maxHeight: 420,
+            position: "fixed",
+            top: pos.top,
+            left: pos.left,
+            width: TOOLTIP_W,
+            zIndex: 9999,
+            maxHeight: TOOLTIP_MAX_H,
             overflowY: "auto",
             background: "#ffffff",
             border: "1px solid #e5e7eb",
@@ -1477,7 +1515,8 @@ function ChangedTotalCell({
               </div>
             ))}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </td>
   );
