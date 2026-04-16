@@ -40,14 +40,14 @@ export default function BagsHeader({
                 ดาวน์โหลด PDF 
             </button>
             <span className="badge text-bg-secondary d-inline-flex align-items-center gap-1">
-              <QrCode size={14} /> ทั้งหมด {bagStats.total}
+              <QrCode size={14} /> ทั้งหมด {bagStats.total} ถุง
             </span>
-            <span className="badge text-bg-success d-inline-flex align-items-center gap-1">
+            {/* <span className="badge text-bg-success d-inline-flex align-items-center gap-1">
               <CheckCircle2 size={14} /> พร้อมใช้ {bagStats.completed}
             </span>
             <span className="badge text-bg-warning d-inline-flex align-items-center gap-1">
               <AlertTriangle size={14} /> ระหว่างทำ {bagStats.inProgress}
-            </span>
+            </span> */}
           </div>
         </div>
       </div>
