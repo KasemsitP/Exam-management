@@ -27,7 +27,8 @@ export default function GraderScoreSummaryPage() {
 
   const [rows, setRows] = useState<GradedBagSummary[]>([]);
   const [loading, setLoading] = useState(false);
-  const [printingBagId, setPrintingBagId] = useState<number | null>(null);
+  //const [printingBagId, setPrintingBagId] = useState<number | null>(null);
+  const [printingKey, setPrintingKey] = useState<string | null>(null);
   const [selectedBag, setSelectedBag] = useState<string>("");
 
   const bagOptions = useMemo(
@@ -78,8 +79,8 @@ export default function GraderScoreSummaryPage() {
     try {
       const { data } = await axios.get<GradedBagSummary[]>(
         `/api/graders/confirmed-bags/${campaignNumericId}/${graderId}`
-        );
-        setRows(data);
+      );
+      setRows(data);
     } catch (err: any) {
       console.error(err);
       Swal.fire("Error", "โหลดข้อมูลไม่สำเร็จ", "error");
@@ -100,26 +101,26 @@ export default function GraderScoreSummaryPage() {
     if (graderId) init();
   }, [reloadRows, graderId]);
 
-  const handlePrint = async (bag: GradedBagSummary) => {
-    setPrintingBagId(bag.bagId);
-    console.log(bag)
+  const handlePrint = async (row: GradedBagSummary) => {
+    const key = `${row.bagId}-${row.questionNo}`;
+    setPrintingKey(key);
+
     try {
       Swal.fire({
         title: "กำลังสร้างเอกสาร...",
         text: "กรุณารอสักครู่",
         allowOutsideClick: false,
         allowEscapeKey: false,
-        didOpen: () => {
-          Swal.showLoading();
-        },
+        didOpen: () => Swal.showLoading(),
       });
 
       const res = await axios.get(
-        `/api/graders/bags/${bag.bagId}/score-payload/${bag.questionNo}/${graderId}/pdf`,
+        `/api/graders/bags/${row.bagId}/score-payload/${row.questionNo}/${graderId}/pdf`,
         { responseType: "blob" }
       );
 
       Swal.close();
+
       const blob = new Blob([res.data], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -127,15 +128,12 @@ export default function GraderScoreSummaryPage() {
       Swal.fire({
         icon: "error",
         title: "ไม่สามารถพิมพ์เอกสารได้",
-        text:
-          error?.response?.data?.message ||
-          "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง",
+        text: error?.response?.data?.message || "เกิดข้อผิดพลาด",
       });
     } finally {
-      setPrintingBagId(null);
+      setPrintingKey(null);
     }
   };
-
   // Group by bagNo for display
   const groupedByBag = useMemo(() => {
     const map = new Map<
@@ -260,46 +258,58 @@ export default function GraderScoreSummaryPage() {
                     </thead>
                     <tbody>
                       {groupedByBag.map((group) =>
-                        group.items.map((row, idx) => (
-                          <tr key={`${row.bagId}-${row.questionNo}-${idx}`}>
-                            <td className="text-center fw-semibold">
-                              {row.bagNo}
-                            </td>
-                            <td className="text-center">
-                              <div>{row.subjectName}</div>
-                              <small className="text-muted">
-                                รหัสวิชา: {row.subjectCode}
-                              </small>
-                            </td>
-                            <td className="text-center">{row.questionNo}</td>
-                            <td className="text-center">
-                              {row.questionLabel ?? "-"}
-                            </td>
-                            <td className="text-center">{row.totalScored}</td>
-                            <td className="text-center">
-                              {row.confirmedAt
-                                ? new Date(row.confirmedAt).toLocaleString("th-TH", {
+                        group.items.map((row, idx) => {
+                          const rowKey = `${row.bagId}-${row.questionNo}`;
+
+                          return (
+                            <tr key={rowKey}>
+                              <td className="text-center fw-semibold">{row.bagNo}</td>
+
+                              <td className="text-center">
+                                <div>{row.subjectName}</div>
+                                <small className="text-muted">รหัสวิชา: {row.subjectCode}</small>
+                              </td>
+
+                              <td className="text-center">{row.questionNo}</td>
+
+                              <td className="text-center">{row.questionLabel ?? "-"}</td>
+
+                              <td className="text-center">{row.totalScored}</td>
+
+                              <td className="text-center">
+                                {row.confirmedAt
+                                  ? new Date(row.confirmedAt).toLocaleString("th-TH", {
                                     dateStyle: "short",
                                     timeStyle: "short",
                                   })
-                                : "-"}
-                            </td>
-                            <td className="text-center">
-                              <button
-                                className="btn btn-sm btn-success d-inline-flex align-items-center gap-1"
-                                onClick={() => handlePrint(row)}
-                                disabled={printingBagId === row.bagId}
-                              >
-                                {printingBagId === row.bagId ? (
-                                  <Loader2 size={14} className="spin-animation" />
-                                ) : (
-                                  <Printer size={14} />
-                                )}
-                                พิมพ์สรุป
-                              </button>
-                            </td>
-                          </tr>
-                        ))
+                                  : "-"}
+                              </td>
+
+                              <td className="text-center">
+                                <button
+                                  className="btn btn-sm btn-success d-inline-flex align-items-center gap-1"
+                                  onClick={() => handlePrint(row)}
+                                  disabled={printingKey === rowKey}
+                                >
+                                  {printingKey === rowKey ? (
+                                    <div className="d-flex align-items-center gap-1">
+                                      {/* <Loader2 size={14} className="spin-animation" /> */}
+                                      <Printer size={14} />
+                                      <span>กำลังสร้าง...</span>
+                                    </div>
+                                  ) : (
+                                    <div className="d-flex align-items-center gap-1">
+                                      <Printer size={14} />
+                                      <span>กำลังสร้าง</span>
+                                    </div>
+                                    
+                                  )}
+
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

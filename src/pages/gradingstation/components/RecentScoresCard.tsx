@@ -330,7 +330,7 @@ export default function RecentScoresCard({
                     กำลังดำเนินการ...
                   </>
                 ) : (
-                  <>ยืนยันคะแนนทั้งหมด ({draftScores.length} รายการ)</>
+                  <>ยืนยันคะแนนทั้งหมด</>
                 )}
               </button>
             </div>

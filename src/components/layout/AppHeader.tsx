@@ -2,7 +2,9 @@ import { CalendarDays, ChevronRight, LogOut, Menu } from "lucide-react";
 import { ExamCampaign } from "@/store/slices/examData.slice";
 import type { Theme } from "@/components/layout/theme"
 import { selectCurrentUser } from "@/store/slices/auth.slice";
+import { useLocation } from "react-router-dom";
 import { useAppSelector } from "@/store/hook";
+import { NAV_ITEMS } from "@/components/layout/navItems";
 
 interface AppHeaderProps {
   activeCampaign: ExamCampaign | null;
@@ -13,6 +15,30 @@ interface AppHeaderProps {
   onclickSidebar: string;
 }
 
+
+
+// const pageTitleMap: Record<string, string> = {
+//   "/home": "หน้าแรก",
+//   "/dashboard": "แดชบอร์ด",
+//   "/campaign-sessions": "รอบสอบ",
+//   "/seat-allocation": "จัดที่นั่ง",
+//   "/bags": "ถุงข้อสอบ",
+//   "/import-csv": "นำเข้าข้อมูล",
+//   "/keys": "จัดการกุญแจ",
+//   "/sign-sheets": "ใบเซ็นชื่อ",
+//   "/grading-station": "ตรวจข้อสอบ",
+//   "/score-review": "ตรวจคะแนน",
+//   "/accounts": "บัญชีผู้ใช้",
+//   "/qrscanner": "สแกน QR",
+//   "/subject": "วิชา",
+//   "/graders": "ผู้ตรวจ",
+//   "/admin-reset": "รีเซ็ตระบบ",
+//   "/subject-ranking-export": "ส่งออกอันดับ",
+//   "/settings": "ตั้งค่า",
+//   "/grader-score-summary": "สรุปคะแนน",
+//   "/active-bags": "ถุงที่กำลังใช้งาน",
+// };
+
 export function AppHeader({
   activeCampaign,
   onOpenCampaignModal,
@@ -21,9 +47,13 @@ export function AppHeader({
   onclickSidebar,
   theme,
 }: AppHeaderProps) {
+  const location = useLocation();
   const user = useAppSelector(selectCurrentUser);
   const isAdmin = user?.roles?.includes("admin");
 
+  const pageTitle =
+  NAV_ITEMS.find((item) => item.to === location.pathname)?.label ||
+  "หน้าแรก";
   const campaignLabel = activeCampaign
     ? `${activeCampaign.name ?? activeCampaign.campaign_size} `
     : null;
@@ -55,7 +85,7 @@ export function AppHeader({
           bottom: 0,
           height: 3,
           // background: `linear-gradient(90deg, ${theme.color} 0%, transparent 70%)`,
-           background: ` ${theme.color} `,
+          background: ` ${theme.color} `,
           opacity: 0.9,
           pointerEvents: "none",
         }}
@@ -76,9 +106,9 @@ export function AppHeader({
           <Menu size={20} />
         </button>
 
-        <div className="d-flex flex-column justify-content-center border rounded-3 px-3 py-2 shadow-sm"   style={{
-    backgroundColor: theme.mainBg,
-  }}>
+        <div className="d-flex flex-column justify-content-center border rounded-3 px-3 py-2 shadow-sm" style={{
+          backgroundColor: theme.mainBg,
+        }}>
           <div className="d-flex align-items-center gap-2">
             {/* ✅ role dot */}
             <span
@@ -90,7 +120,7 @@ export function AppHeader({
                 boxShadow: "0 0 0 3px rgba(255,255,255,0.8)",
               }}
             />
-            
+
             {/* Mobile: แสดงชื่อรอบสอบ */}
             <span
               className="small fw-medium d-sm-none"
@@ -98,21 +128,27 @@ export function AppHeader({
             >
               {activeCampaign ? campaignLabel : "ไม่มีรอบสอบ"}
             </span>
-            
+
             {/* Desktop: แสดง Console */}
             <span
               className="small fw-medium d-none d-sm-inline"
               style={{ color: theme.textMuted, fontFamily: "monospace" }}
             >
             </span>
-            
+
             <ChevronRight
               size={14}
               className="d-none d-sm-inline"
               style={{ color: theme.textMuted }}
             />
-            <h1 className="h6 mb-0 fw-semibold d-none d-sm-block" style={{ color: theme.text, fontFamily: "monospace" }}>
+            {/* <h1 className="h6 mb-0 fw-semibold d-none d-sm-block" style={{ color: theme.text, fontFamily: "monospace" }}>
               {onclickSidebar || "หน้าแรก"}
+            </h1> */}
+            <h1
+              className="h6 mb-0 fw-semibold d-none d-sm-block"
+              style={{ color: theme.text, fontFamily: "monospace" }}
+            >
+              {pageTitle}
             </h1>
           </div>
         </div>
@@ -124,7 +160,7 @@ export function AppHeader({
             <div
               className="d-flex align-items-center gap-3 px-4 py-2 rounded-pill"
               style={{
-                background:theme.headerBg, // ✅ tinted แทน white
+                background: theme.headerBg, // ✅ tinted แทน white
                 border: `1.5px solid ${theme.border}`,
                 boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
               }}
@@ -199,7 +235,7 @@ export function AppHeader({
           title="ออกจากระบบ"
           style={{
             height: 36,
-            background:theme.headerBg, //  tinted
+            background: theme.headerBg, //  tinted
             border: `1.5px solid ${theme.border}`,
             color: theme.text,
             boxShadow: "0 2px 8px rgba(15,23,42,0.12)",
