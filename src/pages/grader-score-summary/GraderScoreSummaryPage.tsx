@@ -300,7 +300,7 @@ export default function GraderScoreSummaryPage() {
                                   ) : (
                                     <div className="d-flex align-items-center gap-1">
                                       <Printer size={14} />
-                                      <span>กำลังสร้าง</span>
+                                      <span>พิมพ์คะแนน</span>
                                     </div>
                                     
                                   )}

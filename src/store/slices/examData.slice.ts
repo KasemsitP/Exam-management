@@ -326,6 +326,37 @@ export const createSessionThunk = createAsyncThunk<
   }
 });
 
+interface UpdateSessionInput {
+  campaignId: string;
+  sessionId: string;
+  examDate: string;
+}
+
+export const updateSessionThunk = createAsyncThunk<
+  { campaignId: string; session: CampaignSession },
+  UpdateSessionInput,
+  { rejectValue: string }
+>("examData/updateSession", async (payload, { rejectWithValue }) => {
+  try {
+    const response = await axios.put<ApiSession>(
+      `/api/sessions/${parseSessionId(payload.sessionId)}`,
+      {
+        campaign_id: parseCampaignId(payload.campaignId),
+        exam_date: payload.examDate,
+      }
+    );
+
+    return {
+      campaignId: payload.campaignId,
+      session: mapApiSessionToCampaignSession(response.data),
+    };
+  } catch (error: unknown) {
+    return rejectWithValue(
+      axiosErrorMessage(error, "Failed to update session")
+    );
+  }
+});
+
 export const deleteSessionThunk = createAsyncThunk<
   { campaignId: string; sessionId: string },
   { campaignId: string; sessionId: string },
@@ -360,7 +391,7 @@ export const createSubjectThunk = createAsyncThunk<
 >("examData/createSubject", async (payload, { rejectWithValue }) => {
   console.log(payload.questions)
   try {
-    console.log(payload.startTime , payload.endTime)
+    console.log(payload.startTime, payload.endTime)
     const response = await axios.post<ApiSubject>("/api/session-subjects", {
       session_id: parseSessionId(payload.sessionId),
       subject_id: payload.subjectId,
@@ -594,6 +625,29 @@ const examDataSlice = createSlice({
         state.error = action.payload ?? "Failed to create session";
       })
 
+      /* ---------- updateSessionThunk ---------- */
+      .addCase(updateSessionThunk.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(updateSessionThunk.fulfilled, (state, action) => {
+        const campaign = state.list.find((c) => c.id === action.payload.campaignId);
+        if (!campaign) return;
+
+        const index = campaign.sessions.findIndex(
+          (s) => s.id === action.payload.session.id
+        );
+
+        if (index >= 0) {
+          campaign.sessions[index] = {
+            ...campaign.sessions[index],
+            ...action.payload.session,
+            subjects: campaign.sessions[index].subjects,
+          };
+        }
+      })
+      .addCase(updateSessionThunk.rejected, (state, action) => {
+        state.error = action.payload ?? "Failed to update session";
+      })
       /* ---------- deleteSessionThunk ---------- */
       .addCase(deleteSessionThunk.pending, (state) => {
         state.error = null;

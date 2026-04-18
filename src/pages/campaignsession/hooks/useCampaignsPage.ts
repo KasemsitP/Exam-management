@@ -19,6 +19,7 @@ import {
   deleteSubjectThunk,
   sessionUpdated,
   subjectUpdated,
+  updateSessionThunk,
 } from "@/store/slices/examData.slice";
 import { showSuccess } from "@/components/ui/successAlert";
 import { showError } from "@/components/ui/ErrorAlert";
@@ -381,8 +382,8 @@ export function useCampaignsPage() {
         setCampaignDialogOpen(false);
       }
     } else {
-    //  console.log(values)
-     // return;
+      //  console.log(values)
+      // return;
       try {
         await dispatch(
           createCampaignThunk({
@@ -409,22 +410,18 @@ export function useCampaignsPage() {
 
   const handleSessionSubmit = async (values: SessionFormValues) => {
     if (!sessionContext) return;
-    
+
     console.log(values)
 
 
     if (sessionContext.session) {
-      dispatch(
-        sessionUpdated({
+      await dispatch(
+        updateSessionThunk({
           campaignId: sessionContext.campaignId,
-          session: {
-            ...sessionContext.session,
-            label: values.label,
-            examDate: values.examDate,
-            note: values.note,
-          },
+          sessionId: sessionContext.session.id,
+          examDate: values.examDate,
         })
-      );
+      ).unwrap();
       Swal.fire({
         icon: "success",
         title: "อัปเดตเซสชันเรียบร้อย",
@@ -438,7 +435,7 @@ export function useCampaignsPage() {
     try {
       const day_no = values.label.split("วันที่ ")[1]?.trim() ?? "";
       console.log(day_no)
-   //   console.log(parentCampaign.sessions)
+      //   console.log(parentCampaign.sessions)
       await dispatch(
         createSessionThunk({
           campaignId: sessionContext.campaignId,
@@ -512,9 +509,9 @@ export function useCampaignsPage() {
       const sessionDate =
         parentSession?.examDate ?? new Date().toISOString().slice(0, 10);
 
-        values.startTime = values.startTime;
-        values.endTime = values.endTime;
-        console.log("TEST",values.startTime)
+      values.startTime = values.startTime;
+      values.endTime = values.endTime;
+      console.log("TEST", values.startTime)
 
 
       await dispatch(
