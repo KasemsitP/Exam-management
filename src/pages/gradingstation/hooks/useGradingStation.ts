@@ -332,43 +332,60 @@ export const useGradingStation = () => {
       setIsDraftLoading(true);
 
       try {
-const scores = Object.entries(editedScores)
-  .map(([key, score]) => {
-    let parsedKey: ScoreKey;
+        const hasDecimalScore = Object.values(editedScores).some((value) => {
+          const trimmed = String(value).trim();
+          const n = Number(trimmed);
+          return trimmed !== "" && Number.isFinite(n) && !Number.isInteger(n);
+        });
 
-    try {
-      parsedKey = JSON.parse(key) as ScoreKey;
-    } catch {
-      return null;
-    }
+        if (hasDecimalScore) {
+          await Swal.fire({
+            icon: "error",
+            title: "ยืนยันคะแนนไม่ได้",
+            text: "คะแนนต้องเป็นจำนวนเต็มเท่านั้น กรุณาตรวจสอบอีกครั้ง",
+            confirmButtonText: "ตกลง",
+          });
+          return;
+        }
+        const scores = Object.entries(editedScores)
+          .map(([key, score]) => {
+            let parsedKey: ScoreKey;
 
-    const slot_id =
-      parsedKey.slot_id != null ? Number(parsedKey.slot_id) : NaN;
-    const question_no =
-      parsedKey.question_no != null ? Number(parsedKey.question_no) : NaN;
-    const numericScore = Number(score);
+            try {
+              parsedKey = JSON.parse(key) as ScoreKey;
+            } catch {
+              return null;
+            }
 
-    if (
-      !Number.isFinite(slot_id) ||
-      !Number.isFinite(question_no) ||
-      !Number.isFinite(numericScore) ||
-      !Number.isFinite(currentBagId)
-    ) {
-      return null;
-    }
+            const slot_id =
+              parsedKey.slot_id != null ? Number(parsedKey.slot_id) : NaN;
+            const question_no =
+              parsedKey.question_no != null ? Number(parsedKey.question_no) : NaN;
+            const trimmedScore = String(score).trim();
+            const numericScore = Number(trimmedScore);
 
-    return {
-      slot_id,
-      question_no,
-      score: numericScore,
-    };
-  })
-  .filter(
-    (
-      item
-    ): item is { slot_id: number; question_no: number; score: number } =>
-      item !== null
-  );
+            if (
+              !Number.isFinite(slot_id) ||
+              !Number.isFinite(question_no) ||
+              !Number.isFinite(numericScore) ||
+              !Number.isInteger(numericScore) ||
+              !Number.isFinite(currentBagId)
+            ) {
+              return null;
+            }
+
+            return {
+              slot_id,
+              question_no,
+              score: numericScore,
+            };
+          })
+          .filter(
+            (
+              item
+            ): item is { slot_id: number; question_no: number; score: number } =>
+              item !== null
+          );
 
         if (scores.length === 0) {
           await Swal.fire({
@@ -378,6 +395,8 @@ const scores = Object.entries(editedScores)
           });
           return;
         }
+
+
         const randomNums = draftScores
           .map((d) => Number(d.random_num))
           .filter((n) => Number.isFinite(n));
@@ -388,41 +407,40 @@ const scores = Object.entries(editedScores)
             ? `${minRandom} - ${maxRandom}`
             : "-";
 
-            const snapshotDraftScores = structuredClone(draftScores);
-const snapshotEditedScores = { ...editedScores };
-//const snapshotBagInfo = structuredClone(draftBagInfo);
+        const snapshotDraftScores = structuredClone(draftScores);
+        const snapshotEditedScores = { ...editedScores };
+        //const snapshotBagInfo = structuredClone(draftBagInfo);
 
-const scoreTableHtml = snapshotDraftScores
-  .map((item, index) => {
-    const key = JSON.stringify({
-      booklet_id: Number(item.booklet_id),
-      slot_id: item.slot_id ?? null,
-      question_no: item.question_no ?? null,
-    });
+        const scoreTableHtml = snapshotDraftScores
+          .map((item, index) => {
+            const key = JSON.stringify({
+              booklet_id: Number(item.booklet_id),
+              slot_id: item.slot_id ?? null,
+              question_no: item.question_no ?? null,
+            });
 
-    const scoreValue =
-      snapshotEditedScores[key] ??
-      (item.score != null ? String(parseInt(String(item.score), 10)) : "-");
+            const scoreValue =
+              snapshotEditedScores[key] ??
+              (item.score != null ? String(parseInt(String(item.score), 10)) : "-");
 
-    return `
+            return `
       <tr>
         <td style="border:1px solid #ddd; padding:6px; text-align:center;">${index + 1}</td>
         <td style="border:1px solid #ddd; padding:6px; text-align:center;">${item.random_num ?? "-"}</td>
         <td style="border:1px solid #ddd; padding:6px; text-align:center;">${scoreValue}</td>
       </tr>
     `;
-  })
-  .join("");
-const ok = await Swal.fire({
-  icon: "question",
-  title: "ยืนยันการบันทึกคะแนนทั้งหมด?",
-  html: `
+          })
+          .join("");
+        const ok = await Swal.fire({
+          icon: "question",
+          title: "ยืนยันการบันทึกคะแนนทั้งหมด?",
+          html: `
     <div style="text-align:left; line-height:1.8;">
       <div>วิชา: <strong>${draftBagInfo.subject_name ?? "-"}</strong></div>
       <div>ข้อ: <strong>${draftBagInfo.question_no ?? "-"}</strong></div>
-      <div>หัวข้อสอบ: <strong>${
-        draftBagInfo.question_label ?? "-"
-      }</strong></div>
+      <div>หัวข้อสอบ: <strong>${draftBagInfo.question_label ?? "-"
+            }</strong></div>
       <div>เลขประจำถุง: <strong>${draftBagInfo.bag_no ?? "-"}</strong></div>
       <div>ช่วงรหัสจัดเก็บในถุง: <strong>${rangeText}</strong></div>
     </div>
@@ -444,16 +462,17 @@ const ok = await Swal.fire({
       </table>
     </div>
   `,
-  showCancelButton: true,
-  confirmButtonText: "ยืนยัน",
-  cancelButtonText: "ยกเลิก",
-  confirmButtonColor: "#3085d6",
-  cancelButtonColor: "#d33",
-});
+          showCancelButton: true,
+          confirmButtonText: "ยืนยัน",
+          cancelButtonText: "ยกเลิก",
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+        });
 
         if (!ok.isConfirmed) {
           return;
-          }
+        }
+        console.log("Confirmed scores to submit:", currentBagId);
 
 
 
@@ -530,46 +549,46 @@ const ok = await Swal.fire({
 
   // --- 8. Handlers ---
 
-const handleScan = async (value: string) => {
-  const now = Date.now();
-  if (!canScan) return;
+  const handleScan = async (value: string) => {
+    const now = Date.now();
+    if (!canScan) return;
 
-  if (!questionNo) {
-    await Swal.fire({
-      icon: "warning",
-      title: "ยังไม่ได้เลือกข้อ",
-      text: "กรุณาเลือกข้อคำถามก่อนดำเนินการต่อ",
-      confirmButtonText: "ตกลง",
-    });
-    return;
-  }
+    if (!questionNo) {
+      await Swal.fire({
+        icon: "warning",
+        title: "ยังไม่ได้เลือกข้อ",
+        text: "กรุณาเลือกข้อคำถามก่อนดำเนินการต่อ",
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
 
-  if (now - lastScanRef.current < cooldownMs) return;
-  lastScanRef.current = now;
+    if (now - lastScanRef.current < cooldownMs) return;
+    lastScanRef.current = now;
 
-  if (!activeAssignment || !graderProfile || !activeCampaign?.id) return;
+    if (!activeAssignment || !graderProfile || !activeCampaign?.id) return;
 
-  setScannerEnabled(false);
-  setPause(true);
+    setScannerEnabled(false);
+    setPause(true);
 
-  const requestPayload: PayloadSlot = {
-    qrPayload: value,
-    campaignId: Number(DeleteCamp(activeCampaign.id)),
-    graderId: graderProfile.grader_id,
-    questionNo: questionNo,
-  };
+    const requestPayload: PayloadSlot = {
+      qrPayload: value,
+      campaignId: Number(DeleteCamp(activeCampaign.id)),
+      graderId: graderProfile.grader_id,
+      questionNo: questionNo,
+    };
 
-  try {
-    const hasActiveDraft = currentBagId !== null && draftScores.length > 0;
+    try {
+      const hasActiveDraft = currentBagId !== null && draftScores.length > 0;
 
-    if (!hasActiveDraft) {
-      const preview = await previewStart(requestPayload);
-      setPreviewData(preview);
+      if (!hasActiveDraft) {
+        const preview = await previewStart(requestPayload);
+        setPreviewData(preview);
 
-      const result = await Swal.fire({
-        icon: "question",
-        title: "ยืนยันเริ่มตรวจ",
-        html: `
+        const result = await Swal.fire({
+          icon: "question",
+          title: "ยืนยันเริ่มตรวจ",
+          html: `
           <div style="text-align:left; line-height:1.8;">
             <div>ถุงที่: <strong>${preview.bagNo}</strong></div>
             <div>วิชา: <strong>${preview.subjectName}</strong></div>
@@ -579,54 +598,54 @@ const handleScan = async (value: string) => {
             <div>รหัสจัดเก็บ: <strong>${preview.min_random} - ${preview.max_random}</strong></div>
           </div>
         `,
-        showCancelButton: true,
-        confirmButtonText: "เริ่มตรวจ",
-        cancelButtonText: "ยกเลิก",
-        confirmButtonColor: "#3085d6",
-        cancelButtonColor: "#d33",
+          showCancelButton: true,
+          confirmButtonText: "เริ่มตรวจ",
+          cancelButtonText: "ยกเลิก",
+          confirmButtonColor: "#3085d6",
+          cancelButtonColor: "#d33",
+        });
+
+        if (!result.isConfirmed) {
+          setPause(false);
+          setScannerEnabled(true);
+          return;
+        }
+
+      }
+
+      // มี draft อยู่แล้ว หรือเพิ่ง preview ผ่าน -> ค่อย confirm start
+      const confirmed = await confirmStart(requestPayload);
+      console.log("confirmStart result:", confirmed);
+
+      setScanData(value ?? null);
+
+      await Swal.fire({
+        icon: "success",
+        title: "สแกนสำเร็จ",
+        text: `พบรหัสผู้เข้าสอบ: ${value ?? "ไม่ระบุ"}`,
+        timer: 1500,
+        showConfirmButton: false,
       });
 
-      if (!result.isConfirmed) {
-        setPause(false);
-        setScannerEnabled(true);
-        return;
+      if (!pauseAfterSuccess) {
+        setTimeout(() => {
+          setPause(false);
+          setScannerEnabled(true);
+        }, cooldownMs);
       }
-     
+      await fetchDraftScores(activeAssignment.grader_id);
+    } catch (err: any) {
+      await Swal.fire({
+        icon: "error",
+        title: "สแกนไม่สำเร็จ",
+        text: err.message || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
+        confirmButtonText: "ตกลง",
+      });
+
+      setPause(false);
+      setScannerEnabled(true);
     }
-
-    // มี draft อยู่แล้ว หรือเพิ่ง preview ผ่าน -> ค่อย confirm start
-    const confirmed = await confirmStart(requestPayload);
-    console.log("confirmStart result:", confirmed);
-
-    setScanData(value ?? null);
-
-    await Swal.fire({
-      icon: "success",
-      title: "สแกนสำเร็จ",
-      text: `พบรหัสผู้เข้าสอบ: ${value ?? "ไม่ระบุ"}`,
-      timer: 1500,
-      showConfirmButton: false,
-    });
-
-    if (!pauseAfterSuccess) {
-      setTimeout(() => {
-        setPause(false);
-        setScannerEnabled(true);
-      }, cooldownMs);
-    }
-     await fetchDraftScores(activeAssignment.grader_id);
-  } catch (err: any) {
-    await Swal.fire({
-      icon: "error",
-      title: "สแกนไม่สำเร็จ",
-      text: err.message || "เกิดข้อผิดพลาดในการตรวจสอบ QR",
-      confirmButtonText: "ตกลง",
-    });
-
-    setPause(false);
-    setScannerEnabled(true);
-  }
-};
+  };
   const handleClear = () => {
     clearLocalGradingState();
     setManualPayload("");
@@ -692,6 +711,16 @@ const handleScan = async (value: string) => {
   </div>
 `
         ,
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
+
+    if (!Number.isInteger(Number(score))) {
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถบันทึกคะแนนได้",
+        text: "กรุณากรอกคะแนนเป็นจำนวนเต็มเท่านั้น",
         confirmButtonText: "ตกลง",
       });
       return;
@@ -788,7 +817,7 @@ const handleScan = async (value: string) => {
     <div>รายวิชา: <strong>${activeAssignment.subject_name}</strong></div>
     <div>หัวข้อ: <strong>${activeAssignment.question_label}</strong></div>
     <div>เลขประจำถุง: <strong>${draftBagInfo.bag_no ?? "-"}</strong></div>
-    <div>ลำดับจัดเก็บ: <strong>${ random_number?? "-"}</strong></div>
+    <div>ลำดับจัดเก็บ: <strong>${random_number ?? "-"}</strong></div>
 
   </div>
 `,
