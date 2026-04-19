@@ -630,19 +630,15 @@ const examDataSlice = createSlice({
         state.error = null;
       })
       .addCase(updateSessionThunk.fulfilled, (state, action) => {
-        const campaign = state.list.find((c) => c.id === action.payload.campaignId);
+        const campaign = state.list.find(c => c.id === action.payload.campaignId);
         if (!campaign) return;
 
-        const index = campaign.sessions.findIndex(
-          (s) => s.id === action.payload.session.id
+        const session = campaign.sessions.find(
+          s => s.id === action.payload.session.id
         );
 
-        if (index >= 0) {
-          campaign.sessions[index] = {
-            ...campaign.sessions[index],
-            ...action.payload.session,
-            subjects: campaign.sessions[index].subjects,
-          };
+        if (session) {
+          session.examDate = action.payload.session.examDate;
         }
       })
       .addCase(updateSessionThunk.rejected, (state, action) => {
