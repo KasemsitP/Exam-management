@@ -48,7 +48,6 @@ export default function GradingStationPage() {
     handleScan,
     closeConfirmModal,
     // requestCameraPermission
-    setQuestionMaxScore,
     questionMaxScore,
 
 
@@ -62,6 +61,7 @@ export default function GradingStationPage() {
     draftBagInfo,
     isDraftLoading,
     confirmAllDraftScores,
+    IsHasbag
   } = useGradingStation();
 
   // Show loading overlay while initial data is loading
@@ -116,18 +116,18 @@ export default function GradingStationPage() {
                 setQuestionNo={setQuestionNo}
                 slotId={lastSlotId}
                 bagNo={bagNo}
-                setQuestionMaxScore={setQuestionMaxScore}
+                //setQuestionMaxScore={setQuestionMaxScore}
                 QrActive={QRActive}
                 QuestionMaxScore={questionMaxScore}
                   IsScanned={IsScanned}
                   random_number={random_number}
+                  ishasbag={IsHasbag}
               />
             </div>
 
             {/* Right: Recent */}
             <div className="col-lg-5">
-              <div>
-                <RecentScoresCard
+              <RecentScoresCard
                 draftScores={draftScores}
                 bagInfo={draftBagInfo}
                 isDraftLoading={isDraftLoading}
@@ -137,7 +137,6 @@ export default function GradingStationPage() {
                   }
                 }}
               />
-              </div>
             </div>
           </div>
         )}

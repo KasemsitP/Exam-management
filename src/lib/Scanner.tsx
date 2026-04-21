@@ -1,6 +1,7 @@
-import React, { useMemo, useEffect, useRef, useCallback } from "react";
-import { Scanner, boundingBox, IDetectedBarcode } from "@yudiel/react-qr-scanner";
-import { Loader2, Pause } from "lucide-react";
+import React, { useMemo, useEffect, useRef, useCallback , useState} from "react";
+import { Scanner, boundingBox, IDetectedBarcode , outline } from "@yudiel/react-qr-scanner";
+import { Loader2, Pause, CheckCircle } from "lucide-react"; // ✅ เพิ่มไอคอนติ๊กถูก (ถ้ามี)
+
 
 const DEFAULT_FORMATS: BarcodeFormat[] = ["qr_code", "micro_qr_code", "rm_qr_code"];
 
@@ -55,6 +56,8 @@ export const CustomQrScanner = React.memo(({
 
   const onResultRef = useRef(onResult);
   //  สร้างตัวจำโค้ดของเราเอง 
+
+  const [isFrozen, setIsFrozen] = useState(false);
   const lastScanRef = useRef<{ code: string; time: number } | null>(null);
 
   useEffect(() => {
@@ -63,6 +66,7 @@ export const CustomQrScanner = React.memo(({
 
   const handleScan = useCallback((codes: IDetectedBarcode[]) => {
     if (!codes?.length) return;
+    if (isFrozen) return;
     const rawValue = codes[0].rawValue;
     const now = Date.now();
     const last = lastScanRef.current;
@@ -86,7 +90,11 @@ export const CustomQrScanner = React.memo(({
 
     playBeep();
     onResultRef.current(rawValue);
-  }, [allowMultipleScans, duplicateTimeoutMs]);
+    setIsFrozen(true);
+    setTimeout(() => {
+      setIsFrozen(false);
+    }, 1000);
+  }, [allowMultipleScans, duplicateTimeoutMs , isFrozen]);
 
   const handleError = useCallback((error: unknown) => {
     console.warn("Scanner error:", error);
@@ -94,7 +102,8 @@ export const CustomQrScanner = React.memo(({
 
   const customTracker = useCallback((detectedCodes: IDetectedBarcode[], ctx: CanvasRenderingContext2D) => {
     if (detectedCodes && detectedCodes.length > 0) {
-      boundingBox([detectedCodes[0]], ctx);
+      //boundingBox([detectedCodes[0]], ctx);
+      outline(detectedCodes, ctx);
     }
   }, []);
 
@@ -115,7 +124,8 @@ export const CustomQrScanner = React.memo(({
     audio: false, // ปิดเสียง Library
   }), []);
 
-  const effectivePaused = isPaused || !qrActive;   
+  const effectivePaused = isPaused || !qrActive || isFrozen;
+  
 
   return (
   <div
@@ -130,9 +140,9 @@ export const CustomQrScanner = React.memo(({
         constraints={constraints}
         styles={styles}
         components={components}
-        allowMultiple={true} // 🔥 จุดสำคัญ! บังคับให้ Library ส่งข้อมูลมาเสมอ เพื่อแก้บัคแช่แล้วไม่ติด
+        allowMultiple={true} //  จุดสำคัญ! บังคับให้ Library ส่งข้อมูลมาเสมอ เพื่อแก้บัคแช่แล้วไม่ติด
         scanDelay={cooldownMs} 
-        paused={isLoading}
+        paused={isFrozen || isLoading || isPaused}
         sound={false} 
       />
     ) : !qrActive ? (

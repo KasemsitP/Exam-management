@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useToast } from "@/components/ui/use-toast";
 import { useAppSelector, useAppDispatch } from "@/store/hook";
+
 import Swal from "sweetalert2";
 
 import type {
@@ -93,6 +94,7 @@ export const useGradingStation = () => {
   const [gradingError, setGradingError] = useState<string | null>(null);
   const [random_number, setRandom_number] = useState<number | null>(null);
   const [IsScanned, setIsScanned] = useState(false);
+  const [IsHasbag, setIsHasbag] = useState(false);
 
   const QRActive = useAppSelector(selectQrActiveCampaign);
 
@@ -195,11 +197,30 @@ export const useGradingStation = () => {
   }>({ subject_name: null, question_label: null, question_no: null });
   const [isDraftLoading, setIsDraftLoading] = useState(false);
   const [questionNo, setQuestionNo] = useState<number>(null);
-  const [questionMaxScore, setQuestionMaxScore] = useState<number>(null);
+  //const [questionMaxScore, setQuestionMaxScore] = useState<number>(null);
   const [currentBagId, setCurrentBagId] = useState<number | null>(null);
   const [previewData, setPreviewData] = useState<PreviewStartResponse | null>(null);
 
-  console.log(questionNo, questionMaxScore)
+  //console.log(questionNo, questionMaxScore)
+
+  // --- Derive max score from current question + assignments ---
+  // แยกออกจาก fetchDraftScores เพราะ useCallback deps [] ทำให้ closure ไม่เห็น
+  // gradersAssignment ล่าสุด (เคสรีเฟรชหน้าแล้ว Redux ยังโหลดไม่เสร็จ)
+  // useEffect(() => {
+  //   if (questionNo == null || gradersAssignment.length === 0) return;
+  //   const ma = gradersAssignment.find(
+  //     (a) => a.question_no === questionNo
+  //   )?.max_score;
+  //   if (ma != null) setQuestionMaxScore(ma);
+  // }, [questionNo, gradersAssignment]);
+
+  const questionMaxScore = useMemo(() => {
+    if (questionNo == null || gradersAssignment.length === 0) return null;
+
+    return (
+      gradersAssignment.find((a) => a.question_no === questionNo)?.max_score ?? null
+    );
+  }, [questionNo, gradersAssignment]);
 
   // --- 6. Error -> toast ---
   useEffect(() => {
@@ -257,7 +278,7 @@ export const useGradingStation = () => {
   );
 
   const confirmStart = useCallback(
-    async (payload: PayloadSlot): Promise<{ slotId: number; bagNo: number; random_num: number }> => {
+    async (payload: PayloadSlot): Promise<{ slotId: number; bagNo: number; random_num: number, isUpdate: boolean }> => {
       setGradingError(null);
       try {
         const res = await axios.post("/api/gradingslots/confirm-start", payload);
@@ -317,6 +338,12 @@ export const useGradingStation = () => {
             ? res.data.data.question_no
             : null,
       });
+      if (bagId) {
+        setIsHasbag(true);
+        setQuestionNo(res.data?.data?.question_no ?? null);
+      }
+
+
     } catch (error: any) {
       console.error("Failed to fetch draft scores:", error);
       setCurrentBagId(null);
@@ -330,7 +357,8 @@ export const useGradingStation = () => {
   const confirmAllDraftScores = useCallback(
     async (graderId: number, editedScores: Record<string, string>) => {
       setIsDraftLoading(true);
-
+      setScannerEnabled(false);
+      console.log("Confirming all draft scores with editedScores:", editedScores);
       try {
         const hasDecimalScore = Object.values(editedScores).some((value) => {
           const trimmed = String(value).trim();
@@ -338,6 +366,32 @@ export const useGradingStation = () => {
           return trimmed !== "" && Number.isFinite(n) && !Number.isInteger(n);
         });
 
+        const countDraftScores = Object.keys(editedScores).length;
+        const countAllBooklets = draftScores.length;
+
+        if (countDraftScores !== countAllBooklets) {
+
+          await Swal.fire({
+            icon: "error",
+            title: "ยืนยันคะแนนไม่ได้",
+            text: "กรุณาตรวจข้อสอบให้ครบทุกเล่มก่อนยืนยันคะแนนทั้งหมด",
+            confirmButtonText: "ตกลง",
+          });
+          return;
+        }
+        const hasEmptyScore = Object.values(editedScores).some(
+          (v) => String(v).trim() === ""
+        );
+
+        if (hasEmptyScore) {
+          await Swal.fire({
+            icon: "error",
+            title: "ยืนยันคะแนนไม่ได้",
+            text: "กรุณากรอกคะแนนให้ครบทุกช่อง",
+            confirmButtonText: "ตกลง",
+          });
+          return;
+        }
         if (hasDecimalScore) {
           await Swal.fire({
             icon: "error",
@@ -347,6 +401,69 @@ export const useGradingStation = () => {
           });
           return;
         }
+
+
+
+        const exceededRows = draftScores
+          .map((item) => {
+            const key = JSON.stringify({
+              booklet_id: Number(item.booklet_id),
+              slot_id: item.slot_id ?? null,
+              question_no: item.question_no ?? null,
+            });
+
+            const rawValue =
+              editedScores[key] ?? (item.score != null ? String(item.score) : "");
+
+            const trimmed = String(rawValue).trim();
+            const score = Number(trimmed);
+
+            if (
+              trimmed === "" ||
+              !Number.isFinite(score) ||
+              questionMaxScore === null ||
+              score <= questionMaxScore
+            ) {
+              return null;
+            }
+
+            return {
+              random_num: item.random_num,
+              score,
+            };
+          })
+          .filter(
+            (item): item is { random_num: string; score: number } => item !== null
+          );
+
+        if (exceededRows.length > 0) {
+          const listHtml = exceededRows
+            .map(
+              (item) => `
+        <li style="margin-bottom:6px;">
+          ลำดับจัดเก็บ <strong>${item.random_num}</strong>
+          : <strong>${item.score}</strong> คะแนน
+        </li>
+      `
+            )
+            .join("");
+
+          await Swal.fire({
+            icon: "error",
+            title: "ไม่สามารถยืนยันคะแนนได้",
+            html: `
+      <div style="text-align:left; line-height:1.8;">
+        <div>พบคะแนนที่เกินคะแนนเต็ม ${questionMaxScore} คะแนน ดังนี้</div>
+        <ul style="margin-top:10px; padding-left:20px;">
+          ${listHtml}
+        </ul>
+      </div>
+    `,
+            confirmButtonText: "ตกลง",
+          });
+          return;
+        }
+
         const scores = Object.entries(editedScores)
           .map(([key, score]) => {
             let parsedKey: ScoreKey;
@@ -436,7 +553,7 @@ export const useGradingStation = () => {
           icon: "question",
           title: "ยืนยันการบันทึกคะแนนทั้งหมด?",
           html: `
-    <div style="text-align:left; line-height:1.8;">
+    <div style="text-align:left; line-height:1.8;">  
       <div>วิชา: <strong>${draftBagInfo.subject_name ?? "-"}</strong></div>
       <div>ข้อ: <strong>${draftBagInfo.question_no ?? "-"}</strong></div>
       <div>หัวข้อสอบ: <strong>${draftBagInfo.question_label ?? "-"
@@ -491,6 +608,7 @@ export const useGradingStation = () => {
         });
       } finally {
         setIsDraftLoading(false);
+        setScannerEnabled(true);
       }
     },
     [fetchDraftScores, currentBagId, draftScores, draftBagInfo]
@@ -618,22 +736,158 @@ export const useGradingStation = () => {
       console.log("confirmStart result:", confirmed);
 
       setScanData(value ?? null);
+      await fetchDraftScores(activeAssignment.grader_id);
 
-      await Swal.fire({
-        icon: "success",
-        title: "สแกนสำเร็จ",
-        text: `พบรหัสผู้เข้าสอบ: ${value ?? "ไม่ระบุ"}`,
-        timer: 1500,
-        showConfirmButton: false,
+      if (confirmed.isUpdate) {
+        const result = await Swal.fire({
+          icon: "warning",
+          title: "คุณให้คะแนนข้อสอบเล่มนี้ไปแล้ว",
+          text: "กรุณากด ยืนยัน เพื่อแก้ไขคะแนน หรือ ยกเลิก เพื่อสแกนเล่มอื่น",
+          showCancelButton: true,
+          confirmButtonText: "ยืนยัน",
+          cancelButtonText: "ยกเลิก",
+        })
+        if (!result.isConfirmed) {
+          setScanData(null);
+          setScore("");
+          setIsScanned(false);
+          setManualPayload("");
+          return;
+        }
+
+      }
+
+
+
+      const scoreResult = await Swal.fire({
+        icon: "question",
+        title: "กรอกคะแนน",
+        html: `
+  <div style="text-align:left; font-size:16px; line-height:1.6;">
+    
+    <div style="margin-bottom:14px;">
+      <div style="color:#666; font-size:14px;">Payload</div>
+      <strong style="color:#222; font-size:18px;">
+        ${value?.length > 25 ? value.slice(0, 25) + "..." : value ?? "-"}
+      </strong>
+    </div>
+
+    <hr style="border:none; border-top:1px solid #eee; margin:12px 0;" />
+
+    <div style="display:grid; grid-template-columns: 140px 1fr; row-gap:10px; column-gap:10px;">
+
+      <div style="color:#666;">ข้อที่</div>
+      <div><strong style="font-size:17px;">${questionNo}</strong></div>
+
+      <div style="color:#666;">รายวิชา</div>
+      <div><strong style="font-size:17px;">${activeAssignment.subject_name ?? "-"}</strong></div>
+
+      <div style="color:#666;">หัวข้อ</div>
+      <div><strong style="font-size:17px;">${activeAssignment.question_label ?? "-"}</strong></div>
+
+      <div style="color:#666;">เลขประจำถุง</div>
+      <div><strong style="font-size:17px;">${confirmed.bagNo ?? "-"}</strong></div>
+
+      <div style="color:#666;">รหัสจัดเก็บ</div>
+      <div><strong style="font-size:17px;">${confirmed.random_num ?? "-"}</strong></div>
+
+      <div style="color:#666;">คะแนนเต็ม</div>
+      <div>
+        <strong style="font-size:18px; ">
+          ${questionMaxScore ?? "-"}
+        </strong>
+      </div>
+          <div style="margin-bottom:8px; font-weight:600;">
+      กรุณากรอกคะแนน
+    </div>
+
+    </div>
+
+  </div>
+`,
+        input: "number",
+        inputAttributes: {
+          min: "0",
+          step: "1",
+          inputmode: "numeric",
+          style: "font-size:18px; padding:8px;"
+        },
+        inputValidator: (v) => {
+          const raw = String(v ?? "").trim();
+          if (raw === "") return "กรุณากรอกคะแนน";
+          if (!/^\d+$/.test(raw))
+            return "คะแนนต้องเป็นจำนวนเต็มบวก ห้ามมีเครื่องหมาย/จุดทศนิยม";
+          const n = Number(raw);
+          if (!Number.isFinite(n)) return "กรุณากรอกเป็นตัวเลข";
+          if (questionMaxScore !== null && n > questionMaxScore)
+            return `คะแนนต้องไม่เกินคะแนนเต็ม (${questionMaxScore})`;
+          return null;
+        },
+        showCancelButton: true,
+        confirmButtonText: "บันทึกคะแนน",
+        cancelButtonText: "ยกเลิก",
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        allowOutsideClick: false,
       });
 
-      if (!pauseAfterSuccess) {
-        setTimeout(() => {
-          setPause(false);
-          setScannerEnabled(true);
-        }, cooldownMs);
+      if (!scoreResult.isConfirmed) {
+        setPause(false);
+        setScannerEnabled(true);
+        return;
       }
-      await fetchDraftScores(activeAssignment.grader_id);
+
+      const enteredScore = Number(scoreResult.value);
+      setScore(String(enteredScore));
+
+      const payload: PayloadScore = {
+        slotId: confirmed.slotId,
+        qrPayload: value,
+        campaignId: activeAssignment.campaign_id,
+        graderId: activeAssignment.grader_id,
+        score: enteredScore,
+        question_no: questionNo,
+      };
+
+      try {
+        await submitScore(payload);
+
+        setScanData(null);
+        setScore("");
+        setIsScanned(false);
+        setManualPayload("");
+
+        await fetchDraftScores(activeAssignment.grader_id);
+
+        await Swal.fire({
+          icon: "success",
+          title: "บันทึกคะแนนสำเร็จ!",
+          html: `
+            <div style="text-align:left; line-height:1.8;">
+              <div>ข้อที่: <strong>${questionNo}</strong></div>
+              <div>คะแนนที่บันทึก: <strong>${enteredScore}</strong> คะแนน</div>
+              <div>รายวิชา: <strong>${activeAssignment.subject_name ?? "-"}</strong></div>
+              <div>หัวข้อ: <strong>${activeAssignment.question_label ?? "-"}</strong></div>
+              <div>เลขประจำถุง: <strong>${confirmed.bagNo ?? "-"}</strong></div>
+              <div>รหัสจัดเก็บ: <strong>${confirmed.random_num ?? "-"}</strong></div>
+            </div>
+          `,
+          timer: 1500,
+          showConfirmButton: false,
+        });
+
+        setPause(false);
+        setScannerEnabled(true);
+      } catch (saveErr: any) {
+        console.error("Failed to save score:", saveErr);
+        await Swal.fire({
+          icon: "error",
+          title: "บันทึกคะแนนไม่สำเร็จ",
+          text: saveErr.message || "เกิดข้อผิดพลาด",
+        });
+        setPause(false);
+        setScannerEnabled(true);
+      }
     } catch (err: any) {
       await Swal.fire({
         icon: "error",
@@ -643,7 +897,12 @@ export const useGradingStation = () => {
       });
 
       setPause(false);
+      // setScannerEnabled(true);
+    }
+    finally {
+      setPause(false);
       setScannerEnabled(true);
+      // lastScanRef.current = 0;
     }
   };
   const handleClear = () => {
@@ -692,6 +951,16 @@ export const useGradingStation = () => {
       setIsConfirmOpen(false);
       return;
     }
+    if (!/^\d+$/.test(String(score).trim())) {
+      await Swal.fire({
+        icon: "error",
+        title: "ไม่สามารถบันทึกคะแนนได้",
+        text: "คะแนนต้องเป็นจำนวนเต็มบวก ห้ามมีเครื่องหมาย/จุดทศนิยม",
+        confirmButtonText: "ตกลง",
+      });
+      return;
+    }
+
     if (questionMaxScore !== null && Number(score) > questionMaxScore) {
       await Swal.fire({
         icon: "error",
@@ -900,7 +1169,6 @@ export const useGradingStation = () => {
     handleSaveScore,
     handleScan,
     closeConfirmModal,
-    setQuestionMaxScore,
     questionMaxScore,
 
     bagNo,
@@ -915,5 +1183,8 @@ export const useGradingStation = () => {
     isDraftLoading,
     confirmAllDraftScores,
     fetchDraftScores,
+
+
+    IsHasbag
   };
 };

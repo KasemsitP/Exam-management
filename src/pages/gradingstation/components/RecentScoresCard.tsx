@@ -1,5 +1,6 @@
 // components/RecentScoresCard.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import type { DraftScore } from "../hooks/useGradingStation";
 
 interface RecentScoresCardProps {
@@ -42,20 +43,40 @@ function makeRowKey(item: DraftScore): string {
 /*  Payload Cell                                                              */
 /* -------------------------------------------------------------------------- */
 function PayloadCell({ payload }: { payload: string }) {
+  const cellRef = useRef<HTMLTableCellElement>(null);
   const [hover, setHover] = useState(false);
+  const [tipPos, setTipPos] = useState<{
+    top: number;
+    left: number;
+    placeAbove: boolean;
+  } | null>(null);
+
+  const updatePos = () => {
+    const rect = cellRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const estimatedHeight = 140;
+    const placeAbove = rect.top > estimatedHeight + 16;
+    setTipPos({
+      top: placeAbove ? rect.top : rect.bottom,
+      left: rect.left + rect.width / 2,
+      placeAbove,
+    });
+  };
 
   return (
     <td
+      ref={cellRef}
       className="text-center"
       style={{
         maxWidth: 120,
-        position: "relative",
-        overflow: "visible",
         cursor: "pointer",
         wordBreak: "break-all",
         whiteSpace: "normal",
       }}
-      onMouseEnter={() => setHover(true)}
+      onMouseEnter={() => {
+        updatePos();
+        setHover(true);
+      }}
       onMouseLeave={() => setHover(false)}
     >
       <span
@@ -65,56 +86,52 @@ function PayloadCell({ payload }: { payload: string }) {
         {payload.length > 20 ? `${payload.slice(0, 20)}...` : payload}
       </span>
 
-      {hover && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "100%",
-            left: 0,
-            right: "auto",
-            zIndex: 9999,
-            background: "#1e293b",
-            color: "#f1f5f9",
-            borderRadius: 8,
-            padding: "10px 14px",
-            minWidth: 220,
-            maxWidth: "80vw",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
-            wordBreak: "break-all",
-            whiteSpace: "normal",
-            textAlign: "left",
-            fontSize: 12,
-          }}
-        >
+      {hover &&
+        tipPos &&
+        createPortal(
           <div
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
             style={{
-              fontSize: "0.7rem",
-              color: "#94a3b8",
-              marginBottom: 4,
-              fontWeight: 600,
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
+              position: "fixed",
+              top: tipPos.top,
+              left: tipPos.left,
+              transform: tipPos.placeAbove
+                ? "translate(-50%, -100%)"
+                : "translate(-50%, 0)",
+              zIndex: 9999,
+              background: "#1e293b",
+              color: "#f1f5f9",
+              borderRadius: 8,
+              padding: "10px 14px",
+              minWidth: 220,
+              maxWidth: "80vw",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+              wordBreak: "break-all",
+              whiteSpace: "normal",
+              textAlign: "left",
+              fontSize: 12,
+              userSelect: "text",
+              cursor: "text",
             }}
           >
-            Payload
-          </div>
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "#94a3b8",
+                marginBottom: 4,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Payload
+            </div>
 
-          <div className="font-monospace">{payload}</div>
-
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: 16,
-              width: 0,
-              height: 0,
-              borderLeft: "6px solid transparent",
-              borderRight: "6px solid transparent",
-              borderTop: "6px solid #1e293b",
-            }}
-          />
-        </div>
-      )}
+            <div className="font-monospace">{payload}</div>
+          </div>,
+          document.body
+        )}
     </td>
   );
 }
@@ -167,7 +184,7 @@ export default function RecentScoresCard({
 
   return (
     <div
-      className="card"
+      className="card h-100"
       style={{
         boxShadow:
           "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)",
@@ -228,92 +245,102 @@ export default function RecentScoresCard({
           )}
       </div>
 
-      <div className="card-body">
+      <div
+        className="card-body d-flex flex-column"
+        style={{ minHeight: 0, overflow: "hidden" }}
+      >
         {draftScores.length === 0 ? (
           <div className="text-muted small">
             ยังไม่มีรายการคะแนนที่ตรวจในแต่ละถุง กรุณาสแกนเพื่อตรวจข้อสอบ
           </div>
         ) : (
           <>
-            {bagNos.map((bagNo) => {
-              const randomNums = groupedByBag[bagNo]
-                .map((it) => Number(it.random_num))
-                .filter((n) => Number.isFinite(n));
-              const minRandom =
-                randomNums.length > 0 ? Math.min(...randomNums) : null;
-              const maxRandom =
-                randomNums.length > 0 ? Math.max(...randomNums) : null;
+            <div
+              className="flex-grow-1"
+              style={{ overflowY: "auto", minHeight: 0 }}
+            >
+              {bagNos.map((bagNo) => {
+                const randomNums = groupedByBag[bagNo]
+                  .map((it) => Number(it.random_num))
+                  .filter((n) => Number.isFinite(n));
+                const minRandom =
+                  randomNums.length > 0 ? Math.min(...randomNums) : null;
+                const maxRandom =
+                  randomNums.length > 0 ? Math.max(...randomNums) : null;
 
-              return (
-                <div key={bagNo} className="mb-3">
-                  <div
-                    className="table-responsive"
-                    style={{ overflow: "visible" }}
-                  >
-                    <table className="table table-sm table-striped table-hover align-middle mb-0">
-                      <thead className="table-light">
-                        <tr>
-                          <th className="text-center" style={{ width: 60 }}>
-                            ลำดับ
-                          </th>
-                          <th className="text-center">ลำดับจัดเก็บ</th>
-                          <th className="text-center">Payload</th>
-                          <th className="text-center" style={{ width: 100 }}>
-                            คะแนน
-                          </th>
-                        </tr>
-                      </thead>
+                return (
+                  <div key={bagNo} className="mb-3">
+                    <div
+                      className="table-responsive"
+                      style={{ overflow: "visible" }}
+                    >
+                      <table className="table table-sm table-striped table-hover align-middle mb-0">
+                        <thead className="table-light">
+                          <tr>
+                            <th className="text-center" style={{ width: 60 }}>
+                              ลำดับ
+                            </th>
+                            <th className="text-center">ลำดับจัดเก็บ</th>
+                            <th className="text-center">Payload</th>
+                            <th className="text-center" style={{ width: 100 }}>
+                              คะแนน
+                            </th>
+                          </tr>
+                        </thead>
 
-                      <tbody>
-                        {groupedByBag[bagNo].map((item, index) => {
-                          const scoreKey = makeScoreKey(item);
-                          const rowKey = makeRowKey(item);
+                        <tbody>
+                          {groupedByBag[bagNo].map((item, index) => {
+                            const scoreKey = makeScoreKey(item);
+                            const rowKey = makeRowKey(item);
 
-                          return (
-                            <tr key={rowKey}>
-                              <td className="text-center">{index + 1}</td>
+                            return (
+                              <tr key={rowKey} style={{ height: 48 }}>
+                                <td className="text-center">{index + 1}</td>
 
-                              <td className="text-center">{item.random_num}</td>
+                                <td className="text-center">{item.random_num}</td>
 
-                              <PayloadCell payload={item.payload} />
+                                <PayloadCell payload={item.payload} />
 
-                              <td className="text-center">
-                                {item.score != null &&
-                                item.slot_id != null &&
-                                item.question_no != null ? (
-                                  <input
-                                    type="number"
-                                    className="form-control form-control-sm text-center fw-semibold"
-                                    style={{
-                                      width: 70,
-                                      minWidth: 60,
-                                      margin: "0 auto",
-                                    }}
-                                    value={
-                                      editedScores[scoreKey] ??
-                                      String(parseInt(String(item.score), 10))
-                                    }
-                                    onChange={(e) =>
-                                      handleScoreChange(scoreKey, e.target.value)
-                                    }
-                                    min={0}
-                                    step={1}
-                                  />
-                                ) : (
-                                  <span className="text-muted small">
-                                    ยังไม่มีคะแนน
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                <td className="text-center">
+                                  {item.score != null &&
+                                    item.slot_id != null &&
+                                    item.question_no != null ? (
+                                    <input
+                                      type="number"
+                                      inputMode="numeric"
+                                      max={99}
+                                      min={0}
+                                      step={1}
+                                      value={
+                                        editedScores[scoreKey] ??
+                                        (item.score != null ? String(item.score) : "")
+                                      }
+                                      onChange={(e) => {
+                                        let val = e.target.value;
+                                        if (val === "") {
+                                          handleScoreChange(scoreKey, "");
+                                          return;
+                                        }
+                                        val = val.replace(/\D/g, "").slice(0, 2);
+                                        handleScoreChange(scoreKey, val);
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-muted small">
+                                      ยังไม่มีคะแนน
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
 
             <div className="d-grid mt-3">
               <button
@@ -321,7 +348,7 @@ export default function RecentScoresCard({
                 onClick={() => onConfirmAll(editedScores)}
                 disabled={isDraftLoading}
               >
-                {isDraftLoading ? (
+                {/* {isDraftLoading ? (
                   <>
                     <span
                       className="spinner-border spinner-border-sm me-2"
@@ -331,7 +358,8 @@ export default function RecentScoresCard({
                   </>
                 ) : (
                   <>ยืนยันคะแนนทั้งหมด</>
-                )}
+                )} */}
+                ยืนยันคะแนนทั้งหมด
               </button>
             </div>
           </>

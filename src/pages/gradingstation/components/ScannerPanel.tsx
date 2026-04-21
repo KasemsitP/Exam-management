@@ -10,8 +10,8 @@ import {
   Scan,
 } from "lucide-react";
 
-// ✅ Import CustomQrScanner (ปรับ path ให้ตรงกับโปรเจกต์ของคุณ)
 import { CustomQrScanner } from "@/lib/Scanner";
+import Swal from "sweetalert2";
 
 interface ScannerPanelProps {
   scanData: string | null;
@@ -30,6 +30,7 @@ interface ScannerPanelProps {
   QrActive: boolean;
   IsScanned: boolean;
   random_number: number | null;
+  ishasbag: boolean;
 
   onChangePauseAfterSuccess: (checked: boolean) => void;
   onChangeCooldown: (ms: number) => void;
@@ -37,7 +38,7 @@ interface ScannerPanelProps {
   onToggleFacingMode: () => void;
   onClear: () => void;
   setQuestionNo: (value: number | null) => void;
-  setQuestionMaxScore: (value: number | null) => void;
+ // setQuestionMaxScore: (value: number | null) => void;
   onChangeManualPayload: (value: string) => void;
   onVerifyManualPayload: () => void;
   onChangeScore: (value: string) => void;
@@ -71,14 +72,14 @@ export default function ScannerPanel({
   questionNo,
   bagNo,
   slotId,
-  setQuestionMaxScore,
   QuestionMaxScore,
   QrActive,
   IsScanned,
-  random_number
+  random_number,
+  ishasbag
 }: ScannerPanelProps) {
   return (
-    <div className="card" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
+    <div className="card h-100" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
       <div className="card-header bg-white d-flex align-items-center justify-content-between">
         <div className="d-flex align-items-center gap-2">
           <span className="fw-semibold">สแกนคิวอาร์โค้ดและบันทึกคะแนน</span>
@@ -142,18 +143,42 @@ export default function ScannerPanel({
 
               if (val === "") {
                 setQuestionNo(null);
-                setQuestionMaxScore(null);
+                //setQuestionMaxScore(null);
+                Swal.fire({
+                  toast: true,
+                  position: "top-end",
+                  icon: "info",
+                  title: "ล้างการเลือกข้อแล้ว",
+                  showConfirmButton: false,
+                  timer: 1500,
+                  timerProgressBar: true,
+                });
                 return;
               }
 
               const num = Number(val);
+              const selected = recent.find((q) => q.question_no === num);
+              const nextMax = selected?.max_score ?? null;
               setQuestionNo(num);
+              //setQuestionMaxScore(nextMax);
 
-              setQuestionMaxScore(
-                recent.find((q) => q.question_no === num)?.max_score ?? null
-              );
+              Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: `เปลี่ยนเป็นข้อ ${num} แล้ว`,
+                html: `
+                  <div style="text-align:left; font-size:12px; line-height:1.6;">
+                    <div>วิชา: <strong>${selected?.question_label ?? "-"}</strong></div>
+                    <div>คะแนนเต็ม: <strong>${nextMax ?? "-"}</strong></div>
+                  </div>
+                `,
+                showConfirmButton: false,
+                timer: 1800,
+                timerProgressBar: true,
+              });
             }}
-            disabled={IsScanned}
+            disabled={IsScanned || ishasbag }
           >
             <option value="" >-- เลือก --</option>
             {recent.map((row) => (
@@ -273,7 +298,7 @@ export default function ScannerPanel({
         </div>
 
         {/* Score form */}
-        <div className="row g-3 mt-3">
+        {/* <div className="row g-3 mt-3">
           <div className="col-md-6">
             <label className="form-label">คะแนน</label>
             <input
@@ -313,7 +338,7 @@ export default function ScannerPanel({
           >
             ล้างข้อมูล
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

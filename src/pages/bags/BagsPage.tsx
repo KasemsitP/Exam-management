@@ -351,6 +351,13 @@ export default function BagsPage() {
       });
       return;
     }
+      Swal.fire({
+        icon: "success",
+        title: "สแกนสำเร็จ",
+        text: "สแกนเข้าถุงสำเร็จแล้ว",
+        timer: 1500,
+        showConfirmButton: false
+      });
 
     setQrPayloads((prev) => [...prev, data]);
     setDatePaylaods((prev) => [...prev, dateTime]);
