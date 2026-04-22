@@ -53,12 +53,26 @@ a:hover { text-decoration: underline; }
   .admin-reset-filter-wrap {
     width: 100%;
     flex-wrap: wrap;
+    gap: .5rem !important;
   }
 
+  .admin-reset-filter-item {
+    width: 100%;
+  }
+
+  .admin-reset-filter-item > label {
+    flex: 0 0 84px;
+  }
+
+  .admin-reset-select,
   .admin-reset-bag-select {
     width: 100% !important;
     min-width: 0 !important;
-    flex: 1 1 100%;
+    flex: 1 1 auto;
+  }
+
+  .admin-reset-filter-clear {
+    align-self: flex-end;
   }
 
 }
@@ -66,6 +80,7 @@ a:hover { text-decoration: underline; }
 /* helper */
 .translate-x--100 { transform: translateX(-100%); }
 .flex-grow-1 { min-width: 0; }
+
 
 .bg-orange-100 { background-color: rgba(255, 176, 107, 0.2) !important; }
 .text-orange-700 { color: #8d3d00 !important; }

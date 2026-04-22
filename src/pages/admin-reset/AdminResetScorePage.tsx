@@ -1,6 +1,7 @@
 // src/pages/grading/recheck/AdminResetScoresPage.tsx
 import axios from "axios";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import Swal from "sweetalert2";
 import { Loader2, QrCode } from "lucide-react";
 
@@ -12,6 +13,112 @@ import type { DisputedQuestionDto } from "./types";
 import ScannerModal from "./components/VerificationScannerModal";
 
 // ============================================================================
+// Payload Cell (hover -> full payload tooltip via portal)
+// ============================================================================
+function PayloadCell({ payload }: { payload: string | null | undefined }) {
+  const cellRef = useRef<HTMLTableCellElement>(null);
+  const [hover, setHover] = useState(false);
+  const [tipPos, setTipPos] = useState<{
+    top: number;
+    left: number;
+    placeAbove: boolean;
+  } | null>(null);
+
+  const updatePos = () => {
+    const rect = cellRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const estimatedHeight = 140;
+    const placeAbove = rect.top > estimatedHeight + 16;
+    setTipPos({
+      top: placeAbove ? rect.top : rect.bottom,
+      left: rect.left + rect.width / 2,
+      placeAbove,
+    });
+  };
+
+  if (!payload) {
+    return <td className="text-center">-</td>;
+  }
+
+  const preview =
+    payload.length > 12
+      ? `${payload.slice(0, 5)} .... ${payload.slice(-5)}`
+      : payload;
+
+  return (
+    <td
+      ref={cellRef}
+      className="text-center"
+      style={{
+        maxWidth: 160,
+        cursor: "pointer",
+        wordBreak: "break-all",
+        whiteSpace: "normal",
+      }}
+      onMouseEnter={() => {
+        updatePos();
+        setHover(true);
+      }}
+      onMouseLeave={() => setHover(false)}
+    >
+      <span
+        className="font-monospace small d-inline-block text-truncate"
+        style={{ maxWidth: "100%" }}
+      >
+        {preview}
+      </span>
+
+      {hover &&
+        tipPos &&
+        createPortal(
+          <div
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            style={{
+              position: "fixed",
+              top: tipPos.top,
+              left: tipPos.left,
+              transform: tipPos.placeAbove
+                ? "translate(-50%, -100%)"
+                : "translate(-50%, 0)",
+              zIndex: 9999,
+              background: "#1e293b",
+              color: "#f1f5f9",
+              borderRadius: 8,
+              padding: "10px 14px",
+              minWidth: 220,
+              maxWidth: "80vw",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.25)",
+              wordBreak: "break-all",
+              whiteSpace: "normal",
+              textAlign: "left",
+              fontSize: 12,
+              userSelect: "text",
+              cursor: "text",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "#94a3b8",
+                marginBottom: 4,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Payload
+            </div>
+
+            <div className="font-monospace">{payload}</div>
+          </div>,
+          document.body
+        )}
+    </td>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 export default function AdminResetScoresPage() {
@@ -21,13 +128,37 @@ export default function AdminResetScoresPage() {
   const [loading, setLoading] = useState(false);
 
   const [selectedBag, setSelectedBag] = useState<string>("");
+  const [selectedQuestion, setSelectedQuestion] = useState<string>("");
+  const [selectedGrader, setSelectedGrader] = useState<string>("");
 
   const bagOptions = Array.from(
     new Set(rows.map((r) => String(r.bagNo ?? "")).filter((v) => v !== ""))
   ).sort((a, b) => Number(a) - Number(b));
 
+  const questionOptions = Array.from(
+    new Set(rows.map((r) => String(r.questionNo ?? "")).filter((v) => v !== ""))
+  ).sort((a, b) => Number(a) - Number(b));
+
+  const graderOptions = Array.from(
+    new Set(
+      rows
+        .flatMap((r) => [r.graderName1, r.graderName2])
+        .filter((v): v is string => !!v && v.trim() !== "")
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const hasAnyFilter = !!selectedBag || !!selectedQuestion || !!selectedGrader;
+
   const sortedRows = [...rows]
     .filter((r) => (selectedBag ? String(r.bagNo) === selectedBag : true))
+    .filter((r) =>
+      selectedQuestion ? String(r.questionNo) === selectedQuestion : true
+    )
+    .filter((r) =>
+      selectedGrader
+        ? r.graderName1 === selectedGrader || r.graderName2 === selectedGrader
+        : true
+    )
     .sort((a, b) => {
       const bagDiff = Number(a.bagNo) - Number(b.bagNo);
       if (bagDiff !== 0) return bagDiff;
@@ -35,6 +166,12 @@ export default function AdminResetScoresPage() {
       if (randDiff !== 0) return randDiff;
       return Number(a.questionNo) - Number(b.questionNo);
     });
+
+  const clearAllFilters = () => {
+    setSelectedBag("");
+    setSelectedQuestion("");
+    setSelectedGrader("");
+  };
 
   // Scanner State
   const [modalOpen, setModalOpen] = useState(false);
@@ -92,28 +229,65 @@ export default function AdminResetScoresPage() {
                   <h5 className="mb-1">จัดการคะแนนที่ต่างกันเกิน 4 คะแนน</h5>
                   <small className="text-muted">สแกนหาที่เล่มข้อสอบและรีเซ็ตคะแนน</small>
                 </div>
-                <div className="d-flex align-items-center gap-2 admin-reset-filter-wrap">
-                 <label className="small text-muted mb-0" style={{ whiteSpace: "nowrap" }}>เลือกถุง:</label>
-                  <select
-                    className="form-select form-select-sm admin-reset-bag-select"
-                    style={{ minWidth: 160 }}
-                    value={selectedBag}
-                    onChange={(e) => setSelectedBag(e.target.value)}
-                  >
-                    <option value="">ทั้งหมด</option>
-                    {bagOptions.map((b) => (
-                      <option key={b} value={b}>
-                        ถุง {b}
-                      </option>
-                    ))}
-                  </select>
-                  {selectedBag && (
+                <div className="d-flex flex-wrap align-items-center gap-3 admin-reset-filter-wrap">
+                  <div className="d-flex align-items-center gap-2 admin-reset-filter-item">
+                    <label className="small text-muted mb-0" style={{ whiteSpace: "nowrap" }}>เลือกถุง:</label>
+                    <select
+                      className="form-select form-select-sm admin-reset-select"
+                      style={{ minWidth: 140 }}
+                      value={selectedBag}
+                      onChange={(e) => setSelectedBag(e.target.value)}
+                    >
+                      <option value="">ทั้งหมด</option>
+                      {bagOptions.map((b) => (
+                        <option key={b} value={b}>
+                          ถุง {b}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="d-flex align-items-center gap-2 admin-reset-filter-item">
+                    <label className="small text-muted mb-0" style={{ whiteSpace: "nowrap" }}>เลือกข้อ:</label>
+                    <select
+                      className="form-select form-select-sm admin-reset-select"
+                      style={{ minWidth: 120 }}
+                      value={selectedQuestion}
+                      onChange={(e) => setSelectedQuestion(e.target.value)}
+                    >
+                      <option value="">ทั้งหมด</option>
+                      {questionOptions.map((q) => (
+                        <option key={q} value={q}>
+                          ข้อ {q}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="d-flex align-items-center gap-2 admin-reset-filter-item">
+                    <label className="small text-muted mb-0" style={{ whiteSpace: "nowrap" }}>ผู้ตรวจ:</label>
+                    <select
+                      className="form-select form-select-sm admin-reset-select"
+                      style={{ minWidth: 180 }}
+                      value={selectedGrader}
+                      onChange={(e) => setSelectedGrader(e.target.value)}
+                    >
+                      <option value="">ทั้งหมด</option>
+                      {graderOptions.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {hasAnyFilter && (
                     <button
                       type="button"
-                      className="btn btn-link btn-sm p-0 text-muted text-decoration-none"
-                      onClick={() => setSelectedBag("")}
+                      className="btn btn-link btn-sm p-0 text-muted text-decoration-none admin-reset-filter-clear"
+                      onClick={clearAllFilters}
                     >
-                      ล้าง
+                      ล้างทั้งหมด
                     </button>
                   )}
                 </div>
@@ -134,9 +308,10 @@ export default function AdminResetScoresPage() {
                       <tr>
                         <th className="text-center">เลขถุง</th>
                         <th className="text-center">ลำดับจัดเก็บ</th>
+                         <th className="text-center">payload</th>
                         <th className="text-center">วิชา</th>
                         <th className="text-center">ข้อ</th>
-                        <th className="text-center">หัวข้อ</th>
+                        {/* <th className="text-center">หัวข้อ</th> */}
                         <th className="text-center">ผู้ตรวจ 1</th>
                         <th className="text-center">คะแนน 1</th>
                         <th className="text-center">ผู้ตรวจ 2</th>
@@ -150,12 +325,13 @@ export default function AdminResetScoresPage() {
                         <tr key={`${row.bookletId}-${row.subjectId}-${row.questionNo}`}>
                           <td className="text-center">{row.bagNo ?? "-"}</td>
                           <td className="text-center">{row.random_num ?? "-"}</td>
+                           <PayloadCell payload={row.qr_payload} />
                           <td className="text-center">
                             <div>{row.subjectName}</div>
                             <small className="text-muted">รหัสวิชา: {row.subjectCode}</small>
                           </td>
                           <td className="text-center">{row.questionNo}</td>
-                          <td className="text-center">{row.questionLabel ?? "-"}</td>
+                          {/* <td className="text-center">{row.questionLabel ?? "-"}</td> */}
                           <td className="text-center">{row.graderName1}</td>
                           <td className="text-center">{row.score1}</td>
                           <td className="text-center">{row.graderName2}</td>

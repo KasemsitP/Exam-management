@@ -7,6 +7,8 @@ export interface DisputedQuestionDto {
   bagId: number | null;
   bagNo: number | null;
 
+  qr_payload : string ;
+
   subjectCode: string;
   subjectName: string;
   questionLabel: string | null;

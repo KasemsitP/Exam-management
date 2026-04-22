@@ -475,11 +475,15 @@ const formatScore = (v: number | string | null | undefined) => {
       }
     } catch (error: any) {
       console.log("decrypt error", error);
-      Swal.fire({
-        icon: "error",
-        title: "Request failed",
-        text: error?.response?.data?.message || "Backend error. กรุณาลองใหม่อีกครั้ง",
-      });
+const message =
+  error?.response?.data?.message ||
+  "Backend error. กรุณาลองใหม่อีกครั้ง";
+
+Swal.fire({
+  icon: "error",
+  title: "ไม่สามารถถอดรหัสได้",
+  html: `<div style="text-align:left">${message.replace(/\n/g, "<br>")}</div>`,
+});
     }
   };
 
@@ -1021,6 +1025,10 @@ const formatScore = (v: number | string | null | undefined) => {
                     <thead>
                       {/* แถวที่ 1 : หัวข้อข้อสอบ + label */}
                       <tr>
+
+         
+                        
+
                         <th
                           rowSpan={2}
                           className="align-middle text-center"
@@ -1031,22 +1039,36 @@ const formatScore = (v: number | string | null | undefined) => {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          {isDecrypted ? "รหัสประจำตัวสอบ" : "ลำดับจัดเก็บ"}
+                          ลำดับจัดเก็บ
                         </th>
 
                         {isDecrypted && (
-                          <th
-                            rowSpan={2}
-                            className="align-middle text-center"
-                            style={{
-                              border: "1px solid #dee2e6",
-                              backgroundColor: "#f8fafc",
-                              fontWeight: 600,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            ชื่อ-สกุล
-                          </th>
+                          <>
+                            <th
+                              rowSpan={2}
+                              className="align-middle text-center"
+                              style={{
+                                border: "1px solid #dee2e6",
+                                backgroundColor: "#f8fafc",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              รหัสประจำตัวสอบ
+                            </th>
+                            <th
+                              rowSpan={2}
+                              className="align-middle text-center"
+                              style={{
+                                border: "1px solid #dee2e6",
+                                backgroundColor: "#f8fafc",
+                                fontWeight: 600,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              ชื่อ-สกุล
+                            </th>
+                          </>
                         )}
 
                         {headerQuestions.map((hq) => (
@@ -1112,7 +1134,7 @@ const formatScore = (v: number | string | null | undefined) => {
                     <tbody>
                       {sortedBooklets.map((bk) => (
                         <tr key={bk.bookletId}>
-                          {/* รหัสสอบ */}
+                          {/* ลำดับจัดเก็บ */}
                           <td
                             className="text-start"
                             style={{
@@ -1122,20 +1144,33 @@ const formatScore = (v: number | string | null | undefined) => {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {bk.examCode}
+                            {bk.randomNum ?? "-"}
                           </td>
                           {isDecrypted && (
-                            <td
-                              className="text-start"
-                              style={{
-                                border: "1px solid #dee2e6",
-                                backgroundColor: "#ffffff",
-                                whiteSpace: "nowrap",
-                                minWidth: 180,
-                              }}
-                            >
-                              {bk.candidateName || "-"}
-                            </td>
+                            <>
+                              <td
+                                className="text-start"
+                                style={{
+                                  border: "1px solid #dee2e6",
+                                  fontWeight: 600,
+                                  backgroundColor: "#ffffff",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {bk.examCode}
+                              </td>
+                              <td
+                                className="text-start"
+                                style={{
+                                  border: "1px solid #dee2e6",
+                                  backgroundColor: "#ffffff",
+                                  whiteSpace: "nowrap",
+                                  minWidth: 180,
+                                }}
+                              >
+                                {bk.candidateName || "-"}
+                              </td>
+                            </>
                           )}
 
                           {/* รายข้อของเล่มนี้ */}

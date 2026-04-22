@@ -12,7 +12,7 @@ export default function AccountsHeader({ stats }: AccountsHeaderProps) {
       <div className="card-header bg-white">
         <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
           <div>
-            <h5 className="mb-1">จัดการบัญชีผู้ใช้</h5>
+            <h5 className="mb-1">จัดการบัญชีผู้ผู้ตรวจ</h5>
             <small className="text-muted">
               เพิ่ม ลบ แก้ไข และกำหนดข้อสำหรับผู้ตรวจ
             </small>

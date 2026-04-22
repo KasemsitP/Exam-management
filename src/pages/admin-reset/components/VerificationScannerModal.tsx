@@ -171,124 +171,163 @@ export default function ScannerModal({ onClose, activeCampaignId, row, onSuccess
   //   }
   // };
 
-  return (
-    <div className="modal-dialog modal-dialog-centered modal-lg">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h6 className="modal-title">สแกนเพื่อปลดล็อคการแก้ไขคะแนน</h6>
-          <button type="button" className="btn-close" onClick={onClose} />
-        </div>
-        <div className="modal-body">
-          {!verified ? (
-            <div className="card" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)' }}>
-              <div className="card-header bg-white">
-                <h6 className="mb-0">สแกนสมุดคำตอบจากคิวอาร์โค้ด</h6>
-                <small className="text-muted">
-                  ลำดับจัดเก็บ: {row.random_num} | ถุง: {row.bagNo ?? "-"} | วิชา: {row.subjectName}
-                </small>
-              </div>
-              <div className="card-body">
-                <div className="mb-3">
-                  <label className="form-label small text-uppercase text-muted fw-bold">สแกนด้วยกล้อง</label>
-                  <CustomSyncQrScanner
-                    onScan={handleVerify}
-                    minHeight={360}
-                    cooldownMs={1600}
-                  />
-                </div>
-                <div className="mb-2">
-                  <label className="form-label small text-uppercase text-muted fw-bold">เพิ่มรหัสด้วยตนเอง</label>
-                  <div className="input-group">
-                    <input
-                      className="form-control font-monospace"
-                      value={manualCode}
-                      onChange={(e) => setManualCode(e.target.value)}
-                      placeholder="กรอกคิวอาร์โค้ด"
-                      disabled={isProcessing.current}
-                      onKeyDown={(e) => e.key === 'Enter' && onManualSubmit()}
-                    />
-                    <button className="btn btn-primary" onClick={onManualSubmit} disabled={isProcessing.current || !manualCode}>
-                      ตรวจสอบ
-                    </button>
-                  </div>
-                </div>
-              </div>
+return (
+  <div
+    className="modal-dialog modal-dialog-centered modal-lg"
+    style={{ maxWidth: "900px", height: "92dvh", margin: "auto" }}
+  >
+    <div
+      className="modal-content d-flex flex-column"
+      style={{ height: "100%", overflow: "hidden" }}
+    >
+      <div className="modal-header flex-shrink-0">
+        <h6 className="modal-title">สแกนเพื่อปลดล็อคการแก้ไขคะแนน</h6>
+        <button type="button" className="btn-close" onClick={onClose} />
+      </div>
+
+      <div
+        className="modal-body d-flex flex-column"
+        style={{ overflow: "hidden", minHeight: 0, flex: 1 }}
+      >
+        {!verified ? (
+          <div
+            className="card d-flex flex-column flex-grow-1"
+            style={{
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)",
+              minHeight: 0,
+              overflow: "hidden",
+            }}
+          >
+            <div className="card-header bg-white flex-shrink-0">
+              <h6 className="mb-0">สแกนสมุดคำตอบจากคิวอาร์โค้ด</h6>
+              <small className="text-muted">
+                ลำดับจัดเก็บ: {row.random_num} | ถุง: {row.bagNo ?? "-"} | วิชา: {row.subjectName}
+              </small>
             </div>
-          ) : (
-            <div className="card border-success" style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)' }}>
-              <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h6 className="mb-0">✓ ยืนยันเล่มสำเร็จ — แก้ไขคะแนนได้</h6>
-                <button className="btn btn-sm btn-outline-light" onClick={() => { setVerified(false); setVerifiedInfo(null); }}>
-                  สแกนใหม่
-                </button>
-              </div>
-              <div className="card-body">
-<div className="card-body">
-  <div className="mb-2"><strong>ลำดับจัดเก็บ:</strong> {verifiedInfo?.booklets_id ?? row.bookletId}</div>
-  <div className="mb-2"><strong>วิชา:</strong> {verifiedInfo?.subject_name ?? row.subjectName}</div>
-  <div className="mb-2"><strong>หมายเลขถุง:</strong> {verifiedInfo?.bag_no ?? row.bagNo ?? "-"}</div>
-  <div className="mb-2"><strong>ข้อ:</strong> {row.questionNo}</div>
-  <div className="mb-2"><strong>หัวข้อ:</strong> {row.questionLabel ?? "-"}</div>
-</div>
 
-                <hr />
+            <div
+              className="card-body d-flex flex-column"
+              style={{ minHeight: 0, flex: 1, overflow: "hidden" }}
+            >
+              <div
+                className="mb-3 d-flex flex-column"
+                style={{ minHeight: 0, flex: 1 }}
+              >
+                <label className="form-label small text-uppercase text-muted fw-bold flex-shrink-0">
+                  สแกนด้วยกล้อง
+                </label>
 
-                <h6 className="mb-3">แก้ไขคะแนน</h6>
-                <div className="row g-3">
-                  <div className="col-md-6">
-                    <label className="form-label">
-                      ผู้ตรวจ 1: <strong>{row.graderName1}</strong>
-                      <span className="text-muted ms-2">(คะแนนเดิม: {row.score1})</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      className="form-control"
-                      placeholder={`แก้ไขคะแนน ${row.graderName1}`}
-                      onChange={(e) => setNewScore1(e.target.value)}
-                      disabled={saving || resetting}
-                    />
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label">
-                      ผู้ตรวจ 2: <strong>{row.graderName2}</strong>
-                      <span className="text-muted ms-2">(คะแนนเดิม: {row.score2})</span>
-                    </label>
-                    <input
-                      type="number"
-                      step="1"
-                      className="form-control"
-                      placeholder={`แก้ไขคะแนน ${row.graderName2}`}
-                      onChange={(e) => setNewScore2(e.target.value)}
-                      disabled={saving || resetting}
+                <div
+                  className="scanner-fit flex-grow-1 d-flex align-items-center justify-content-center"
+                  style={{ minHeight: 0 }}
+                >
+                  <div style={{ width: "100%", maxWidth: 400 }}>
+                    <CustomSyncQrScanner
+                      onScan={handleVerify}
+                      minHeight={0}
+                      cooldownMs={1600}
                     />
                   </div>
                 </div>
+              </div>
 
-                <div className="d-flex gap-2 mt-4 justify-content-end">
-                  {/* <button
-                    className="btn btn-danger"
-                    onClick={handleReset}
-                    disabled={saving || resetting}
-                  >
-                    {resetting ? "กำลังรีเซ็ต..." : "รีเซ็ตคะแนน"}
-                  </button> */}
+              <div className="mb-2 flex-shrink-0">
+                <label className="form-label small text-uppercase text-muted fw-bold">
+                  เพิ่มรหัสด้วยตนเอง
+                </label>
+                <div className="input-group">
+                  <input
+                    className="form-control font-monospace"
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    placeholder="กรอกคิวอาร์โค้ด"
+                    disabled={isProcessing.current}
+                    onKeyDown={(e) => e.key === "Enter" && onManualSubmit()}
+                  />
                   <button
-                    className="btn btn-success"
-                    onClick={handleSaveScores}
-                    disabled={saving || resetting}
+                    className="btn btn-primary"
+                    onClick={onManualSubmit}
+                    disabled={isProcessing.current || !manualCode}
                   >
-                    {saving ? "กำลังบันทึก..." : "บันทึกคะแนนใหม่"}
+                    ตรวจสอบ
                   </button>
                 </div>
               </div>
             </div>
-          )}
-        </div>
-        <div className="modal-footer bg-light">
-          <button className="btn btn-outline-secondary" onClick={onClose}>ปิดหน้าต่าง</button>
-        </div>
+          </div>
+        ) : (
+          <div
+            className="card border-success"
+            style={{ boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12)" }}
+          >
+            <div className="card-header bg-success text-white d-flex justify-content-between align-items-center">
+              <h6 className="mb-0">✓ ยืนยันเล่มสำเร็จ — แก้ไขคะแนนได้</h6>
+              <button
+                className="btn btn-sm btn-outline-light"
+                onClick={() => {
+                  setVerified(false);
+                  setVerifiedInfo(null);
+                }}
+              >
+                สแกนใหม่
+              </button>
+            </div>
+
+            <div className="card-body">
+              <div className="mb-2"><strong>ลำดับจัดเก็บ:</strong> {verifiedInfo?.booklets_id ?? row.bookletId}</div>
+              <div className="mb-2"><strong>วิชา:</strong> {verifiedInfo?.subject_name ?? row.subjectName}</div>
+              <div className="mb-2"><strong>หมายเลขถุง:</strong> {verifiedInfo?.bag_no ?? row.bagNo ?? "-"}</div>
+              <div className="mb-2"><strong>ข้อ:</strong> {row.questionNo}</div>
+              <div className="mb-2"><strong>หัวข้อ:</strong> {row.questionLabel ?? "-"}</div>
+
+              <hr />
+
+              <h6 className="mb-3">แก้ไขคะแนน</h6>
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label">
+                    ผู้ตรวจ 1: <strong>{row.graderName1}</strong>
+                    <span className="text-muted ms-2">(คะแนนเดิม: {row.score1})</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    className="form-control"
+                    placeholder={`แก้ไขคะแนน ${row.graderName1}`}
+                    onChange={(e) => setNewScore1(e.target.value)}
+                    disabled={saving || resetting}
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">
+                    ผู้ตรวจ 2: <strong>{row.graderName2}</strong>
+                    <span className="text-muted ms-2">(คะแนนเดิม: {row.score2})</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    className="form-control"
+                    placeholder={`แก้ไขคะแนน ${row.graderName2}`}
+                    onChange={(e) => setNewScore2(e.target.value)}
+                    disabled={saving || resetting}
+                  />
+                </div>
+              </div>
+
+              <div className="d-flex gap-2 mt-4 justify-content-end">
+                <button
+                  className="btn btn-success"
+                  onClick={handleSaveScores}
+                  disabled={saving || resetting}
+                >
+                  {saving ? "กำลังบันทึก..." : "บันทึกคะแนนใหม่"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  );
+  </div>
+);
 }

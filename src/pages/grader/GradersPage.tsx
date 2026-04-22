@@ -18,7 +18,10 @@ import {
   RevokeAccountThunk,
   UnrevokeAccountThunk
 } from "@/store/slices/account.slice";
-import { selectAssignmentsForGrader } from "@/store/slices/graders.slice";
+import {
+  selectGradersForCampaign,
+  fetchGradersForCampaignThunk,
+} from "@/store/slices/graders.slice";
 
 import { fetchSubjectsQuestionThunk } from "@/store/slices/subjects.slice";
 import GradersHeader from "./components/GradersHeader";
@@ -62,6 +65,8 @@ export default function AccountsPage() {
     initialRole
   );
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [sessionFilter, setSessionFilter] = useState<number | "all">("all");
+  const [subjectFilter, setSubjectFilter] = useState<number | "all">("all");
 
 
   const [isCreateOpen, setCreateOpen] = useState(false);
@@ -77,6 +82,10 @@ export default function AccountsPage() {
 
   const campaignId = camp ? Number(camp.id) : 0;
   const accountId = subjectListAccount ? Number(subjectListAccount.id) : 0;
+
+  const graderAssignments = useAppSelector(
+    selectGradersForCampaign(camp ? Number(camp.id) : null)
+  );
 
   // const graderAssignments = useAppSelector(
   //   subjectListAccount
@@ -150,7 +159,10 @@ export default function AccountsPage() {
 
     const loadGraderData = async () => {
       try {
-        await dispatch(fetchAccountsGradersThunk(campaignId)).unwrap();
+        await Promise.all([
+          dispatch(fetchAccountsGradersThunk(campaignId)).unwrap(),
+          dispatch(fetchGradersForCampaignThunk(campaignId)).unwrap(),
+        ]);
       } catch (error) {
         console.error('Failed to load grader accounts:', error);
       }
@@ -174,11 +186,41 @@ export default function AccountsPage() {
   };
 
 
+  const sessionOptions = useMemo(() => {
+    const map = new Map<number, { id: number; label: string; exam_date: string }>();
+    graderAssignments.forEach((g) => {
+      if (!map.has(g.session_id)) {
+        map.set(g.session_id, {
+          id: g.session_id,
+          label: g.session_code,
+          exam_date: g.exam_date,
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) =>
+      (a.exam_date ?? "").localeCompare(b.exam_date ?? "")
+    );
+  }, [graderAssignments]);
+
+  const subjectOptions = useMemo(() => {
+    const map = new Map<number, { id: number; name: string; code: string }>();
+    graderAssignments.forEach((g) => {
+      if (!map.has(g.subject_id)) {
+        map.set(g.subject_id, {
+          id: g.subject_id,
+          name: g.subject_name,
+          code: g.subject_code,
+        });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [graderAssignments]);
+
   const filteredAccounts = useMemo(() => {
     const term = searchText.trim().toLowerCase();
     let list = accounts;
-
-
 
     if (roleFilter !== "all") {
       list = list.filter((a) => a.role_id === roleFilter);
@@ -186,6 +228,19 @@ export default function AccountsPage() {
 
     if (activeFilter !== "all") {
       list = list.filter((a) => (activeFilter === "active" ? a.active : !a.active));
+    }
+
+    if (sessionFilter !== "all" || subjectFilter !== "all") {
+      const allowedAccountIds = new Set(
+        graderAssignments
+          .filter(
+            (g) =>
+              (sessionFilter === "all" || g.session_id === sessionFilter) &&
+              (subjectFilter === "all" || g.subject_id === subjectFilter)
+          )
+          .map((g) => g.account_id)
+      );
+      list = list.filter((a) => allowedAccountIds.has(a.id));
     }
 
     if (!term) return list;
@@ -196,7 +251,7 @@ export default function AccountsPage() {
         acc.full_name.toLowerCase().includes(term) ||
         acc.email?.toLowerCase().includes(term)
     );
-  }, [accounts, searchText, roleFilter, activeFilter]);
+  }, [accounts, searchText, roleFilter, activeFilter, sessionFilter, subjectFilter, graderAssignments]);
 
 
   const stats = useMemo(() => {
@@ -448,6 +503,12 @@ const handleCreate = async (data: CreateAccountFormValues) => {
         onRoleFilterChange={setRoleFilter}
         activeFilter={activeFilter}
         onActiveFilterChange={setActiveFilter}
+        sessionFilter={sessionFilter}
+        onSessionFilterChange={setSessionFilter}
+        subjectFilter={subjectFilter}
+        onSubjectFilterChange={setSubjectFilter}
+        sessionOptions={sessionOptions}
+        subjectOptions={subjectOptions}
         roles={roles}
         onOpenCreate={() => setCreateOpen(true)}
       />

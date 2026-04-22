@@ -5,6 +5,18 @@ import type { Role, RoleFilter, ActiveFilter } from "../types";
 import { selectIsSystemLocked } from "@/store/slices/examData.slice";
 import { useAppSelector } from "@/store/hook";
 
+interface SessionOption {
+  id: number;
+  label: string;
+  exam_date: string;
+}
+
+interface SubjectOption {
+  id: number;
+  name: string;
+  code: string;
+}
+
 interface AccountsToolbarProps {
   searchText: string;
   onSearchChange: (value: string) => void;
@@ -14,6 +26,15 @@ interface AccountsToolbarProps {
 
   activeFilter: ActiveFilter;
   onActiveFilterChange: (value: ActiveFilter) => void;
+
+  sessionFilter: number | "all";
+  onSessionFilterChange: (value: number | "all") => void;
+
+  subjectFilter: number | "all";
+  onSubjectFilterChange: (value: number | "all") => void;
+
+  sessionOptions: SessionOption[];
+  subjectOptions: SubjectOption[];
 
   roles: Role[];
 
@@ -27,6 +48,12 @@ export default function AccountsToolbar({
   onRoleFilterChange,
   activeFilter,
   onActiveFilterChange,
+  sessionFilter,
+  onSessionFilterChange,
+  subjectFilter,
+  onSubjectFilterChange,
+  sessionOptions,
+  subjectOptions,
   roles,
   onOpenCreate,
 }: AccountsToolbarProps) {
@@ -57,7 +84,7 @@ export default function AccountsToolbar({
                   id="acc-search"
                   value={searchText}
                   onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="ค้นหา username, ชื่อ-สกุล, หรือ email"
+                  placeholder="ค้นหา username, ชื่อ-สกุล"
                   className="form-control ps-5"
                 />
               </div>
@@ -66,7 +93,7 @@ export default function AccountsToolbar({
             {/* Role filter */}
             <div style={{ minWidth: 220 }}>
               <label htmlFor="role-filter" className="form-label small text-muted">
-                ฟิลเตอร์ตาม Role
+                บทบาท
               </label>
               <select
                 id="role-filter"
@@ -76,6 +103,7 @@ export default function AccountsToolbar({
                   const v = e.target.value;
                   onRoleFilterChange(v === "all" ? "all" : Number(v));
                 }}
+                disabled={true}
               >
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -99,6 +127,54 @@ export default function AccountsToolbar({
                 <option value="all">ทั้งหมด</option>
                 <option value="active">เฉพาะ Active</option>
                 <option value="inactive">เฉพาะ Inactive</option>
+              </select>
+            </div>
+
+            {/* Session (exam date) filter */}
+            <div style={{ minWidth: 220 }}>
+              <label htmlFor="session-filter" className="form-label small text-muted">
+                วันที่สอบ / รอบสอบ
+              </label>
+              <select
+                id="session-filter"
+                className="form-select"
+                value={sessionFilter}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  onSessionFilterChange(v === "all" ? "all" : Number(v));
+                }}
+              >
+                <option value="all">ทั้งหมด</option>
+                {sessionOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.exam_date
+                      ? `${new Date(s.exam_date).toLocaleDateString("th-TH")} - ${s.label}`
+                      : s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Subject (exam topic) filter */}
+            <div style={{ minWidth: 220 }}>
+              <label htmlFor="subject-filter" className="form-label small text-muted">
+                หัวข้อที่สอบ
+              </label>
+              <select
+                id="subject-filter"
+                className="form-select"
+                value={subjectFilter}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  onSubjectFilterChange(v === "all" ? "all" : Number(v));
+                }}
+              >
+                <option value="all">ทั้งหมด</option>
+                {subjectOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.code ? `${s.code} - ${s.name}` : s.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

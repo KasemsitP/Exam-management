@@ -44,8 +44,8 @@ export default function AccountsTable({
               <tr>
                 <th>ชื่อผู้ใช้</th>
                 <th>ชื่อ-นามสกุล</th>
-                <th>สถานะ</th>
-                <th className="text-center">Active</th>
+                <th >บทบาท</th>
+                <th className="text-center">สถานะ</th>
                 <th className="text-end"></th>
               </tr>
             </thead>
