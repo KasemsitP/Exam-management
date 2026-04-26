@@ -254,12 +254,40 @@ export const useKeyManagement = () => {
       return;
     }
 
+    const trimmedKey = currentKeyValue.trim();
+    const confirmResult = await Swal.fire({
+      icon: "question",
+      title: "ยืนยันคีย์อีกครั้ง",
+      text: "เพื่อป้องกันการพิมพ์ผิด กรุณากรอกคีย์อีกครั้งเพื่อยืนยัน",
+      input: "password",
+      inputAttributes: {
+        maxlength: "16",
+        autocapitalize: "off",
+        autocorrect: "off",
+        placeholder: "กรอกคีย์ 16 ตัวอักษรเพื่อยืนยัน",
+      },
+      showCancelButton: true,
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
+      confirmButtonColor: "#0d6efd",
+      reverseButtons: true,
+      allowOutsideClick: false,
+      inputValidator: (value) => {
+        if (!value) return "กรุณากรอกคีย์เพื่อยืนยัน";
+        if (value.length !== 16) return "คีย์ต้องมีความยาว 16 ตัวอักษร";
+        if (value !== trimmedKey) return "คีย์ไม่ตรงกัน กรุณาตรวจสอบและกรอกใหม่";
+        return null;
+      },
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
     dispatch(
       saveNewKey({
         campaignId: numericCampaignId,
-        key: currentKeyValue.trim(),
+        key: trimmedKey,
         account_id: Number(userAccountId),
-        order_num: manager_order === 1 ? 1 : 2, 
+        order_num: manager_order === 1 ? 1 : 2,
       })
     )
       .unwrap()

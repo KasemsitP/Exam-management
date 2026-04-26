@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import type { DraftScore } from "../hooks/useGradingStation";
 
 interface RecentScoresCardProps {
+  issueScoreFormPdf: () => void;
   draftScores: DraftScore[];
   bagInfo?: {
     subject_name: string | null;
@@ -38,6 +39,11 @@ function makeRowKey(item: DraftScore): string {
     item.question_no ?? "noq",
   ].join("-");
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Print: ใบกรอกคะแนน                                                         */
+/* -------------------------------------------------------------------------- */
+
 
 /* -------------------------------------------------------------------------- */
 /*  Payload Cell                                                              */
@@ -143,6 +149,7 @@ export default function RecentScoresCard({
   draftScores,
   bagInfo,
   isDraftLoading,
+  issueScoreFormPdf,
   onConfirmAll,
 }: RecentScoresCardProps) {
   const [editedScores, setEditedScores] = useState<Record<string, string>>({});
@@ -191,15 +198,26 @@ export default function RecentScoresCard({
       }}
     >
       <div className="card-header bg-white py-3 px-3 border-bottom">
-        <div className="d-flex align-items-center">
+        <div className="d-flex align-items-center gap-2">
           <h6 className="mb-0 fw-semibold text-dark ">
             รายการคะแนนที่ตรวจในแต่ละถุง
           </h6>
 
           {draftScores.length > 0 && (
-            <span className="ms-auto small text-muted">
+            <span className="small text-muted">
               {draftScores.length} รายการ
             </span>
+          )}
+
+          {!isDraftLoading && draftScores.length > 0 && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-primary ms-auto"
+              onClick={issueScoreFormPdf}
+              disabled={isDraftLoading}
+            >
+              ออกใบกรอกคะแนน
+            </button>
           )}
         </div>
 

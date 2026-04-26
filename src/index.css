@@ -123,6 +123,21 @@ a:hover { text-decoration: underline; }
   padding: .375rem .5rem;
 }
 
+/* fix Firefox bug 924068: padding ของ <select> โดน chevron ทับ
+   ต้องบังคับ box-sizing พร้อม vendor prefixes */
+.form-select {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  padding-right: 2.25rem !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.form-select-sm {
+  padding-right: 2rem !important;
+}
+
 /* buttons */
 .app-compact .btn {
   font-size: var(--app-font-sm);

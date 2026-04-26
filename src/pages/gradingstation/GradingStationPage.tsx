@@ -61,7 +61,8 @@ export default function GradingStationPage() {
     draftBagInfo,
     isDraftLoading,
     confirmAllDraftScores,
-    IsHasbag
+    IsHasbag,
+    issueScoreFormPdf
   } = useGradingStation();
 
   // Show loading overlay while initial data is loading
@@ -128,6 +129,7 @@ export default function GradingStationPage() {
             {/* Right: Recent */}
             <div className="col-lg-5">
               <RecentScoresCard
+                issueScoreFormPdf={issueScoreFormPdf}
                 draftScores={draftScores}
                 bagInfo={draftBagInfo}
                 isDraftLoading={isDraftLoading}

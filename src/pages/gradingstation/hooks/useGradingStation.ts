@@ -615,6 +615,57 @@ export const useGradingStation = () => {
   );
   //Old [fetchDraftScores, currentBagId]
 
+  const issueScoreFormPdf = useCallback(async () => {
+  if (!currentBagId || !activeAssignment?.grader_id) {
+    await Swal.fire({
+      icon: "warning",
+      title: "ไม่สามารถออกใบกรอกคะแนนได้",
+      text: "ไม่พบถุงหรือผู้ตรวจที่ใช้งานอยู่",
+      confirmButtonText: "ตกลง",
+    });
+    return;
+  }
+  Swal.fire({
+    title: "กำลังสร้าง PDF...",
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    },
+  });
+
+  try {
+    const res = await axios.get(
+      `/api/graders/bags/${currentBagId}/manual-payload/${activeAssignment.grader_id}/pdf`,
+      { responseType: "blob" }
+    );
+
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+  } catch (error: any) {
+    let message = "เกิดข้อผิดพลาด";
+
+    if (error.response?.data instanceof Blob) {
+      try {
+        const text = await error.response.data.text();
+        const parsed = JSON.parse(text);
+        message = parsed?.message ?? message;
+      } catch {}
+    } else {
+      message = error.response?.data?.message ?? error.message ?? message;
+    }
+
+    await Swal.fire({
+      icon: "error",
+      title: "ออกใบกรอกคะแนนไม่สำเร็จ",
+      text: message,
+      confirmButtonText: "ตกลง",
+    });
+  } finally {
+    Swal.close();
+  }
+}, [currentBagId, activeAssignment?.grader_id]);
+
   const clearLocalGradingState = useCallback(() => {
     setLastSlotId(null);
     setBagNo(null);
@@ -1185,6 +1236,8 @@ export const useGradingStation = () => {
     fetchDraftScores,
 
 
-    IsHasbag
+    IsHasbag,
+
+    issueScoreFormPdf
   };
 };

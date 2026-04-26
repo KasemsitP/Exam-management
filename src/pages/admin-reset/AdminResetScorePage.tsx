@@ -234,7 +234,7 @@ export default function AdminResetScoresPage() {
                     <label className="small text-muted mb-0" style={{ whiteSpace: "nowrap" }}>เลือกถุง:</label>
                     <select
                       className="form-select form-select-sm admin-reset-select"
-                      style={{ minWidth: 140 }}
+                      style={{ minWidth: 180 }}
                       value={selectedBag}
                       onChange={(e) => setSelectedBag(e.target.value)}
                     >
@@ -251,7 +251,7 @@ export default function AdminResetScoresPage() {
                     <label className="small text-muted mb-0" style={{ whiteSpace: "nowrap" }}>เลือกข้อ:</label>
                     <select
                       className="form-select form-select-sm admin-reset-select"
-                      style={{ minWidth: 120 }}
+                      style={{ minWidth: 180 }}
                       value={selectedQuestion}
                       onChange={(e) => setSelectedQuestion(e.target.value)}
                     >

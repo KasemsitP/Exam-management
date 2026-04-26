@@ -8,6 +8,7 @@ import {
   FileText,
   Users,
   History,
+  RefreshCw,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hook";
 import { useForm } from "react-hook-form";
@@ -261,7 +262,6 @@ export default function BagScoresPage() {
     const fetchScores = async () => {
       setLoadingScores(true);
       setErrorScores(null);
-      setBagScores(null);
 
       try {
         const res = await axios.get<BagScoresApiResponse>(
@@ -273,7 +273,6 @@ export default function BagScoresPage() {
       } catch (err: any) {
         if (cancelled) return;
         setErrorScores(err?.response?.data?.message ?? "โหลดคะแนนของถุงนี้ไม่สำเร็จ");
-        setBagScores(null);
       } finally {
         if (!cancelled) setLoadingScores(false);
       }
@@ -894,7 +893,8 @@ Swal.fire({
                 </button>
 
                 <select
-                  className="form-select form-select-sm border-start-0 border-end-0 pe-5"
+                  className="form-select form-select-sm border-start-0 border-end-0"
+                  style={{ paddingRight: "2.75rem", textOverflow: "ellipsis" }}
                   value={selectedBagId ?? ""}
                   onChange={(e) => setSelectedBagId(Number(e.target.value))}
                   disabled={filteredBags.length === 0}
@@ -903,7 +903,7 @@ Swal.fire({
                     <option key={b.bagId} value={b.bagId}>
                       {truncate(
                         `ถุงที่ ${String(b.bagNo)} - ${b.sessionLabel}`,
-                        90
+                        70
                       )}
                     </option>
                   ))}
@@ -980,20 +980,33 @@ Swal.fire({
                   <span>จำนวนชุดข้อสอบ: {selectedBag.scannedCount}</span>
                 </div>
               </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                onClick={() => setScoresReloadKey((x) => x + 1)}
+                disabled={loadingScores}
+                title="โหลดคะแนนถุงนี้ใหม่"
+              >
+                <RefreshCw
+                  size={14}
+                  className={loadingScores ? "spin-animation" : undefined}
+                />
+                <span>{loadingScores ? "รีเฟรช" : "รีเฟรช"}</span>
+              </button>
             </div>
           </div>
 
-          <div className="card-body p-0">
-            {loadingScores && (
-              <div className="text-center py-5">
-                <div className="text-muted small">กำลังโหลดคะแนน...</div>
-              </div>
-            )}
-
+          <div className="card-body p-0 position-relative">
             {errorScores && !loadingScores && (
               <div className="text-center text-danger py-4">
                 <div className="fw-semibold mb-1">โหลดคะแนนไม่สำเร็จ</div>
                 <small>{errorScores}</small>
+              </div>
+            )}
+
+            {loadingScores && headerQuestions.length === 0 && (
+              <div className="text-center py-5">
+                <div className="text-muted small">กำลังโหลดคะแนน...</div>
               </div>
             )}
 
@@ -1006,11 +1019,34 @@ Swal.fire({
                 </div>
               )}
 
-            {!loadingScores &&
-              !errorScores &&
-              headerQuestions.length > 0 && (
+            {loadingScores && headerQuestions.length > 0 && (
+              <div
+                className="position-absolute d-flex align-items-center gap-1"
+                style={{
+                  top: 8,
+                  right: 12,
+                  zIndex: 5,
+                  background: "rgba(255,255,255,0.95)",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 999,
+                  padding: "2px 10px",
+                  fontSize: "0.75rem",
+                  color: "#6b7280",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+                }}
+              >
+                {/* <Loader2 size={12} className="spin-animation" />
+                <span>กำลังโหลด...</span> */}
+              </div>
+            )}
+
+            {!errorScores && headerQuestions.length > 0 && (
                 <div
                   className="table-responsive"
+                  style={{
+                    opacity: loadingScores ? 0.6 : 1,
+                    transition: "opacity 0.15s ease",
+                  }}
                 >
                   <table
                     className="table table-sm mb-0 align-middle text-nowrap"
