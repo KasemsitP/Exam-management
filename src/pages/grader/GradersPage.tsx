@@ -65,8 +65,7 @@ export default function AccountsPage() {
     initialRole
   );
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
-  const [sessionFilter, setSessionFilter] = useState<number | "all">("all");
-  const [subjectFilter, setSubjectFilter] = useState<number | "all">("all");
+  const [sessionSubjectFilter, setSessionSubjectFilter] = useState<string | "all">("all");
 
 
   const [isCreateOpen, setCreateOpen] = useState(false);
@@ -186,36 +185,38 @@ export default function AccountsPage() {
   };
 
 
-  const sessionOptions = useMemo(() => {
-    const map = new Map<number, { id: number; label: string; exam_date: string }>();
+  const sessionSubjectOptions = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        key: string;
+        session_id: number;
+        subject_id: number;
+        session_code: string;
+        subject_name: string;
+        subject_code: string;
+        exam_date: string;
+      }
+    >();
     graderAssignments.forEach((g) => {
-      if (!map.has(g.session_id)) {
-        map.set(g.session_id, {
-          id: g.session_id,
-          label: g.session_code,
+      const key = `${g.session_id}_${g.subject_id}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          session_id: g.session_id,
+          subject_id: g.subject_id,
+          session_code: g.session_code,
+          subject_name: g.subject_name,
+          subject_code: g.subject_code,
           exam_date: g.exam_date,
         });
       }
     });
-    return Array.from(map.values()).sort((a, b) =>
-      (a.exam_date ?? "").localeCompare(b.exam_date ?? "")
-    );
-  }, [graderAssignments]);
-
-  const subjectOptions = useMemo(() => {
-    const map = new Map<number, { id: number; name: string; code: string }>();
-    graderAssignments.forEach((g) => {
-      if (!map.has(g.subject_id)) {
-        map.set(g.subject_id, {
-          id: g.subject_id,
-          name: g.subject_name,
-          code: g.subject_code,
-        });
-      }
+    return Array.from(map.values()).sort((a, b) => {
+      const dateCmp = (a.exam_date ?? "").localeCompare(b.exam_date ?? "");
+      if (dateCmp !== 0) return dateCmp;
+      return a.subject_name.localeCompare(b.subject_name);
     });
-    return Array.from(map.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
   }, [graderAssignments]);
 
   const filteredAccounts = useMemo(() => {
@@ -230,14 +231,11 @@ export default function AccountsPage() {
       list = list.filter((a) => (activeFilter === "active" ? a.active : !a.active));
     }
 
-    if (sessionFilter !== "all" || subjectFilter !== "all") {
+    if (sessionSubjectFilter !== "all") {
+      const [sid, subjId] = sessionSubjectFilter.split("_").map(Number);
       const allowedAccountIds = new Set(
         graderAssignments
-          .filter(
-            (g) =>
-              (sessionFilter === "all" || g.session_id === sessionFilter) &&
-              (subjectFilter === "all" || g.subject_id === subjectFilter)
-          )
+          .filter((g) => g.session_id === sid && g.subject_id === subjId)
           .map((g) => g.account_id)
       );
       list = list.filter((a) => allowedAccountIds.has(a.id));
@@ -251,7 +249,7 @@ export default function AccountsPage() {
         acc.full_name.toLowerCase().includes(term) ||
         acc.email?.toLowerCase().includes(term)
     );
-  }, [accounts, searchText, roleFilter, activeFilter, sessionFilter, subjectFilter, graderAssignments]);
+  }, [accounts, searchText, roleFilter, activeFilter, sessionSubjectFilter, graderAssignments]);
 
 
   const stats = useMemo(() => {
@@ -322,6 +320,7 @@ const handleCreate = async (data: CreateAccountFormValues) => {
 
     await dispatch(fetchAccountsThunk()).unwrap();
     await dispatch(fetchAccountsGradersThunk(Number(camp.id))).unwrap();
+    await dispatch(fetchGradersForCampaignThunk(Number(camp.id))).unwrap();
     await dispatch(fetchRolesThunk()).unwrap();
 
     await Swal.fire({
@@ -503,12 +502,9 @@ const handleCreate = async (data: CreateAccountFormValues) => {
         onRoleFilterChange={setRoleFilter}
         activeFilter={activeFilter}
         onActiveFilterChange={setActiveFilter}
-        sessionFilter={sessionFilter}
-        onSessionFilterChange={setSessionFilter}
-        subjectFilter={subjectFilter}
-        onSubjectFilterChange={setSubjectFilter}
-        sessionOptions={sessionOptions}
-        subjectOptions={subjectOptions}
+        sessionSubjectFilter={sessionSubjectFilter}
+        onSessionSubjectFilterChange={setSessionSubjectFilter}
+        sessionSubjectOptions={sessionSubjectOptions}
         roles={roles}
         onOpenCreate={() => setCreateOpen(true)}
       />

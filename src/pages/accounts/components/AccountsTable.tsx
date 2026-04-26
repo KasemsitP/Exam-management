@@ -46,8 +46,8 @@ export default function AccountsTable({
               <tr>
                 <th className="px-3 py-3">ชื่อผู้ใช้</th>
                 <th className="px-3 py-3">ชื่อ-นามสกุล</th>
-                <th className="px-3 py-3">สถานะ</th>
-                <th className="text-center px-3 py-3">Active</th>
+                <th className="px-3 py-3">บทบาท</th>
+                <th className="text-center px-3 py-3">สถานะ</th>
                 <th className="text-end px-3 py-3"></th>
               </tr>
             </thead>
@@ -57,9 +57,7 @@ export default function AccountsTable({
                   <td className="fw-semibold text-nowrap px-3 py-2">{acc.username}</td>
                   <td className="text-nowrap px-3 py-2">{acc.full_name}</td>
                   <td className="text-nowrap px-3 py-2">
-                    <span className="badge bg-light text-dark border">
-                      {roleName(acc.role_id)} ({roleCode(acc.role_id)})
-                    </span>
+                    {roleName(acc.role_id)} ({roleCode(acc.role_id)})
                   </td>
                   <td className="text-center text-nowrap px-3 py-2">
                     {acc.active ? (

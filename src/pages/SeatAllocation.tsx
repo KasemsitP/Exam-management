@@ -882,13 +882,13 @@ export default function SeatAllocationPage() {
                     } else if (allocatedCount < room.capacity) {
                       statusBadge = (
                         <span className="badge text-bg-warning">
-                          จัดสรรบางส่วน
+                          จัดสรรบางส่วนในห้อง
                         </span>
                       );
                     } else {
                       statusBadge = (
                         <span className="badge text-bg-success">
-                          จัดสรรครบ
+                          จัดสรรครบทั้งห้อง
                         </span>
                       );
                     }

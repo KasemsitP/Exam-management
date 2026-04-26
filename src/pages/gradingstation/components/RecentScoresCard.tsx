@@ -212,7 +212,7 @@ export default function RecentScoresCard({
           {!isDraftLoading && draftScores.length > 0 && (
             <button
               type="button"
-              className="btn btn-sm btn-outline-primary ms-auto"
+              className="btn btn-success y ms-auto"
               onClick={issueScoreFormPdf}
               disabled={isDraftLoading}
             >

@@ -5,16 +5,14 @@ import type { Role, RoleFilter, ActiveFilter } from "../types";
 import { selectIsSystemLocked } from "@/store/slices/examData.slice";
 import { useAppSelector } from "@/store/hook";
 
-interface SessionOption {
-  id: number;
-  label: string;
+interface SessionSubjectOption {
+  key: string;
+  session_id: number;
+  subject_id: number;
+  session_code: string;
+  subject_name: string;
+  subject_code: string;
   exam_date: string;
-}
-
-interface SubjectOption {
-  id: number;
-  name: string;
-  code: string;
 }
 
 interface AccountsToolbarProps {
@@ -27,14 +25,10 @@ interface AccountsToolbarProps {
   activeFilter: ActiveFilter;
   onActiveFilterChange: (value: ActiveFilter) => void;
 
-  sessionFilter: number | "all";
-  onSessionFilterChange: (value: number | "all") => void;
+  sessionSubjectFilter: string | "all";
+  onSessionSubjectFilterChange: (value: string | "all") => void;
 
-  subjectFilter: number | "all";
-  onSubjectFilterChange: (value: number | "all") => void;
-
-  sessionOptions: SessionOption[];
-  subjectOptions: SubjectOption[];
+  sessionSubjectOptions: SessionSubjectOption[];
 
   roles: Role[];
 
@@ -48,12 +42,9 @@ export default function AccountsToolbar({
   onRoleFilterChange,
   activeFilter,
   onActiveFilterChange,
-  sessionFilter,
-  onSessionFilterChange,
-  subjectFilter,
-  onSubjectFilterChange,
-  sessionOptions,
-  subjectOptions,
+  sessionSubjectFilter,
+  onSessionSubjectFilterChange,
+  sessionSubjectOptions,
   roles,
   onOpenCreate,
 }: AccountsToolbarProps) {
@@ -125,56 +116,33 @@ export default function AccountsToolbar({
                 onChange={(e) => onActiveFilterChange(e.target.value as any)}
               >
                 <option value="all">ทั้งหมด</option>
-                <option value="active">เฉพาะ Active</option>
-                <option value="inactive">เฉพาะ Inactive</option>
+                <option value="active">เฉพาะกำลังเปิดใช้งาน</option>
+                <option value="inactive">เฉพาะกำลังปิดใช้งาน</option>
               </select>
             </div>
 
-            {/* Session (exam date) filter */}
-            <div style={{ minWidth: 220 }}>
-              <label htmlFor="session-filter" className="form-label small text-muted">
-                วันที่สอบ / รอบสอบ
+            {/* Session + Subject combined filter */}
+            <div style={{ minWidth: 280 }}>
+              <label htmlFor="session-subject-filter" className="form-label small text-muted">
+                วันที่สอบ / วิชา
               </label>
               <select
-                id="session-filter"
+                id="session-subject-filter"
                 className="form-select"
-                value={sessionFilter}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  onSessionFilterChange(v === "all" ? "all" : Number(v));
-                }}
+                value={sessionSubjectFilter}
+                onChange={(e) => onSessionSubjectFilterChange(e.target.value)}
               >
                 <option value="all">ทั้งหมด</option>
-                {sessionOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.exam_date
-                      ? `${new Date(s.exam_date).toLocaleDateString("th-TH")} - ${s.label}`
-                      : s.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Subject (exam topic) filter */}
-            <div style={{ minWidth: 220 }}>
-              <label htmlFor="subject-filter" className="form-label small text-muted">
-                หัวข้อที่สอบ
-              </label>
-              <select
-                id="subject-filter"
-                className="form-select"
-                value={subjectFilter}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  onSubjectFilterChange(v === "all" ? "all" : Number(v));
-                }}
-              >
-                <option value="all">ทั้งหมด</option>
-                {subjectOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.code ? `${s.code} - ${s.name}` : s.name}
-                  </option>
-                ))}
+                {sessionSubjectOptions.map((s) => {
+                  const dateLabel = s.exam_date
+                    ? new Date(s.exam_date).toLocaleDateString("th-TH")
+                    : s.session_code;
+                  return (
+                    <option key={s.key} value={s.key}>
+                      {`${dateLabel} - วิชา${s.subject_name}`}
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>

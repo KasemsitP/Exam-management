@@ -355,10 +355,8 @@ export default function AccountCreateModal({
                   className="btn btn-primary"
                   disabled={loading || isSubmitting}
                 >
-                  {(loading || isSubmitting) && (
-                    <Loader2 size={16} className="me-2 spin-animation" />
-                  )}
-                  สร้างผู้ใช้
+
+                  {loading || isSubmitting ? "กำลังสร้างผู้ใช้..." : "สร้างผู้ใช้"}
                 </button>
               </div>
             </form>

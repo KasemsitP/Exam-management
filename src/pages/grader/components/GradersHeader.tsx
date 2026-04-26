@@ -23,10 +23,10 @@ export default function AccountsHeader({ stats }: AccountsHeaderProps) {
               <Users size={14} /> ทั้งหมด {stats.total}
             </span>
             <span className="badge text-bg-success d-inline-flex align-items-center gap-1">
-              <CheckCircle2 size={14} /> Active {stats.active}
+              <CheckCircle2 size={14} /> เปิดใช้งาน {stats.active}
             </span>
             <span className="badge text-bg-light d-inline-flex align-items-center gap-1">
-              <X size={14} /> Inactive {stats.inactive}
+              <X size={14} /> ปิดใช้งาน {stats.inactive}
             </span>
           </div>
         </div>

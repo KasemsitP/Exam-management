@@ -58,9 +58,7 @@ export default function AccountsTable({
                     {acc.email ?? "-"}
                   </td> */}
                   <td>
-                    <span className="badge text-bg-light">
-                      {roleName(acc.role_id)} ({roleCode(acc.role_id)})
-                    </span>
+                    {roleName(acc.role_id)} ({roleCode(acc.role_id)})
                   </td>
                   <td className="text-center">
                     {acc.active ? (
